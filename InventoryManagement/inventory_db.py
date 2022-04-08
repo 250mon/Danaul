@@ -1,6 +1,7 @@
 import sqlite3
 from sqlite3 import Error
 from datetime import date
+import pyinputplus as pyip
 
 
 class InventoryDB:
@@ -63,6 +64,11 @@ class InventoryDB:
             print("Error! cannot create the database self.connection.")
 
     def _execute_sql(self, *sql):
+        """
+        Execute a sql statement
+        :param sql:
+        :return: cursor
+        """
         print(sql)
         cursor = self.connection.cursor()
         cursor.execute(*sql)
@@ -159,8 +165,8 @@ class InventoryDB:
         :param priority:
         :return:
         """
-        sql = ("SELECT * FROM items WHERE item_code=?", (code,))
-        cur = self._execute_sql(sql)
+        sql = "SELECT * FROM items WHERE item_code=?"
+        cur = self._execute_sql(sql, (code,))
         rows = cur.fetchall()
         for row in rows:
             print(row)
@@ -183,14 +189,16 @@ class InventoryDB:
         :param code:
         :return:
         """
-        sql = ("SELECT * FROM transactions WHERE item_code=?", (code,))
-        cur = self._execute_sql(sql)
+        sql = "SELECT * FROM transactions WHERE item_code=?"
+        cur = self._execute_sql(sql, (code,))
         rows = cur.fetchall()
-        for row in rows:
-            print(row)
+        # for row in rows:
+        #     print(row)
+        return rows
 
 if __name__ == '__main__':
     inv_db = InventoryDB('test_inventory.db')
+
 
     with inv_db.connection:
         items = [('AA', 'band'), ('BB', 'needle')]
@@ -212,3 +220,10 @@ if __name__ == '__main__':
 
         inv_db.delete_all_items()
         inv_db.delete_all_transactions()
+
+    while(1):
+        code = pyip.inputStr()
+        name = pyip.inputStr()
+        item = (code, name)
+        inv_db.create_item(item)
+
