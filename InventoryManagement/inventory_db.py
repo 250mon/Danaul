@@ -151,37 +151,55 @@ class InventoryDB:
         """
         Query all rows in the items table
         :param
-        :return:
+        :return: rows
         """
         sql = "SELECT * FROM items"
         cur = self._execute_sql(sql)
         rows = cur.fetchall()
-        for row in rows:
-            print(row)
+        # for row in rows:
+        #     print(row)
+
+        return rows
 
     def select_item_by_code(self, code):
         """
         Query items by code
         :param priority:
-        :return:
+        :return: rows
         """
         sql = "SELECT * FROM items WHERE item_code=?"
         cur = self._execute_sql(sql, (code,))
         rows = cur.fetchall()
-        for row in rows:
-            print(row)
+        # for row in rows:
+        #     print(row)
+
+        return rows
 
     def select_all_transactions(self):
         """
         Query all rows in the transactions table
         :param
-        :return:
+        :return: rows
         """
         sql = "SELECT * FROM transactions"
         cur = self._execute_sql(sql)
         rows = cur.fetchall()
-        for row in rows:
-            print(row)
+        # for row in rows:
+        #     print(row)
+
+        return rows
+
+    def select_all_last_transactions(self):
+        """
+        Query only the last transactions of each items
+        :param
+        :return:
+        """
+        sql = "SELECT * FROM transactions" \
+              " WHERE id in (SELECT MAX(id) FROM transactions GROUP BY item_code) ORDER BY id DESC"
+        cur = self._execute_sql(sql)
+        rows = cur.fetchall()
+        return rows
 
     def select_transaction_by_code(self, code):
         """
@@ -194,6 +212,7 @@ class InventoryDB:
         rows = cur.fetchall()
         # for row in rows:
         #     print(row)
+
         return rows
 
 if __name__ == '__main__':
@@ -214,16 +233,14 @@ if __name__ == '__main__':
         for transaction in transactions:
             inv_db.create_transaction(transaction)
 
-        inv_db.select_all_items()
+        rows = inv_db.select_all_items()
+        dict = {v[1]: v[2:] for v in rows}
+        print(dict)
         inv_db.select_transaction_by_code('DD')
-        inv_db.select_all_transactions()
+        rows = inv_db.select_all_last_transactions()
+        print(rows)
+        dict = {v[1]: v[2:] for v in rows}
+        print(dict)
 
         inv_db.delete_all_items()
         inv_db.delete_all_transactions()
-
-    while(1):
-        code = pyip.inputStr()
-        name = pyip.inputStr()
-        item = (code, name)
-        inv_db.create_item(item)
-
