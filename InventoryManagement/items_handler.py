@@ -6,8 +6,21 @@ from inventory_item import InvItem
 
 class ItemsHandler:
     def __init__(self, inv_db):
-        items_dict = {}
-        inv_db = inv_db
+        self.items_dict = {}
+        self.inv_db = inv_db
+
+    def _fetch_from_db(self):
+        """
+                                        id integer PRIMARY KEY,
+                                        item_code text NOT NULL,
+                                        item_name text NOT NULL,
+                                        category text NOT NULL,
+                                        quantity integer NOT NULL,
+                                        inventory integer NOT NULL,
+                                        date text NOT NULL,
+        :return:
+        """
+        rows = self.inv_db.select_all_last_transactions()
 
 
 

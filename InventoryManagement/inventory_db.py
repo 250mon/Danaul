@@ -46,6 +46,7 @@ class InventoryDB:
         sql_create_transactions_table = """CREATE TABLE IF NOT EXISTS transactions (
                                         id integer PRIMARY KEY,
                                         item_code text NOT NULL,
+                                        item_name text NOT NULL,
                                         category text NOT NULL,
                                         quantity integer NOT NULL,
                                         inventory integer NOT NULL,
@@ -237,6 +238,7 @@ if __name__ == '__main__':
         dict = {v[1]: v[2:] for v in rows}
         print(dict)
         inv_db.select_transaction_by_code('DD')
+
         rows = inv_db.select_all_last_transactions()
         print(rows)
         dict = {v[1]: v[2:] for v in rows}
