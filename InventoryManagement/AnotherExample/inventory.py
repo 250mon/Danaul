@@ -5,14 +5,39 @@ import time
 import random
 
 # Creating Dictionary to store data
-available_products = {1001: {"name": "avocado", "price": 230, "category": "grocery", "quantity": 10,
-                             "date": "2021/10/03",
-                             "sold": {},  # sold["2021/10/03"] = 3
-                             },
-                      1002: {"name": "lotion", "price": 250, "category": "beauty & personal", "quantity": 100,
-                             "date": "2021/15/07",
-                             "sold": {},
-                             },
+available_products = {1001: {"name": "avocado", "price": 230,
+                             "category": "grocery",
+                             "quantity": 10, "date": "10/03/2021"},
+                      1002: {"name": "lotion", "price": 250,
+                             "category": "beauty & personal",
+                             "quantity": 100,
+                             "date": "15/07/2021"},
+                      1003: {"name": "pain reliever", "price": 500,
+                             "category": "health",
+                             "quantity": 200, "date": "12/04/2021"},
+                      1004: {"name": "dry pasta", "price": 20,
+                             "category": "grocery",
+                             "quantity": 50, "date": "27/06/2021"},
+                      1005: {"name": "toothbrush", "price": 700,
+                             "category": "beauty & personal",
+                             "quantity": 100,
+                             "date": "30/01/2021"},
+                      1006: {"name": "halloween candy", "price": 33,
+                             "category": "grocery",
+                             "quantity": 56, "date": "22/02/2021"},
+                      1007: {"name": "mascara", "price": 765,
+                             "category": "beauty & personal",
+                             "quantity": 70,
+                             "date": "11/03/2021"},
+                      1008: {"name": "capsicum", "price": 764,
+                             "category": "grocery",
+                             "quantity": 90, "date": "16/02/2021"},
+                      1009: {"name": "blush", "price": 87,
+                             "category": "beauty & personal",
+                             "quantity": 50, "date": "17/07/2021"},
+                      1010: {"name": "granola bars", "price": 24,
+                             "category": "grocery", "quantity": 60,
+                             "date": "20/05/2021"},
                       }
 
 # Formatting Dictionary into JSON format
@@ -23,13 +48,12 @@ js = json.dumps(available_products)
 js  # so we got all data in json string format here
 
 # Create Jason File for DataBase and Write data Into File
-fd = open("data.json", 'w')
+fd = open("../data.json", 'w')
 # it will open file into write mode if file
 # does not exists then it will create file too'''
 fd.write(js)  # writing string into file
 fd.close()  # Close File After Inserting Data
 
-exit(0)
 
 def admin():
     print("========\
@@ -64,7 +88,7 @@ def admin():
 
 
 def display_data():
-    fd = open("data.json", 'r')
+    fd = open("../data.json", 'r')
     txt = fd.read()  # reading data from file
     data = json.loads(txt)
 
@@ -78,10 +102,11 @@ def display_data():
     # Display All Records
     if (n == 1):
         table = pd.DataFrame(
-            columns=['ID', 'name', 'price', 'category', 'quantity', 'date', 'sold'])
+            columns=['ID', 'name', 'price', 'category', 'quantity', 'date'])
 
         # Creating Pandas dataframe to show data in table format later
         for i in data.keys():
+
             # Fetch all keys in dictionary
             temp = pd.DataFrame(columns=['ID'])
             temp['ID'] = [i]
@@ -125,7 +150,7 @@ def display_data():
 
 # display_data() # Uncomment This Line To Run This Function
 def display_specific_data():
-    fd = open("data.json", 'r')
+    fd = open("../data.json", 'r')
     txt = fd.read()
     data = json.loads(txt)
     fd.close()
@@ -147,7 +172,7 @@ def display_specific_data():
 
 # display_specific_data() # Uncomment This Line To Run This Function
 def add_new():
-    fd = open("data.json", 'r')
+    fd = open("../data.json", 'r')
     txt = fd.read()
     data = json.loads(txt)
     fd.close()
@@ -184,14 +209,14 @@ def add_new():
         print("The Product ID you Have Entered Is\
 		Already Present in DataBase Please Check...!!!")
     js = json.dumps(data)
-    fd = open("data.json", 'w')
+    fd = open("../data.json", 'w')
     fd.write(js)
     fd.close()
 
 
 # add_new() # Uncomment This Line To Run This Function
 def delete_prod():
-    fd = open("data.json", 'r')
+    fd = open("../data.json", 'r')
     txt = fd.read()
     data = json.loads(txt)
     fd.close()
@@ -203,14 +228,14 @@ def delete_prod():
     else:
         print("Invalid Product ID...!!!")
     js = json.dumps(data)
-    fd = open("data.json", 'w')
+    fd = open("../data.json", 'w')
     fd.write(js)
     fd.close()
 
 
 # delete_prod() # Uncomment This Line To Run This Function
 def update_prod_data():
-    fd = open("data.json", 'r')
+    fd = open("../data.json", 'r')
     txt = fd.read()
     data = json.loads(txt)
     fd.close()
@@ -271,19 +296,19 @@ def update_prod_data():
     else:
         print("Invalid Product ID...!!!")
     js = json.dumps(data)
-    fd = open("data.json", 'w')
+    fd = open("../data.json", 'w')
     fd.write(js)
     fd.close()
 
 
 # update_prod_data() # Uncomment This Line To Run This Function
 def display_reports_admin():
-    if (os.path.isfile("user_data.json") is False):
+    if (os.path.isfile("../user_data.json") is False):
         # Check for if file is present or not
         # File will be generated only if any user will do some purchase
         print("No User Reports are Present")
         return
-    fd = open("user_data.json", 'r')
+    fd = open("../user_data.json", 'r')
     txt = fd.read()
     user_data = json.loads(txt)
     fd.close()
@@ -330,13 +355,13 @@ def display_reports_admin():
 
 # display_reports_admin() # Uncomment This Line To Run This Function
 def delete_all():
-    fd = open("data.json", 'r')
+    fd = open("../data.json", 'r')
     txt = fd.read()
     data = json.loads(txt)
     fd.close()
     data = {}  # Replacing Data with NULL Dictionary
     js = json.dumps(data)
-    fd = open("data.json", 'w')
+    fd = open("../data.json", 'w')
     fd.write(js)
     fd.close()
 
@@ -366,10 +391,10 @@ def user():
 
 
 def display_user_data():
-    if (os.path.isfile("user_data.json") is False):
+    if (os.path.isfile("../user_data.json") is False):
         print("No User Reports are Present")
         return
-    fd = open("user_data.json", 'r')
+    fd = open("../user_data.json", 'r')
     txt = fd.read()
     user_data = json.loads(txt)
     fd.close()
@@ -419,14 +444,14 @@ def generate_bill(user_id, prod_id, price, time_date, purchase_no,
 
 
 def buy_product():
-    if (os.path.isfile("user_data.json") is False):
+    if (os.path.isfile("../user_data.json") is False):
         user_data = {}
     else:
-        fd = open("user_data.json", 'r')
+        fd = open("../user_data.json", 'r')
         txt = fd.read()
         user_data = json.loads(txt)
         fd.close()
-    fd = open("data.json", 'r')
+    fd = open("../data.json", 'r')
     txt = fd.read()
     data = json.loads(txt)
     fd.close()
@@ -533,11 +558,11 @@ def buy_product():
     else:
         print("User ID Doesn't Exists...!!!")
     js = json.dumps(data)
-    fd = open("data.json", 'w')
+    fd = open("../data.json", 'w')
     fd.write(js)
     fd.close()
     js = json.dumps(user_data)
-    fd = open("user_data.json", 'w')
+    fd = open("../user_data.json", 'w')
     fd.write(js)
     fd.close()
 
