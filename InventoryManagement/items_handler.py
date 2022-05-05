@@ -11,7 +11,11 @@ class ItemsHandler:
         self.inv_db = inv_db
         self._fetch_from_db()
 
-    def _reset_dict(self):
+    def update_items_dict(self):
+        """
+        Update items_dict with the current db
+        :return:
+        """
         self.items_dict = {}
         self._fetch_from_db()
 
@@ -46,9 +50,11 @@ class ItemsHandler:
 
     def create_new_item(self):
         print("========== 새로운 품목 생성 ===========")
-        code = pyip.inputStr("코드 입력: ")
-        if code in self.items_dict.keys():
-            print(f"이미 존재하는 코드({code})이며 새로 아이템을 생성할 수 없습니다.")
+        code = pyip.inputStr("코드 입력 (Press Enter to Exit): ")
+        if code == '':
+            return
+        elif code in self.items_dict.keys():
+            print(f"이미 존재 하는 코드({code})이며 새로 아이템을 생성할 수 없습니다.")
             return
 
         name = pyip.inputStr("이름 입력: ")
@@ -58,13 +64,9 @@ class ItemsHandler:
             print("수량은 0 보다 큰 수를 입력 해야 합니다.")
             return
 
-        # make an instance of item
-        item = InvItem(self, code, name, inventory)
-        # append item to the items_dict
-        self.items_dict[code] = item
-
         # insert it to the db
         self._insert_to_db(code, name, 'buy', inventory, inventory)
+        self.update_items_dict()
 
     def _check_code(self, code):
         if code == '' or code == '99':
@@ -170,7 +172,7 @@ class ItemsHandler:
         print(header)
 
         if code == '' or code == '99':
-            for item in self.items_dict.values():
+            for item in reversed(self.items_dict.values()):
                 print(item)
         elif code in self.items_dict.keys():
             print(self.items_dict[code])
@@ -202,31 +204,35 @@ class ItemsHandler:
         try:
             trans = (category, quan, inventory, index)
             self.inv_db.update_transaction(trans)
-            self._reset_dict()
+            self.update_items_dict()
         except:
             print("An exception occured")
 
         self.display_items_db(code)
 
-    def delete_db(self):
+    def delete_db_transaction(self):
         print("========== DB 삭제 ===========")
         code = pyip.inputStr("코드 입력 (Exit: 99): ")
         if code == '99':
             return
         elif code == '024659898':
-            self.inv_db.delete_all_transaction()
+            self.inv_db.delete_all_transactions()
+            self.update_items_dict()
+            # display the db contents of all items
+            self.display_items_db('99')
         elif code in self.items_dict.keys():
             self.display_items_db(code)
+            index = pyip.inputInt('Index: ')
+            try:
+                self.inv_db.delete_transaction(index)
+                self.update_items_dict()
+                # display the db contents of the code
+                self.display_items_db(code)
+            except:
+                print("An exception occured")
         else:
             return
 
-        index = pyip.inputInt('Index: ')
-        try:
-            self.inv_db.delete_transaction(index)
-        except:
-            print("An exception occured")
-
-        self.display_items_db(code)
 
 
 
@@ -256,7 +262,7 @@ if __name__ == '__main__':
         elif user_input == 5:
             items_handler.update_db_transaction()
         elif user_input == 88:
-            items_handler.delete_db()
+            items_handler.delete_db_transaction()
         elif user_input == 99:
             break
         else:
