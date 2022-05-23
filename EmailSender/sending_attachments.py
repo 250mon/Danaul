@@ -13,18 +13,24 @@ from email.mime.text import MIMEText
 
 class EmailSender:
     def __init__(self):
-        # Read options from config file
-        options = config_reader("config")
+        # Read from config file
+        self.options = self.read_config()
 
         # Options from config file
-        self.subject = options['subject']
-        self.body = options['body']
-        self.dir_path = options['dir_path']
+        self.subject = self.options['subject']
+        self.body = self.options['body']
+        self.dir_path = self.options['dir_path']
 
         self.smtp_server = "smtp.gmail.com"
         self.port = 587  # For starttls
-        self.sender_email = "danaulns@gmail.com"
+        self.sender_email = self.options['sender_email']
+        # self.password = self.options['password']
         self.password = input("Type your password and press enter: ")
+
+    def read_config(self):
+        # Read options from config file
+        options = config_reader("config")
+        return options
 
     def create_message(self, receiver_email):
         # Create a multipart message and set headers
@@ -91,6 +97,6 @@ class EmailSender:
 
 
 
-if __name__ == "main":
+if __name__ == "__main__":
     esender = EmailSender()
     esender.read_addressbook()
