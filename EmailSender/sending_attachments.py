@@ -1,5 +1,6 @@
 import email, smtplib, ssl
 import os
+import glob
 
 import utils
 from utils import config_reader
@@ -17,12 +18,18 @@ class EmailSender:
         self.options = self.read_config()
 
         # Options from config file
-        self.subject = self.options['subject']
+        self.year_month = self.options['year_month']
+        self.year = self.year_month[0:2]
+        self.month = self.year_month[2:4].lstrip('0')
+        self.subject = self.year + '년 ' + self.month + self.options['subject']
         self.body = self.options['body']
-        self.dir_path = self.options['dir_path']
+        self.dir_path = self.options['dir_path'] + '\\' + self.year_month
+        self.filename_prefix = self.options['filename_beg'] + self.month + self.options['filename_end']
 
-        self.smtp_server = "smtp.gmail.com"
-        self.port = 587  # For starttls
+        # self.smtp_server = "smtp.gmail.com"
+        # self.port = 587  # For starttls
+        self.smtp_server = self.options['smtp_server']
+        self.port = int(self.options['port'])
         self.sender_email = self.options['sender_email']
         # self.password = self.options['password']
         self.password = input("Type your password and press enter: ")
@@ -89,12 +96,24 @@ class EmailSender:
             server.quit()
 
     def read_addressbook(self):
-        staff = utils.config_reader('address')
-        for person in staff.keys():
-            attached_file = person + '.pdf'
-            email_addr = staff[person]
-            self.send_email(email_addr, attached_file)
+        addrs = utils.config_reader('address')
+        files_to_attach = map(self.find_file_by_name, addrs.keys())
+        # print(list(files_to_attach))
+        list(map(self.send_email, addrs.values(), files_to_attach))
 
+        # for name in addrs.keys():
+        #     file_to_attach = self.find_file_by_name(name)
+        #     print(file_to_attach)
+        #     # file_to_attach = self.filename_prefix + name + '.pdf'
+        #     addr = addrs[name]
+        #     self.send_email(addr, file_to_attach)
+
+    def find_file_by_name(self, name):
+        files = glob.glob(os.path.join(self.dir_path, f'*{name}*'))
+        if files:
+            return os.path.basename(files[0])
+        else:
+            return None
 
 
 if __name__ == "__main__":
