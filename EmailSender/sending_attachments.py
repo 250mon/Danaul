@@ -35,6 +35,7 @@ class EmailSender:
         self.password = input("Type your password and press enter: ")
 
     def read_config(self):
+
         # Read options from config file
         options = config_reader("config")
         return options
@@ -51,8 +52,7 @@ class EmailSender:
         message.attach(MIMEText(self.body, "plain"))
         return message
 
-    def create_attachment(self, file_name):
-        file_path = os.path.join(self.dir_path, file_name)
+    def create_attachment(self, file_path):
         # Open PDF file in binary mode
         with open(file_path, "rb") as attachment:
             # Add file as application/octet-stream
@@ -65,10 +65,12 @@ class EmailSender:
         encoders.encode_base64(part)
 
         # Add header as key/value pair to attachment part
+        file_name = os.path.basename(file_path)
         part.add_header("Content-Disposition", 'attachment', filename=str(file_name))
         return part
 
-    def send_email(self, receiver_email, attached_file):
+    def send_email(self, addr_file):
+        receiver_email, attached_file = addr_file
         message = self.create_message(receiver_email)
         part = self.create_attachment(attached_file)
 
@@ -97,22 +99,21 @@ class EmailSender:
 
     def read_addressbook(self):
         addrs = utils.config_reader('address')
+        # find the exact file path to attach
         files_to_attach = map(self.find_file_by_name, addrs.keys())
         # print(list(files_to_attach))
-        list(map(self.send_email, addrs.values(), files_to_attach))
-
-        # for name in addrs.keys():
-        #     file_to_attach = self.find_file_by_name(name)
-        #     print(file_to_attach)
-        #     # file_to_attach = self.filename_prefix + name + '.pdf'
-        #     addr = addrs[name]
-        #     self.send_email(addr, file_to_attach)
+        addr_file_pair = zip(addrs.values(), files_to_attach)
+        list(map(self.send_email, addr_file_pair))
 
     def find_file_by_name(self, name):
-        files = glob.glob(os.path.join(self.dir_path, f'*{name}*'))
+        # searching the directory including subdirectories
+        dir_name = self.dir_path + "\**"
+        files = glob.glob(os.path.join(dir_name, f'*{name}*.pdf'), recursive=True)
         if files:
-            return os.path.basename(files[0])
+            print(files)
+            return files[0]
         else:
+            print (f'No file found which includes the name {name}.')
             return None
 
 
