@@ -6,7 +6,10 @@ import datetime
 def conv_datetime(dt):
     weekdays = ('월', '화', '수', '목', '금', '토', '일')
     # dt = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-    form_time_str = dt.strftime('%m/%d(') + weekdays[dt.weekday()] + dt.strftime(') %I:%M %p')
+    if dt.hour < 19:
+        form_time_str = dt.strftime('%m/%d(') + weekdays[dt.weekday()] + dt.strftime(') %I:%M %p')
+    else :
+        form_time_str = dt.strftime('%m/%d(') + weekdays[dt.weekday()] + ')'
     return form_time_str
 
 def make_out_file_name(flag):
@@ -69,11 +72,10 @@ def check_df(wb_df):
 
 
 if __name__ == '__main__':
-    # dir_name = "C:/Users/lambk/OneDrive/문서/Danaul Util Devel/뿌리오"
-    # default_input_file = "reserv"
-    dir_name = "./"
-    # default_input_file = "Book1"
-    default_input_file = "통합 문서1"
+    dir_name = "C:/Users/lambk/OneDrive/문서/Danaul Util Devel/뿌리오"
+    default_input_file = "reserv"
+    # dir_name = "./"
+    # default_input_file = "통합 문서1"
 
     while True:
         rsrv_file = input(f"\n입력파일명 (Press Enter for {default_input_file}.xlsx,   'q' to quit): ")

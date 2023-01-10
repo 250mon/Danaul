@@ -31,8 +31,8 @@ class EmailSender:
         self.smtp_server = self.options['smtp_server']
         self.port = int(self.options['port'])
         self.sender_email = self.options['sender_email']
-        # self.password = self.options['password']
-        self.password = input("Type your password and press enter: ")
+        pw = self.options['password']
+        self.password = pw if pw else input("Type your password and press enter: ")
 
     def read_config(self):
 
