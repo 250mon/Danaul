@@ -7,7 +7,6 @@ from inventory_item import InvItem
 class ItemsHandler:
     def __init__(self, inv_db):
         # items_dict: key:item_code, value:inventory item instance
-        self.items_dict = {}
         self.inv_db = inv_db
         self._fetch_from_db()
 
@@ -16,7 +15,6 @@ class ItemsHandler:
         Update items_dict with the current db
         :return:
         """
-        self.items_dict = {}
         self._fetch_from_db()
 
     def _fetch_from_db(self):
@@ -33,6 +31,7 @@ class ItemsHandler:
                  date text NOT NULL,
         :return:
         """
+        self.items_dict = {}
         rows = self.inv_db.select_all_last_transactions()
         for row in rows:
             item_code = row[1]
@@ -68,7 +67,9 @@ class ItemsHandler:
         self._insert_to_db(code, name, 'buy', inventory, inventory)
         self.update_items_dict()
 
-    def _check_code(self, code):
+    # '': exit or default
+    # '99': exit
+    def check_code(self, code):
         if code == '' or code == '99':
             return code
         elif code not in self.items_dict.keys():
@@ -78,7 +79,7 @@ class ItemsHandler:
 
     def create_transaction(self):
         print("========== 입출고 거래 생성 ===========")
-        code = pyip.inputCustom(self._check_code, "코드 입력 (Press Enter to Exit): ", blank=True)
+        code = pyip.inputCustom(self.check_code, "코드 입력 (Press Enter to Exit): ", blank=True)
         if code == '':
             return
 
@@ -113,7 +114,7 @@ class ItemsHandler:
         print("\n변경후 ...")
         self.display_inventory(code)
 
-    def create_single_sell_transaction(self, code):
+    def create_sell_one_item_transaction(self, code, count=1):
         # print current inventory
         self.display_inventory(code)
 
@@ -124,7 +125,7 @@ class ItemsHandler:
             print("재고가 없어 출고할 수 없습니다.")
             return
         category = 'sell'
-        quan = -1
+        quan = count * -1
         new_inventory = item.update_inventory(quan)
 
         # insert it the db
@@ -133,19 +134,26 @@ class ItemsHandler:
         print("\n변경후 ...")
         self.display_inventory(code)
 
-    def single_sell_mode(self):
+    # interactive sell mode
+    # item of a quantity 1
+    def sell_one_item(self):
         while(1):
             print("========== 출고 모드 ===========")
-            code = pyip.inputCustom(self._check_code, "코드 입력 (Exit: 99): ", blank=True)
+            code = pyip.inputCustom(self.check_code, "코드 입력 (Exit: 99): ", blank=True)
             if code == '99':
                 return
             elif code != '':
-                self.create_single_sell_transaction(code)
+                self.create_sell_one_item_transaction(code)
             print("\n\n")
+
+    # multiple items of multiple quantity
+    # param items : a list of tuples (item_code, count)
+    def sell_multi_items(self, items):
+        map(self.create_sell_one_item_transaction, items[0], items[1])
 
     def display_items_db(self, code=None):
         if code is None:
-            code = pyip.inputCustom(self._check_code, "코드 입력 (전체보기 Enter): ", blank=True)
+            code = pyip.inputCustom(self.check_code, "코드 입력 (전체보기 Enter): ", blank=True)
 
         header = 'Index Code, Name, Category, Transaction_Quantity, Inventory, Date'
         print(header)
@@ -163,7 +171,7 @@ class ItemsHandler:
 
     def display_inventory(self, code=None):
         if code is None:
-            code = pyip.inputCustom(self._check_code, "코드 입력 (전체보기 Enter): ", blank=True)
+            code = pyip.inputCustom(self.check_code, "코드 입력 (전체보기 Enter): ", blank=True)
 
         codestr = 'Code'.ljust(10)
         namestr = 'Name'.ljust(20)
@@ -185,7 +193,7 @@ class ItemsHandler:
         if sure == 'n':
             return
 
-        code = pyip.inputCustom(self._check_code, "코드 입력 (Exit: 99): ")
+        code = pyip.inputCustom(self.check_code, "코드 입력 (Exit: 99): ")
         if code == '99':
             return
 
@@ -250,7 +258,7 @@ if __name__ == '__main__':
         print("99. 종료\n")
         user_input = pyip.inputInt("번호 입력: ")
         if user_input == 0:
-            items_handler.single_sell_mode()
+            items_handler.sell_one_item()
         elif user_input == 1:
             items_handler.create_new_item()
         elif user_input == 2:
