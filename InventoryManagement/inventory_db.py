@@ -150,10 +150,10 @@ if __name__ == '__main__':
 
     with inv_db.connection:
         transactions = [
-            ('AA', 'band', 'buy', 10, 10, date.today().isoformat()),
-            ('BB', 'needle', 'buy', 10, 10, date.today().isoformat()),
-            ('AA', 'band', 'buy', 1, 11, date.today().isoformat()),
-            ('CC', '거즈', 'buy', 1, 11, date.today().isoformat()),
+            ('AA', 'band', 'inbound', 10, 10, date.today().isoformat()),
+            ('BB', 'needle', 'inbound', 10, 10, date.today().isoformat()),
+            ('AA', 'band', 'inbound', 1, 11, date.today().isoformat()),
+            ('CC', '거즈', 'inbound', 1, 11, date.today().isoformat()),
             ]
         for transaction in transactions:
             inv_db.create_transaction(transaction)
@@ -164,7 +164,7 @@ if __name__ == '__main__':
         # print(rows)
         # dict = {v[1]: v[2:] for v in rows}
         # print(dict)
-        # modify_trans = ('buy', 10, 10, 18)
+        # modify_trans = ('inbound', 10, 10, 18)
         # inv_db.update_transaction(modify_trans)
         rows = inv_db.select_all_transactions()
         for row in rows:
