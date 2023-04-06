@@ -1,13 +1,10 @@
-import email, smtplib, ssl
+import smtplib, ssl
 import os
 import glob
-
 import utils
 from utils import config_reader
-
 from email import encoders
 from email.mime.base import MIMEBase
-from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -17,15 +14,13 @@ class EmailSender:
         # Read from config file
         self.options = self.read_config()
 
-        # Options from config file
-        self.year_month = self.options['year_month']
-        self.year = self.year_month[0:2]
-        self.month = self.year_month[2:4].lstrip('0')
-        self.subject = self.year + '년 ' + self.month + self.options['subject']
-        self.body = self.options['body']
-        self.dir_path = self.options['dir_path'] + '\\' + self.year_month
-        self.filename_prefix = self.options['filename_beg'] + self.month + self.options['filename_end']
+        # create contents of email to send
+        self.subject = None
+        self.body = None
+        self.dir_path = None
+        self.create_contents()
 
+        # SMTP setting
         # self.smtp_server = "smtp.gmail.com"
         # self.port = 587  # For starttls
         self.smtp_server = self.options['smtp_server']
@@ -33,6 +28,20 @@ class EmailSender:
         self.sender_email = self.options['sender_email']
         pw = self.options['password']
         self.password = pw if pw else input("Type your password and press enter: ")
+
+    def create_contents(self):
+        '''
+        make subject, body text and dir_path of the files to be attached
+        :return:
+        '''
+        # extract year and month info for salary slip
+        year_month = self.options['year_month']
+        year = year_month[0:2]
+        month = year_month[2:4].lstrip('0')
+        # make email subject, body, dir_path containing the files to be attached
+        self.subject = year + '년 ' + month + self.options['subject']
+        self.body = self.options['body']
+        self.dir_path = self.options['dir_path']
 
     def read_config(self):
 
@@ -69,13 +78,21 @@ class EmailSender:
         part.add_header("Content-Disposition", 'attachment', filename=str(file_name))
         return part
 
-    def send_email(self, addr_file):
-        receiver_email, attached_file = addr_file
+    def send_email(self, addr_files):
+        receiver_email, attached_files = addr_files
         message = self.create_message(receiver_email)
-        part = self.create_attachment(attached_file)
+        if len(attached_files) == 0:
+            print(f'No file found to send for {receiver_email}.')
+            return
 
-        # Add attachment to message and convert message to string
-        message.attach(part)
+        # attach files to message
+        for file in attached_files:
+            print(f'sending {file} ...')
+            part = self.create_attachment(file)
+            # Add attachment to message
+            message.attach(part)
+
+        # convert message to string
         text = message.as_string()
 
         # Create a secure SSL context
@@ -97,26 +114,26 @@ class EmailSender:
         finally:
             server.quit()
 
-    def read_addressbook(self):
-        addrs = utils.config_reader('address')
-        # find the exact file path to attach
-        files_to_attach = map(self.find_file_by_name, addrs.keys())
-        # print(list(files_to_attach))
-        addr_file_pair = zip(addrs.values(), files_to_attach)
-        list(map(self.send_email, addr_file_pair))
-
-    def find_file_by_name(self, name):
+    def find_files_by_name(self, name):
         # searching the directory including subdirectories
         dir_name = self.dir_path + "\**"
         files = glob.glob(os.path.join(dir_name, f'*{name}*.pdf'), recursive=True)
-        if files:
-            print(files)
-            return files[0]
-        else:
-            print (f'No file found which includes the name {name}.')
-            return None
+        print(f'\nfiles are {files}')
+        files_to_send = []
+        for file in files:
+            ans = input(f'{file}: are you sure to send? (y or n) ')
+            if ans.lower() == 'y':
+                files_to_send.append(file)
+        return files_to_send
+
+    def main(self):
+        addrs = utils.config_reader('address.sh')
+        # find the exact file path to attach
+        files_to_attach = map(self.find_files_by_name, addrs.keys())
+        addr_files_pair = zip(addrs.values(), files_to_attach)
+        list(map(self.send_email, addr_files_pair))
 
 
 if __name__ == "__main__":
     esender = EmailSender()
-    esender.read_addressbook()
+    esender.main()

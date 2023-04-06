@@ -1,19 +1,31 @@
-import pandas as pd
-import os
-import datetime
+# import pandas as pd
+from pandas import read_excel
+import os.path
+from datetime import datetime
 
 
-def conv_datetime(dt):
+def conv_datetime(time_str):
     weekdays = ('월', '화', '수', '목', '금', '토', '일')
-    # dt = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-    if dt.hour < 19:
-        form_time_str = dt.strftime('%m/%d(') + weekdays[dt.weekday()] + dt.strftime(') %I:%M %p')
-    else :
-        form_time_str = dt.strftime('%m/%d(') + weekdays[dt.weekday()] + ')'
+    # time_str to datetime object
+    try:
+        if type(time_str) is str:
+            dt = datetime.strptime(time_str, '%Y-%m-%d %H:%M')
+        elif type(time_str) is datetime:
+            dt = time_str
+        # if the reservation hour is earlier than 9pm, it is regarded as an exact time reservation
+        # if the hour is later than 9pm, it is regarded as a day reservation in which
+        # just the day information is notified to the client.
+        if dt.hour < 21:
+            form_time_str = dt.strftime('%m/%d(') + weekdays[dt.weekday()] + dt.strftime(') %I:%M %p')
+        else:
+            form_time_str = dt.strftime('%m/%d(') + weekdays[dt.weekday()] + ')'
+    except Exception as e:
+        print(e)
+        form_time_str = False
     return form_time_str
 
 def make_out_file_name(flag):
-    curr_time = datetime.datetime.now()
+    curr_time = datetime.now()
     out_name = curr_time.strftime('%m%d') + flag + '.xlsx'
     return out_name
 
@@ -29,11 +41,9 @@ def create_xlsx(df, dir_name, flag=''):
     else:
         df.to_excel(out_path, sheet_name="Sheet1", header=False, index=False)
 
-
-
 def read_rsrv_file(file_path):
     try:
-        wb = pd.read_excel(file_path)
+        wb = read_excel(file_path)
         if '일시' not in wb.columns:
             wb.loc[:, '일시'] = wb.loc[:, '예약일시'].map(conv_datetime)
         wb_df = wb.loc[:, ['성명', '핸드폰번호', '일시', '메모']]
@@ -72,10 +82,10 @@ def check_df(wb_df):
 
 
 if __name__ == '__main__':
-    dir_name = "C:/Users/lambk/OneDrive/문서/Danaul Util Devel/뿌리오"
-    default_input_file = "reserv"
-    # dir_name = "./"
-    # default_input_file = "통합 문서1"
+    # dir_name = "C:/Users/lambk/OneDrive/문서/Danaul Util Devel/뿌리오"
+    # default_input_file = "reserv"
+    dir_name = "./"
+    default_input_file = "통합 문서1"
 
     while True:
         rsrv_file = input(f"\n입력파일명 (Press Enter for {default_input_file}.xlsx,   'q' to quit): ")
