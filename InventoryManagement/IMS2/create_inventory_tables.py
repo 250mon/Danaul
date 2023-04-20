@@ -6,8 +6,11 @@ from inventory_schema import (
     CREATE_ITEM_SIZE_TABLE,
     CREATE_ITEM_SIDE_TABLE,
     CREATE_SKU_TABLE,
+    CREATE_USER_TABLE,
+    CREATE_TRANSACTION_TABLE,
     SIDE_INSERT,
-    SIZE_INSERT
+    SIZE_INSERT,
+    USER_INSERT
 )
 
 
@@ -21,8 +24,11 @@ async def main():
                   CREATE_ITEM_SIZE_TABLE,
                   CREATE_ITEM_SIDE_TABLE,
                   CREATE_SKU_TABLE,
+                  CREATE_USER_TABLE,
+                  CREATE_TRANSACTION_TABLE,
                   SIDE_INSERT,
-                  SIZE_INSERT]
+                  SIZE_INSERT,
+                  USER_INSERT]
     print('Creating the inventory database')
     for statement in statements:
         status = await connection.execute(statement)
