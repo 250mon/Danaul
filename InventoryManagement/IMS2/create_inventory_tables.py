@@ -14,7 +14,7 @@ from inventory_schema import (
 )
 
 
-async def main():
+async def create_tables():
     connection = await connect_pg()
     if connection is None:
         print("Cannot connect to inventory DB!")
@@ -26,8 +26,8 @@ async def main():
                   CREATE_SKU_TABLE,
                   CREATE_USER_TABLE,
                   CREATE_TRANSACTION_TABLE,
-                  SIDE_INSERT,
-                  SIZE_INSERT,
+                  # SIDE_INSERT,
+                  # SIZE_INSERT,
                   USER_INSERT]
     print('Creating the inventory database')
     for statement in statements:
@@ -36,4 +36,4 @@ async def main():
     print('Finished creating the inventory database')
     await connection.close()
 
-asyncio.run(main())
+asyncio.run(create_tables())

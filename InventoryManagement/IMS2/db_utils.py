@@ -24,10 +24,13 @@ async def connect_pg():
     options = get_options("db_settings")
     host_url = options['host']
     port = options['port']
+    user = options['user']
+    database = options['database']
     passwd = options['password']
+
     connection = await asyncpg.connect(host=host_url,
                                        port=port,
-                                       user='postgres',
-                                       database='danaul_inventory',
+                                       user=user,
+                                       database=database,
                                        password=passwd)
     return connection

@@ -18,14 +18,14 @@ CREATE_ITEM_SIZE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS item_size(
     item_size_id SERIAL PRIMARY KEY,
-    item_size_name TEXT NOT NULL
+    item_size_name VARCHAR ( 20 ) NOT NULL
     );"""
 
 CREATE_ITEM_SIDE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS item_side(
     item_side_id SERIAL PRIMARY KEY,
-    item_side_name TEXT NOT NULL
+    item_side_name VARCHAR ( 20 ) NOT NULL
     );"""
 
 CREATE_SKU_TABLE = \
@@ -44,21 +44,21 @@ CREATE_SKU_TABLE = \
 
 CREATE_USER_TABLE = \
     """
-    CREATE TABLE IF NOT EXISTS user(
+    CREATE TABLE IF NOT EXISTS users(
     user_id SERIAL PRIMARY KEY,
-    user_name TEXT NOT NULL
+    user_name VARCHAR ( 20 ) NOT NULL
     );"""
 
 CREATE_TRANSACTION_TABLE = \
     """
-    CREATE TABLE IF NOT EXISTS transaction(
+    CREATE TABLE IF NOT EXISTS transactions(
     tr_id SERIAL PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id INT NOT NULL,
     sku_id INT NOT NULL,
     tr_quantity INT NOT NULL,
     tr_date DATE NOT NULL DEFAULT CURRENT_DATE,
     FOREIGN KEY (sku_id) REFERENCES sku(sku_id),
-    FOREIGN KEY (user_id) REFERENCES user(user_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
     );"""
 
 SIDE_INSERT = \
@@ -78,6 +78,6 @@ SIZE_INSERT = \
 
 USER_INSERT = \
     """
-    INSERT INTO item_size VALUES(1, 'admin');
-    INSERT INTO item_size VALUES(2, 'test');
+    INSERT INTO users VALUES(1, 'test1');
+    INSERT INTO users VALUES(2, 'test2');
     """
