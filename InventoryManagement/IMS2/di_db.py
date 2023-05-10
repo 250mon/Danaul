@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import date
 from db_utils import connect_pg
+import asyncpg
 import pyinputplus as pyip
 from inventory_schema import (
     CREATE_CATEGORY_TABLE,
@@ -19,9 +20,9 @@ from inventory_schema import (
 
 class InventoryDB:
     def __init__(self, db_settings_file):
-        self.connection = None
+        self.connection: asyncpg.Connection = None
         self._create_connection(db_settings_file)
-        self._create_inventory_tables()
+        self._create_tables()
 
     def _create_connection(self):
         """
@@ -70,7 +71,6 @@ class InventoryDB:
         """
         cursor = self.connection.cursor()
         cursor.execute(*sql)
-        self.connection.commit()
         return cursor
 
     def create_transaction(self, transaction):
