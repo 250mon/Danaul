@@ -55,10 +55,18 @@ CREATE_TRANSACTION_TABLE = \
         tr_id SERIAL PRIMARY KEY,
         user_id INT NOT NULL,
         sku_id INT NOT NULL,
+        tr_type INT NOT NULL,
         tr_quantity INT NOT NULL,
         tr_date DATE NOT NULL DEFAULT CURRENT_DATE,
         FOREIGN KEY (sku_id) REFERENCES sku(sku_id),
         FOREIGN KEY (user_id) REFERENCES users(user_id)
+    );"""
+
+CREATE_TRANSACTION_TYPE_TABLE = \
+    """
+    CREATE TABLE IF NOT EXISTS transaction_type(
+        tr_type_id SERIAL PRIMARY KEY,
+        tr_type VARCHAR ( 10 ) NOT NULL
     );"""
 
 SIDE_INSERT = \
@@ -74,6 +82,13 @@ SIZE_INSERT = \
     INSERT INTO item_size VALUES(3, 'Large');
     INSERT INTO item_size VALUES(4, '40cc');
     INSERT INTO item_size VALUES(5, '120cc');
+    """
+
+TRANSACTION_TYPE_INSERT = \
+    """
+    INSERT INTO transaction_type VALUES(1, 'Buy');
+    INSERT INTO transaction_type VALUES(2, 'Sell');
+    INSERT INTO transaction_type VALUES(3, 'Adjustment');
     """
 
 USER_INSERT = \
