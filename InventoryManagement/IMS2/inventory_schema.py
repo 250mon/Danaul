@@ -32,7 +32,7 @@ CREATE_SKU_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS sku(
         sku_id SERIAL PRIMARY KEY,
-        sku_quantity INT NOT NULL,
+        sku_qty INT NOT NULL,
         item_id INT NOT NULL,
         item_size_id INT,
         item_side_id INT,
@@ -56,7 +56,9 @@ CREATE_TRANSACTION_TABLE = \
         user_id INT NOT NULL,
         sku_id INT NOT NULL,
         tr_type INT NOT NULL,
-        tr_quantity INT NOT NULL,
+        tr_qty INT NOT NULL,
+        before_qty INT NOT NULL,
+        after_qty INT NOT NULL,
         tr_date DATE NOT NULL DEFAULT CURRENT_DATE,
         FOREIGN KEY (sku_id) REFERENCES sku(sku_id),
         FOREIGN KEY (user_id) REFERENCES users(user_id)

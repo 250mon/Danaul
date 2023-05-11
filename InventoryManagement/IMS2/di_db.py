@@ -4,8 +4,9 @@ from typing import List, Tuple
 from asyncpg import Record
 from asyncpg import UndefinedTableError
 import logging
+from functools import partial
 from datetime import date
-from db_utils import connect_pg, ConnectPG
+from db_utils import connect_pg, ConnectPG, DbConfig
 # import pyinputplus as pyip
 from inventory_schema import (
     CREATE_CATEGORY_TABLE,
@@ -21,9 +22,9 @@ from inventory_schema import (
 logging.basicConfig(level=logging.INFO)
 
 class InventoryDB:
-    def __init__(self, db_settings_file):
+    def __init__(self, db_config_file):
         self.connection: asyncpg.Connection = None
-        self.db_settings = db_settings_file
+        self.db_config_file = db_config_file
         # self.create_connection()
         # self.create_tables()
 
@@ -42,7 +43,7 @@ class InventoryDB:
                       CREATE_TRANSACTION_TYPE_TABLE]
 
         results = []
-        async with ConnectPG(self.db_settings) as conn:
+        async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
                 return
@@ -68,7 +69,7 @@ class InventoryDB:
                        'transactions', 'transaction_type']
 
         results = []
-        async with ConnectPG(self.db_settings) as conn:
+        async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
                 return None
@@ -100,13 +101,13 @@ class InventoryDB:
         :return: None
         """
         data = {
-            'category': [('Topical',), ('Fluid',), ('Orthotics',)],
+            'category': [('외용제',), ('수액제',), ('보조기',), ('기타',)],
             'item_side': [('Right',), ('Left',)],
             'item_size': [('Small',), ('Medium',), ('Large',), ('40cc',), ('120cc',)],
             'transaction_type': [('Buy',), ('Sell',), ('AdjustmentPlus',), ('AdjustmentMinus',)],
             'users': [('admin',), ('test',)]
         }
-        async with ConnectPG(self.db_settings) as conn:
+        async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
                 return
@@ -127,7 +128,7 @@ class InventoryDB:
         :param table: table name
         :return: list of Record or None
         '''
-        async with ConnectPG(self.db_settings) as conn:
+        async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
                 return None
@@ -145,7 +146,7 @@ class InventoryDB:
 
         :return: None
         """
-        async with ConnectPG(self.db_settings) as conn:
+        async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
                 return
@@ -158,6 +159,29 @@ class InventoryDB:
 
         logging.info('Finished querying')
 
+    async def queries_thru_pool(self, async_queries: List, statements: List):
+        '''
+        Execute queries through ascynpg.pool
+        :param async_queries: List of queries which is capable of using pool
+        :return: List of results of queries
+        '''
+        config_options = DbConfig(self.db_config_file)
+        async with asyncpg.create_pool(host=config_options.host,
+                                       port=config_options.port,
+                                       user=config_options.user,
+                                       database=config_options.database,
+                                       password=config_options.passwd) as pool:
+            if len(async_queries) == 1:
+                queries = [async_queries[0](stmt, pool) for stmt in statements]
+            elif len(async_queries) == len(statements):
+                queries = [query(stmt, pool) for query, stmt in zip(async_queries, statements)]
+            else:
+                logging.error('aysnc_queries are not matched to statements for pool execution')
+                return None
+
+            return await asyncio.gather(*queries)
+
+    async def insert_sku(self, ):
 
 async def main():
     danaul_db = InventoryDB('db_settings')
@@ -165,8 +189,32 @@ async def main():
     # await danaul_db.remove_tables()
     # await danaul_db.initialize_db()
     # await danaul_db.initial_insert()
+    # results = await danaul_db.select_all('item_side')
 
-    results = await danaul_db.select_all('item_side')
+    async def test_queries(queries: List, pool: asyncpg.pool.Pool):
+        async with pool.acquire() as conn:
+            return await conn.fetch(queries)
+    stmt_list = [
+        """
+        SELECT
+            i.item_id,
+            i.item_name,
+            s.sku_id,
+            s.sku_qty,
+            isz.item_size_name,
+            isd.item_side_name,
+            s.expiration_date,
+            c.category_name
+        FROM item as i
+        JOIN sku as s on s.item_id = i.item_id
+        JOIN item_size as isz on isz.item_size_id = s.item_size_id
+        JOIN item_side as isd on isd.item_side_id = s.item_side_id
+        JOIN category as c on c.category_id = i.category_id
+        WHERE i.item_id = 1
+        """,
+    ]
+
+    results = await danaul_db.queries_thru_pool([test_queries,], stmt_list)
     print(results)
 
 
