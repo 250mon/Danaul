@@ -1,7 +1,8 @@
 import asyncio
 import asyncpg
-from typing import List
+from typing import List, Tuple
 from asyncpg import Record
+from asyncpg import UndefinedTableError
 import logging
 from datetime import date
 from db_utils import connect_pg, ConnectPG
@@ -15,12 +16,9 @@ from inventory_schema import (
     CREATE_USER_TABLE,
     CREATE_TRANSACTION_TABLE,
     CREATE_TRANSACTION_TYPE_TABLE,
-    SIDE_INSERT,
-    SIZE_INSERT,
-    TRANSACTION_TYPE_INSERT,
-    USER_INSERT
 )
 
+logging.basicConfig(level=logging.INFO)
 
 class InventoryDB:
     def __init__(self, db_settings_file):
@@ -29,75 +27,148 @@ class InventoryDB:
         # self.create_connection()
         # self.create_tables()
 
-    async def create_connection(self):
-        """
-        Create a database connection
-        :param db_file:
-        :return: Connection object or None
-        """
-        try:
-            self.connection = await connect_pg(self.db_settings)
-            if self.connection is None:
-                print("Cannot connect to inventory DB!")
-                exit(0)
-        except Exception as e:
-            logging.exception('Error while connecting to DB', e)
-
-
     async def create_tables(self):
-        try:
-            async with self.connection.transaction():
-                statements = [CREATE_CATEGORY_TABLE,
-                              CREATE_ITEM_TABLE,
-                              CREATE_ITEM_SIZE_TABLE,
-                              CREATE_ITEM_SIDE_TABLE,
-                              CREATE_SKU_TABLE,
-                              CREATE_USER_TABLE,
-                              CREATE_TRANSACTION_TABLE,
-                              CREATE_TRANSACTION_TYPE_TABLE,
-                              SIDE_INSERT,
-                              SIZE_INSERT,
-                              TRANSACTION_TYPE_INSERT,
-                              USER_INSERT]
-                print('Creating the inventory database')
-                for statement in statements:
-                    status = await self.connection.execute(statement)
-                    print(status)
-                print('Finished creating the inventory database')
-        except Exception as e:
-            logging.exception('Error while creating tables', e)
-        finally:
-            print("closing DB ...")
-            await self.connection.close()
+        """
+        Create all the tables
+        :return:  the list of results of creating the tables or None if connection fails
+        """
+        statements = [CREATE_CATEGORY_TABLE,
+                      CREATE_ITEM_TABLE,
+                      CREATE_ITEM_SIZE_TABLE,
+                      CREATE_ITEM_SIDE_TABLE,
+                      CREATE_SKU_TABLE,
+                      CREATE_USER_TABLE,
+                      CREATE_TRANSACTION_TABLE,
+                      CREATE_TRANSACTION_TYPE_TABLE]
+
+        results = []
+        async with ConnectPG(self.db_settings) as conn:
+            if conn is None:
+                logging.debug('Error while connecting to DB during removing tables')
+                return
+
+            logging.info('Creating the tables')
+            for statement in statements:
+                try:
+                    logging.info(f'{statement}')
+                    status = await conn.execute(statement)
+                    results.append(status)
+                    logging.debug(status)
+                except Exception as e:
+                    logging.exception(f'Error while creating table: {statement}', e)
+            logging.info('Finished creating the tables')
+        return results
 
     async def remove_tables(self):
-        try:
-            async with ConnectPG(self.db_settings) as connection:
-                table_names = ['category', 'item', 'item_size',
-                               'item_side', 'sku', 'users',
-                               'transactions', 'transaction_type']
-                sql_smt = 'DROP TABLE $1;'
-                result = await connection.executemany(sql_smt, table_names)
-                return result
-        except Exception as e:
-            logging.exception('Error while dropping tables', e)
+        """
+        Remove all the tables
+        :return:  the list of results of dropping the tables or None if connection fails
+        """
+        table_names = ['category', 'item', 'item_size', 'item_side', 'sku', 'users',
+                       'transactions', 'transaction_type']
 
-    async def query(self):
-        try:
-            async with ConnectPG(self.db_settings) as conn:
-                query = await conn.prepare('''SELECT $1 FROM users''')
-                results: List[Record] = await query.fetch('admin')
-                # query = await conn.prepare('''SELECT 1 + $1''')
-                # results: int = await query.fetchval(2)
+        results = []
+        async with ConnectPG(self.db_settings) as conn:
+            if conn is None:
+                logging.debug('Error while connecting to DB during removing tables')
+                return None
+
+            logging.info('Removing the tables')
+            for table in table_names:
+                try:
+                    sql_stmt = f'DROP TABLE {table} CASCADE;'
+                    result = await conn.execute(sql_stmt)
+                    results.append(result)
+                except UndefinedTableError as ute:
+                    logging.exception('Trying to drop an undefined table', ute)
+                except Exception as e:
+                    logging.exception('Error while dropping tables', e)
+        logging.info('Finished removing the tables')
+        return results
+
+    async def initialize_db(self):
+        """
+        Remove all the tables and recreate them
+        :return:
+        """
+        await self.remove_tables()
+        await self.create_tables()
+
+    async def initial_insert(self):
+        """
+        Inserting initial data
+        :return: None
+        """
+        data = {
+            'category': [('Topical',), ('Fluid',), ('Orthotics',)],
+            'item_side': [('Right',), ('Left',)],
+            'item_size': [('Small',), ('Medium',), ('Large',), ('40cc',), ('120cc',)],
+            'transaction_type': [('Buy',), ('Sell',), ('AdjustmentPlus',), ('AdjustmentMinus',)],
+            'users': [('admin',), ('test',)]
+        }
+        async with ConnectPG(self.db_settings) as conn:
+            if conn is None:
+                logging.debug('Error while connecting to DB during removing tables')
+                return
+
+            logging.info('Inserting initial data into the tables')
+            for table, data_list in data.items():
+                try:
+                    stmt = f'INSERT INTO {table} VALUES(DEFAULT, $1)'
+                    await conn.executemany(stmt, data_list)
+                except Exception as e:
+                    logging.exception('Error during initial insert', e)
+
+        logging.info('Finished inserting initial data into the tables')
+
+    async def select_all(self, table):
+        '''
+        Selecting all from the table
+        :param table: table name
+        :return: list of Record or None
+        '''
+        async with ConnectPG(self.db_settings) as conn:
+            if conn is None:
+                logging.debug('Error while connecting to DB during removing tables')
+                return None
+
+            try:
+                query = await conn.prepare(f'SELECT $1 FROM {table}')
+                results: List[Record] = await query.fetch('*')
                 return results
-        except Exception as e:
-            logging.exception('Error while dropping tables', e)
+            except Exception as e:
+                logging.exception('Error while selecting sku table', e)
+                return None
+
+    async def query(self, statement: str, args: List[Tuple]):
+        """
+
+        :return: None
+        """
+        async with ConnectPG(self.db_settings) as conn:
+            if conn is None:
+                logging.debug('Error while connecting to DB during removing tables')
+                return
+
+            logging.info('Querying')
+            try:
+                await conn.executemany(statement, args)
+            except Exception as e:
+                logging.exception('Error during querying', e)
+
+        logging.info('Finished querying')
+
 
 async def main():
     danaul_db = InventoryDB('db_settings')
+    # await danaul_db.create_tables()
     # await danaul_db.remove_tables()
-    results = await danaul_db.query()
+    # await danaul_db.initialize_db()
+    # await danaul_db.initial_insert()
+
+    results = await danaul_db.select_all('item_side')
     print(results)
+
 
 if __name__ == '__main__':
     asyncio.run(main())

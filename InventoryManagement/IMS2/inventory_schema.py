@@ -66,33 +66,5 @@ CREATE_TRANSACTION_TYPE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS transaction_type(
         tr_type_id SERIAL PRIMARY KEY,
-        tr_type VARCHAR ( 10 ) NOT NULL
+        tr_type VARCHAR ( 20 ) NOT NULL
     );"""
-
-SIDE_INSERT = \
-    """
-    INSERT INTO item_side VALUES(1, 'Right');
-    INSERT INTO item_side VALUES(2, 'Left');
-    """
-
-SIZE_INSERT = \
-    """
-    INSERT INTO item_size VALUES(1, 'Small');
-    INSERT INTO item_size VALUES(2, 'Medium');
-    INSERT INTO item_size VALUES(3, 'Large');
-    INSERT INTO item_size VALUES(4, '40cc');
-    INSERT INTO item_size VALUES(5, '120cc');
-    """
-
-TRANSACTION_TYPE_INSERT = \
-    """
-    INSERT INTO transaction_type VALUES(1, 'Buy');
-    INSERT INTO transaction_type VALUES(2, 'Sell');
-    INSERT INTO transaction_type VALUES(3, 'Adjustment');
-    """
-
-USER_INSERT = \
-    """
-    INSERT INTO users VALUES(1, 'admin');
-    INSERT INTO users VALUES(2, 'test');
-    """
