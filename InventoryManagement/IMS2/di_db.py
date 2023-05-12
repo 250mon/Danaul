@@ -123,11 +123,11 @@ class InventoryDB:
         logging.info('Finished inserting initial data into the tables')
 
     async def select_all(self, table):
-        '''
+        """
         Selecting all from the table
         :param table: table name
         :return: list of Record or None
-        '''
+        """
         async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
@@ -160,11 +160,11 @@ class InventoryDB:
         logging.info('Finished querying')
 
     async def queries_thru_pool(self, async_queries: List, statements: List):
-        '''
+        """
         Execute queries through ascynpg.pool
         :param async_queries: List of queries which is capable of using pool
         :return: List of results of queries
-        '''
+        """
         config_options = DbConfig(self.db_config_file)
         async with asyncpg.create_pool(host=config_options.host,
                                        port=config_options.port,
