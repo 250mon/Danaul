@@ -2,7 +2,8 @@ CREATE_CATEGORY_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS category(
         category_id SERIAL PRIMARY KEY,
-        category_name TEXT NOT NULL
+        category_name TEXT NOT NULL,
+        UNIQUE(category_name)
     );"""
 
 CREATE_ITEM_TABLE = \
@@ -11,21 +12,24 @@ CREATE_ITEM_TABLE = \
         item_id SERIAL PRIMARY KEY,
         item_name TEXT NOT NULL,
         category_id INT NOT NULL,
-        FOREIGN KEY (category_id) REFERENCES category(category_id)
+        FOREIGN KEY (category_id) REFERENCES category(category_id),
+        UNIQUE(item_name)
     );"""
 
 CREATE_ITEM_SIZE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS item_size(
         item_size_id SERIAL PRIMARY KEY,
-        item_size_name VARCHAR ( 20 ) NOT NULL
+        item_size_name VARCHAR ( 20 ) NOT NULL,
+        UNIQUE(item_size_name)
     );"""
 
 CREATE_ITEM_SIDE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS item_side(
         item_side_id SERIAL PRIMARY KEY,
-        item_side_name VARCHAR ( 20 ) NOT NULL
+        item_side_name VARCHAR ( 20 ) NOT NULL,
+        UNIQUE(item_side_name)
     );"""
 
 CREATE_SKU_TABLE = \
@@ -39,14 +43,16 @@ CREATE_SKU_TABLE = \
         expiration_date DATE,
         FOREIGN KEY (item_id) REFERENCES item(item_id),
         FOREIGN KEY (item_size_id) REFERENCES item_size(item_size_id),
-        FOREIGN KEY (item_side_id) REFERENCES item_side(item_side_id)
+        FOREIGN KEY (item_side_id) REFERENCES item_side(item_side_id),
+        UNIQUE(item_id, item_size_id, item_side_id, expiration_date)
     );"""
 
 CREATE_USER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS users(
         user_id SERIAL PRIMARY KEY,
-        user_name VARCHAR ( 20 ) NOT NULL
+        user_name VARCHAR ( 20 ) NOT NULL,
+        UNIQUE(user_name)
     );"""
 
 CREATE_TRANSACTION_TABLE = \

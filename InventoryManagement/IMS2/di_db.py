@@ -18,8 +18,10 @@ from inventory_schema import (
     CREATE_TRANSACTION_TABLE,
     CREATE_TRANSACTION_TYPE_TABLE,
 )
+from lab import Lab
+from items import Item, SKU, Transaction
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 class InventoryDB:
     def __init__(self, db_config_file):
@@ -134,88 +136,100 @@ class InventoryDB:
                 return None
 
             try:
-                query = await conn.prepare(f'SELECT $1 FROM {table}')
-                results: List[Record] = await query.fetch('*')
+                query = await conn.prepare(f'SELECT * FROM {table}')
+                results: List[Record] = await query.fetch()
                 return results
             except Exception as e:
                 logging.exception('Error while selecting sku table', e)
                 return None
 
-    async def query(self, statement: str, args: List[Tuple]):
+    async def sync_execute(self, statement: str, args: List[Tuple]):
         """
-
-        :return: None
+        Execute a statement through connection.executemany()
+        :param statement: statement to execute
+        :param args: list of argements which are supplied to the statement one by one
+        :return: list of results of queries
         """
         async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
                 return
 
-            logging.info('Querying')
+            logging.info('Synchronous executing')
             try:
                 await conn.executemany(statement, args)
             except Exception as e:
-                logging.exception('Error during querying', e)
+                logging.exception('Error during synchronous executing', e)
 
-        logging.info('Finished querying')
+        logging.info('Finished synchronous executing')
 
-    async def queries_thru_pool(self, async_queries: List, statements: List):
+    async def async_execute(self, statement: str, args: List[Tuple]):
         """
-        Execute queries through ascynpg.pool
-        :param async_queries: List of queries which is capable of using pool
-        :return: List of results of queries
+        Execute a statement through ascynpg.pool
+        :param statement: statement to execute
+        :param args: list of argements which are supplied to the statement one by one
+        :return: list of results of queries
         """
+        async def execute(stmt, arg, pool):
+            async with pool.acquire() as conn:
+                logging.debug(stmt)
+                logging.debug(arg)
+                return await conn.execute(stmt, *arg)
+
+        logging.info('Asynchronous executing')
         config_options = DbConfig(self.db_config_file)
         async with asyncpg.create_pool(host=config_options.host,
                                        port=config_options.port,
                                        user=config_options.user,
                                        database=config_options.database,
                                        password=config_options.passwd) as pool:
-            if len(async_queries) == 1:
-                queries = [async_queries[0](stmt, pool) for stmt in statements]
-            elif len(async_queries) == len(statements):
-                queries = [query(stmt, pool) for query, stmt in zip(async_queries, statements)]
-            else:
-                logging.error('aysnc_queries are not matched to statements for pool execution')
-                return None
+            queries = [execute(statement, arg, pool) for arg in args]
+            results = await asyncio.gather(*queries)
 
-            return await asyncio.gather(*queries)
+            logging.info('Finished asynchronous executing')
+            return results
 
-    async def insert_sku(self, ):
+    async def insert_category(self, cat_name):
+        stmt = """ INSERT INTO category VALUES(DEFAULT, $1)"""
+        await self.async_execute(stmt, [(cat_name),])
+
+    async def insert_items(self, items: List[Item]):
+        stmt = """ INSERT INTO item VALUES(DEFAULT, $1, $2)"""
+        args = [(item.item_name, item.category_id) for item in items]
+        logging.debug(args[0])
+        await self.async_execute(stmt, args)
+
 
 async def main():
     danaul_db = InventoryDB('db_settings')
-    # await danaul_db.create_tables()
-    # await danaul_db.remove_tables()
     # await danaul_db.initialize_db()
     # await danaul_db.initial_insert()
-    # results = await danaul_db.select_all('item_side')
 
-    async def test_queries(queries: List, pool: asyncpg.pool.Pool):
-        async with pool.acquire() as conn:
-            return await conn.fetch(queries)
-    stmt_list = [
-        """
-        SELECT
-            i.item_id,
-            i.item_name,
-            s.sku_id,
-            s.sku_qty,
-            isz.item_size_name,
-            isd.item_side_name,
-            s.expiration_date,
-            c.category_name
-        FROM item as i
-        JOIN sku as s on s.item_id = i.item_id
-        JOIN item_size as isz on isz.item_size_id = s.item_size_id
-        JOIN item_side as isd on isd.item_side_id = s.item_side_id
-        JOIN category as c on c.category_id = i.category_id
-        WHERE i.item_id = 1
-        """,
-    ]
+    # results = await danaul_db.select_all('category')
+    # print(results)
 
-    results = await danaul_db.queries_thru_pool([test_queries,], stmt_list)
-    print(results)
+    items = [Item(None, '써지겔5', 1),]
+    await danaul_db.insert_items(items)
+
+    # stmt = """
+    #     SELECT
+    #         i.item_id,
+    #         i.item_name,
+    #         s.sku_id,
+    #         s.sku_qty,
+    #         isz.item_size_name,
+    #         isd.item_side_name,
+    #         s.expiration_date,
+    #         c.category_name
+    #     FROM item as i
+    #     JOIN sku as s on s.item_id = i.item_id
+    #     JOIN item_size as isz on isz.item_size_id = s.item_size_id
+    #     JOIN item_side as isd on isd.item_side_id = s.item_side_id
+    #     JOIN category as c on c.category_id = i.category_id
+    #     WHERE i.item_id = 1
+    #     """
+    # results = await danaul_db.async_execute(stmt, [])
+    # print(results)
 
 
 if __name__ == '__main__':
