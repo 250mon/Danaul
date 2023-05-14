@@ -19,7 +19,7 @@ from inventory_schema import (
     CREATE_TRANSACTION_TYPE_TABLE,
 )
 from lab import Lab
-from items import Item, SKU, Transaction
+from items import Item, Sku, Transaction
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -104,8 +104,8 @@ class InventoryDB:
         """
         data = {
             'category': [('외용제',), ('수액제',), ('보조기',), ('기타',)],
-            'item_side': [('Right',), ('Left',)],
-            'item_size': [('Small',), ('Medium',), ('Large',), ('40cc',), ('120cc',)],
+            'item_side': [('None',), ('Rt',), ('Lt',)],
+            'item_size': [('None',), ('Small',), ('Medium',), ('Large',), ('40cc',), ('120cc',)],
             'transaction_type': [('Buy',), ('Sell',), ('AdjustmentPlus',), ('AdjustmentMinus',)],
             'users': [('admin',), ('test',)]
         }
@@ -124,11 +124,11 @@ class InventoryDB:
 
         logging.info('Finished inserting initial data into the tables')
 
-    async def select_all(self, table):
+    async def select_query(self, query):
         """
-        Selecting all from the table
-        :param table: table name
-        :return: list of Record or None
+        Select query
+        :param query
+        :return: results
         """
         async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
@@ -136,11 +136,11 @@ class InventoryDB:
                 return None
 
             try:
-                query = await conn.prepare(f'SELECT * FROM {table}')
+                query = await conn.prepare(query)
                 results: List[Record] = await query.fetch()
                 return results
             except Exception as e:
-                logging.exception('Error while selecting sku table', e)
+                logging.exception(f'Error while executing {query}', e)
                 return None
 
     async def sync_execute(self, statement: str, args: List[Tuple]):
@@ -148,7 +148,9 @@ class InventoryDB:
         Execute a statement through connection.executemany()
         :param statement: statement to execute
         :param args: list of argements which are supplied to the statement one by one
-        :return: list of results of queries
+        :return:
+            if successful, list of results of queries
+            otherwise, exception
         """
         async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
@@ -157,18 +159,21 @@ class InventoryDB:
 
             logging.info('Synchronous executing')
             try:
-                await conn.executemany(statement, args)
+                results = await conn.executemany(statement, args)
+                logging.info('Finished synchronous executing')
+                return results
             except Exception as e:
                 logging.exception('Error during synchronous executing', e)
-
-        logging.info('Finished synchronous executing')
+                return e
 
     async def async_execute(self, statement: str, args: List[Tuple]):
         """
         Execute a statement through ascynpg.pool
         :param statement: statement to execute
         :param args: list of argements which are supplied to the statement one by one
-        :return: list of results of queries
+        :return:
+            if successful, list of results of queries
+            otherwise, exception
         """
         async def execute(stmt, arg, pool):
             async with pool.acquire() as conn:
@@ -184,32 +189,85 @@ class InventoryDB:
                                        database=config_options.database,
                                        password=config_options.passwd) as pool:
             queries = [execute(statement, arg, pool) for arg in args]
-            results = await asyncio.gather(*queries)
-
+            results = await asyncio.gather(*queries, return_exceptions=True)
             logging.info('Finished asynchronous executing')
             return results
 
     async def insert_category(self, cat_name):
-        stmt = """ INSERT INTO category VALUES(DEFAULT, $1)"""
-        await self.async_execute(stmt, [(cat_name),])
+        stmt = "INSERT INTO category VALUES(DEFAULT, $1)"
+        return await self.async_execute(stmt, [(cat_name),])
 
     async def insert_items(self, items: List[Item]):
-        stmt = """ INSERT INTO item VALUES(DEFAULT, $1, $2)"""
+        stmt = "INSERT INTO item VALUES(DEFAULT, $1, $2)"
         args = [(item.item_name, item.category_id) for item in items]
         logging.debug(args[0])
-        await self.async_execute(stmt, args)
+        return await self.async_execute(stmt, args)
+
+    async def delete(self, table, col_name, args: List[Tuple]):
+        stmt = f"DELETE FROM {table} WHERE {col_name} = $1"
+        logging.debug(args)
+        return await self.async_execute(stmt, args)
+
+    async def delete_items(self, items: List[Item]):
+        args = [(item.item_id,) for item in items]
+        return await self.delete('item', 'item_id', args)
+
+    async def delete_items_by_name(self, items: List[Item]):
+        args = [(item.item_name,) for item in items]
+        return await self.delete('item', 'item_name', args)
+
+    async def insert_skus(self, skus: List[Sku]):
+        stmt = """INSERT INTO sku
+                    VALUES(DEFAULT, $1, $2, $3, $4, $5)"""
+        args = [(s.sku_qty, s.item_id, s.item_size_id,
+                 s.item_side_id, s.expiration_date) for s in skus]
+        return await self.async_execute(stmt, args)
+
+    async def delete_skus(self, skus: List[Sku]):
+        args = [(s.sku_id,) for s in skus]
+        return await self.delete('sku', 'sku_id', args)
 
 
 async def main():
     danaul_db = InventoryDB('db_settings')
+    # Initialize db by dropping all the tables and then
+    # creating them all over again.
+    # After creating the tables, inserting initial data
     # await danaul_db.initialize_db()
     # await danaul_db.initial_insert()
 
-    # results = await danaul_db.select_all('category')
-    # print(results)
 
-    items = [Item(None, '써지겔5', 1),]
-    await danaul_db.insert_items(items)
+    # Inserting items
+    # item_names = ['써지겔', '아토베리어', 'test1']
+    # items = [Item(None, name, 1) for name in item_names]
+    # results = await danaul_db.insert_items(items)
+
+    # Deleting from the table
+    # args = [('test1',),]
+    # results = await danaul_db.delete('item', 'item_name', args)
+
+    # Deleting items
+    # results = await danaul_db.delete_items_by_name(items)
+
+    # Inserting skus
+    skus = [Sku(None, 10, 3, 3), Sku(None, 1, 1, 3),
+            Sku(None, 3, 2, 3)]
+    print(await danaul_db.insert_skus(skus))
+
+    # Select from a table
+    stmt = """SELECT s.sku_id, i.item_name, itz.item_size_name
+                FROM item AS i
+                JOIN sku AS s USING(item_id)
+                JOIN item_size as itz USING(item_size_id)
+                ORDER BY item_id, sku_id"""
+    print(await danaul_db.select_query(stmt))
+    # Deleting from the sku table
+    # skus = [Sku(1, 10, 1), Sku(2, 3, 2)]
+    # results = await danaul_db.delete_skus(skus)
+
+    # Inserting
+
+    # skus = [SKU(None, )]
 
     # stmt = """
     #     SELECT

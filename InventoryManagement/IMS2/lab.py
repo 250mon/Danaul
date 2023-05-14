@@ -1,4 +1,4 @@
-from items import Item, SKU, Transaction
+from items import Item, Sku, Transaction
 
 
 class Lab:
@@ -16,7 +16,7 @@ class Lab:
     def get_skus(self):
         return self.skus
 
-    def add_sku(self, sku: SKU):
+    def add_sku(self, sku: Sku):
         self.skus.append(sku)
 
     def get_transactions(self):

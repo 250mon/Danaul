@@ -1,5 +1,9 @@
 import unicodedata
+from datetime import datetime
 
+
+def _conv_date(_date: str) -> datetime:
+    return datetime.strptime(_date, "%Y-%m-%d")
 
 class Item:
     def __init__(self, item_id, item_name, category_id):
@@ -56,9 +60,10 @@ class Item:
         return id_str + name_str + cat_id_str
 
 
-class SKU:
+class Sku:
     def __init__(self, sku_id, sku_qty, item_id,
-                 item_size_id, item_side_id, expiration_date):
+                 item_size_id=1, item_side_id=1,
+                 expiration_date='9999-01-01'):
         self.sku_id = sku_id
         self.sku_qty = sku_qty
         self.item_id = item_id
@@ -107,17 +112,17 @@ class SKU:
         self._item_side_id = val
 
     @property
-    def expiration_date(self):
+    def expiration_date(self) -> datetime:
         return self._expiration_date
 
     @expiration_date.setter
-    def expiration_date(self, val):
-        self._expiration_date = val
+    def expiration_date(self, val: str):
+        self._expiration_date = _conv_date(val)
 
 
 class Transaction:
     def __init__(self, tr_id, user_id, sku_id, tr_type, tr_qty,
-                 before_qty, after_qty, tr_date):
+                 before_qty, after_qty, tr_date: str):
         self.tr_id = tr_id
         self.user_id = user_id
         self.sku_id = sku_id
@@ -184,11 +189,9 @@ class Transaction:
         self._after_qty = val
 
     @property
-    def tr_date(self):
+    def tr_date(self) -> datetime:
         return self._tr_date
 
     @tr_date.setter
-    def tr_date(self, val):
-        self._tr_date = val
-
-
+    def tr_date(self, val: str):
+        self._tr_date = _conv_date(val)
