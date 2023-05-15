@@ -204,16 +204,37 @@ class InventoryDB:
         return await self.async_execute(stmt, args)
 
     async def delete(self, table, col_name, args: List[Tuple]):
+        if not isinstance(args, List):
+            logging.error(f"args' type{type(args)} must be List[Tuple]")
+            return None
+        if not isinstance(args[0], Tuple):
+            logging.error(f"args element's type{type(args[0])} must be Tuple")
+            return None
+
         stmt = f"DELETE FROM {table} WHERE {col_name} = $1"
         logging.debug(args)
         return await self.async_execute(stmt, args)
 
-    async def delete_items(self, items: List[Item]):
-        args = [(item.item_id,) for item in items]
+    async def delete_items(self, items: Item or List[Item]):
+        if isinstance(items, List):
+            args = [(item.item_id,) for item in items]
+        elif isinstance(items, Item):
+            args = [(items.item_id,)]
+        else:
+            logging.error(f"items' type{type(items)} must be either Item or List[Item]")
+            return None
+
         return await self.delete('item', 'item_id', args)
 
-    async def delete_items_by_name(self, items: List[Item]):
-        args = [(item.item_name,) for item in items]
+    async def delete_items_by_name(self, items: Item or List[Item]):
+        if isinstance(items, List):
+            args = [(item.item_name,) for item in items]
+        elif isinstance(items, Item):
+            args = [(items.item_name,)]
+        else:
+            logging.error(f"items' type{type(items)} must be either Item or List[Item]")
+            return None
+
         return await self.delete('item', 'item_name', args)
 
     async def insert_skus(self, skus: List[Sku]):
@@ -238,29 +259,32 @@ async def main():
 
 
     # Inserting items
-    # item_names = ['써지겔', '아토베리어', 'test1']
-    # items = [Item(None, name, 1) for name in item_names]
-    # results = await danaul_db.insert_items(items)
+    item_names = ['써지겔', '아토베리어', 'test1']
+    items = [Item(None, name, 1) for name in item_names]
+    print(await danaul_db.insert_items(items))
 
     # Deleting from the table
     # args = [('test1',),]
-    # results = await danaul_db.delete('item', 'item_name', args)
+    # print(await danaul_db.delete('item', 'item_name', args))
 
     # Deleting items
-    # results = await danaul_db.delete_items_by_name(items)
+    # print(await danaul_db.delete_items_by_name(items))
+    # Deleting item
+    print(await danaul_db.delete_items_by_name(items[0]))
+
 
     # Inserting skus
-    skus = [Sku(None, 10, 3, 3), Sku(None, 1, 1, 3),
-            Sku(None, 3, 2, 3)]
-    print(await danaul_db.insert_skus(skus))
+    # skus = [Sku(None, 10, 3, 3), Sku(None, 1, 1, 3),
+    #         Sku(None, 3, 2, 3)]
+    # print(await danaul_db.insert_skus(skus))
 
     # Select from a table
-    stmt = """SELECT s.sku_id, i.item_name, itz.item_size_name
-                FROM item AS i
-                JOIN sku AS s USING(item_id)
-                JOIN item_size as itz USING(item_size_id)
-                ORDER BY item_id, sku_id"""
-    print(await danaul_db.select_query(stmt))
+    # stmt = """SELECT s.sku_id, i.item_name, itz.item_size_name
+    #             FROM item AS i
+    #             JOIN sku AS s USING(item_id)
+    #             JOIN item_size as itz USING(item_size_id)
+    #             ORDER BY item_id, sku_id"""
+    # print(await danaul_db.select_query(stmt))
     # Deleting from the sku table
     # skus = [Sku(1, 10, 1), Sku(2, 3, 2)]
     # results = await danaul_db.delete_skus(skus)
