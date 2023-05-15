@@ -5,6 +5,7 @@ from datetime import datetime
 def _conv_date(_date: str) -> datetime:
     return datetime.strptime(_date, "%Y-%m-%d")
 
+
 class Item:
     def __init__(self, item_id, item_name, category_id):
         self.item_id = item_id
@@ -63,7 +64,7 @@ class Item:
 class Sku:
     def __init__(self, sku_id, sku_qty, item_id,
                  item_size_id=1, item_side_id=1,
-                 expiration_date='9999-01-01'):
+                 expiration_date: str = '9999-01-01'):
         self.sku_id = sku_id
         self.sku_qty = sku_qty
         self.item_id = item_id
@@ -121,8 +122,9 @@ class Sku:
 
 
 class Transaction:
-    def __init__(self, tr_id, user_id, sku_id, tr_type, tr_qty,
-                 before_qty, after_qty, tr_date: str):
+    def __init__(self, tr_id, user_id, sku_id, tr_type,
+                 tr_qty, before_qty, after_qty,
+                 tr_date: str = datetime.today().strftime('%Y-%m-%d')):
         self.tr_id = tr_id
         self.user_id = user_id
         self.sku_id = sku_id

@@ -248,6 +248,18 @@ class InventoryDB:
         args = [(s.sku_id,) for s in skus]
         return await self.delete('sku', 'sku_id', args)
 
+    async def insert_transactions(self, trs: List[Transaction]):
+        stmt = """INSERT INTO transactions
+                    VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7)"""
+        args = [(t.user_id, t.sku_id, t.tr_type,
+                 t.tr_qty, t.before_qty, t.after_qty,
+                 t.tr_date) for t in trs]
+        return await self.async_execute(stmt, args)
+
+    async def delete_transactions(self, trs: List[Transaction]):
+        args = [(t.tr_id,) for t in trs]
+        return await self.delete('transactions', 'tr_id', args)
+
 
 async def main():
     danaul_db = InventoryDB('db_settings')
@@ -258,10 +270,11 @@ async def main():
     # await danaul_db.initial_insert()
 
 
+    # item_names = ['써지겔', '아토베리어', 'test1']
+    # items = [Item(None, name, 1) for name in item_names]
+
     # Inserting items
-    item_names = ['써지겔', '아토베리어', 'test1']
-    items = [Item(None, name, 1) for name in item_names]
-    print(await danaul_db.insert_items(items))
+    # print(await danaul_db.insert_items(items))
 
     # Deleting from the table
     # args = [('test1',),]
@@ -270,13 +283,20 @@ async def main():
     # Deleting items
     # print(await danaul_db.delete_items_by_name(items))
     # Deleting item
-    print(await danaul_db.delete_items_by_name(items[0]))
+    # print(await danaul_db.delete_items_by_name(items[0]))
 
 
     # Inserting skus
     # skus = [Sku(None, 10, 3, 3), Sku(None, 1, 1, 3),
     #         Sku(None, 3, 2, 3)]
     # print(await danaul_db.insert_skus(skus))
+
+    # Inserting transactions
+    trs = [Transaction(None, 1, 1, 1, 10, 0, 10),
+           Transaction(None, 2, 3, 1, 10, 0, 10),
+           Transaction(None, 1, 4, 1, 10, 0, 10),
+           Transaction(None, 1, 1, 2, 10, 10, 0),]
+    print(await danaul_db.insert_transactions(trs))
 
     # Select from a table
     # stmt = """SELECT s.sku_id, i.item_name, itz.item_size_name
@@ -289,9 +309,6 @@ async def main():
     # skus = [Sku(1, 10, 1), Sku(2, 3, 2)]
     # results = await danaul_db.delete_skus(skus)
 
-    # Inserting
-
-    # skus = [SKU(None, )]
 
     # stmt = """
     #     SELECT
