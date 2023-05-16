@@ -122,13 +122,13 @@ class Sku:
 
 
 class Transaction:
-    def __init__(self, tr_id, user_id, sku_id, tr_type,
+    def __init__(self, tr_id, user_id, sku_id, tr_type_id,
                  tr_qty, before_qty, after_qty,
                  tr_date: str = datetime.today().strftime('%Y-%m-%d')):
         self.tr_id = tr_id
         self.user_id = user_id
         self.sku_id = sku_id
-        self.tr_type = tr_type
+        self.tr_type_id = tr_type_id
         self.tr_qty = tr_qty
         self.before_qty = before_qty
         self.after_qty = after_qty
@@ -159,11 +159,11 @@ class Transaction:
         self._sku_id = val
 
     @property
-    def tr_type(self):
+    def tr_type_id(self):
         return self._tr_type
 
-    @tr_type.setter
-    def tr_type(self, val):
+    @tr_type_id.setter
+    def tr_type_id(self, val):
         self._tr_type = val
 
     @property

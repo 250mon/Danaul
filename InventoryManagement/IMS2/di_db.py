@@ -15,8 +15,8 @@ from inventory_schema import (
     CREATE_ITEM_SIDE_TABLE,
     CREATE_SKU_TABLE,
     CREATE_USER_TABLE,
-    CREATE_TRANSACTION_TABLE,
     CREATE_TRANSACTION_TYPE_TABLE,
+    CREATE_TRANSACTION_TABLE,
 )
 from lab import Lab
 from items import Item, Sku, Transaction
@@ -41,8 +41,8 @@ class InventoryDB:
                       CREATE_ITEM_SIDE_TABLE,
                       CREATE_SKU_TABLE,
                       CREATE_USER_TABLE,
-                      CREATE_TRANSACTION_TABLE,
-                      CREATE_TRANSACTION_TYPE_TABLE]
+                      CREATE_TRANSACTION_TYPE_TABLE,
+                      CREATE_TRANSACTION_TABLE]
 
         results = []
         async with ConnectPG(self.db_config_file) as conn:
@@ -249,12 +249,18 @@ class InventoryDB:
         return await self.delete('sku', 'sku_id', args)
 
     async def insert_transactions(self, trs: List[Transaction]):
+        """
+        Transaction insertion must be done synchronously because of
+        chronological order
+        :param trs: list of transactions
+        :return: results from DB
+        """
         stmt = """INSERT INTO transactions
                     VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7)"""
-        args = [(t.user_id, t.sku_id, t.tr_type,
+        args = [(t.user_id, t.sku_id, t.tr_type_id,
                  t.tr_qty, t.before_qty, t.after_qty,
                  t.tr_date) for t in trs]
-        return await self.async_execute(stmt, args)
+        return await self.sync_execute(stmt, args)
 
     async def delete_transactions(self, trs: List[Transaction]):
         args = [(t.tr_id,) for t in trs]
@@ -266,40 +272,54 @@ async def main():
     # Initialize db by dropping all the tables and then
     # creating them all over again.
     # After creating the tables, inserting initial data
-    # await danaul_db.initialize_db()
-    # await danaul_db.initial_insert()
+    async def initialize():
+        await danaul_db.initialize_db()
+        await danaul_db.initial_insert()
 
+    async def insert_items():
+        item_names = ['써지겔', '아토베리어', 'test1']
+        items = [Item(None, name, 1) for name in item_names]
 
-    # item_names = ['써지겔', '아토베리어', 'test1']
-    # items = [Item(None, name, 1) for name in item_names]
+        # Inserting items
+        print(await danaul_db.insert_items(items))
 
-    # Inserting items
-    # print(await danaul_db.insert_items(items))
+    async def delete_items():
+        item_names = ['써지겔', '아토베리어', 'test1']
 
-    # Deleting from the table
-    # args = [('test1',),]
-    # print(await danaul_db.delete('item', 'item_name', args))
+        # Deleting from the table
+        # args = [('test1',),]
+        # print(await danaul_db.delete('item', 'item_name', args))
 
-    # Deleting items
-    # print(await danaul_db.delete_items_by_name(items))
-    # Deleting item
-    # print(await danaul_db.delete_items_by_name(items[0]))
+        # Deleting items
+        print(await danaul_db.delete_items_by_name(items))
+        # Deleting item
+        # print(await danaul_db.delete_items_by_name(items[0]))
 
+    async def insert_skus():
+        # Inserting skus
+        skus = [Sku(None, 10, 3, 3), Sku(None, 1, 1, 3),
+                Sku(None, 3, 2, 3)]
+        print(await danaul_db.insert_skus(skus))
 
-    # Inserting skus
-    # skus = [Sku(None, 10, 3, 3), Sku(None, 1, 1, 3),
-    #         Sku(None, 3, 2, 3)]
-    # print(await danaul_db.insert_skus(skus))
+    async def insert_trs():
+        # Inserting transactions
+        trs = [Transaction(None, 1, 1, 1, 10, 0, 10),
+               Transaction(None, 2, 3, 1, 10, 0, 10),
+               Transaction(None, 1, 2, 1, 10, 0, 10),
+               Transaction(None, 1, 1, 2, 10, 10, 0),
+               Transaction(None, 1, 1, 1, 10, 0, 10),
+               Transaction(None, 2, 3, 2, 5, 10, 5),
+               Transaction(None, 1, 2, 2, 10, 10, 0),
+               Transaction(None, 1, 1, 2, 10, 10, 0),]
+        print(await danaul_db.insert_transactions(trs))
 
-    # Inserting transactions
-    trs = [Transaction(None, 1, 1, 1, 10, 0, 10),
-           Transaction(None, 2, 3, 1, 10, 0, 10),
-           Transaction(None, 1, 4, 1, 10, 0, 10),
-           Transaction(None, 1, 1, 2, 10, 10, 0),]
-    print(await danaul_db.insert_transactions(trs))
+    await initialize()
+    await insert_items()
+    await insert_skus()
+    await insert_trs()
 
     # Select from a table
-    # stmt = """SELECT s.sku_id, i.item_name, itz.item_size_name
+    # stmt = """SELECT s.sku_id, i.item_name, itz.item_size
     #             FROM item AS i
     #             JOIN sku AS s USING(item_id)
     #             JOIN item_size as itz USING(item_size_id)
@@ -316,7 +336,7 @@ async def main():
     #         i.item_name,
     #         s.sku_id,
     #         s.sku_qty,
-    #         isz.item_size_name,
+    #         isz.item_size,
     #         isd.item_side_name,
     #         s.expiration_date,
     #         c.category_name
