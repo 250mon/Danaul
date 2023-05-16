@@ -67,7 +67,7 @@ class InventoryDB:
         Remove all the tables
         :return:  the list of results of dropping the tables or None if connection fails
         """
-        table_names = ['category', 'item', 'item_size', 'item_side', 'sku', 'users',
+        table_names = ['category', 'items', 'item_size', 'item_side', 'skus', 'users',
                        'transactions', 'transaction_type']
 
         results = []
@@ -128,7 +128,7 @@ class InventoryDB:
         """
         Select query
         :param query
-        :return: results
+        :return: all results if successful, otherwise None
         """
         async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
@@ -147,15 +147,15 @@ class InventoryDB:
         """
         Execute a statement through connection.executemany()
         :param statement: statement to execute
-        :param args: list of argements which are supplied to the statement one by one
+        :param args: list of arguments which are supplied to the statement one by one
         :return:
-            if successful, list of results of queries
-            otherwise, exception
+            if successful, None
+            otherwise, exception or string
         """
         async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
-                return
+                return "Connection failed"
 
             logging.info('Synchronous executing')
             try:
@@ -193,16 +193,6 @@ class InventoryDB:
             logging.info('Finished asynchronous executing')
             return results
 
-    async def insert_category(self, cat_name):
-        stmt = "INSERT INTO category VALUES(DEFAULT, $1)"
-        return await self.async_execute(stmt, [(cat_name),])
-
-    async def insert_items(self, items: List[Item]):
-        stmt = "INSERT INTO item VALUES(DEFAULT, $1, $2)"
-        args = [(item.item_name, item.category_id) for item in items]
-        logging.debug(args[0])
-        return await self.async_execute(stmt, args)
-
     async def delete(self, table, col_name, args: List[Tuple]):
         if not isinstance(args, List):
             logging.error(f"args' type{type(args)} must be List[Tuple]")
@@ -215,6 +205,22 @@ class InventoryDB:
         logging.debug(args)
         return await self.async_execute(stmt, args)
 
+    async def insert_category(self, cat_name):
+        stmt = "INSERT INTO category VALUES(DEFAULT, $1)"
+        return await self.async_execute(stmt, [(cat_name),])
+
+    async def insert_items(self, items: List[Item]):
+        """
+        Initial insertion of items
+        item_id and item_valid are set to default values
+        :param items:
+        :return:
+        """
+        stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2)"
+        args = [(item.item_name, item.category_id) for item in items]
+        logging.debug(args[0])
+        return await self.async_execute(stmt, args)
+
     async def delete_items(self, items: Item or List[Item]):
         if isinstance(items, List):
             args = [(item.item_id,) for item in items]
@@ -224,29 +230,35 @@ class InventoryDB:
             logging.error(f"items' type{type(items)} must be either Item or List[Item]")
             return None
 
-        return await self.delete('item', 'item_id', args)
+        return await self.delete('items', 'item_id', args)
 
-    async def delete_items_by_name(self, items: Item or List[Item]):
-        if isinstance(items, List):
-            args = [(item.item_name,) for item in items]
-        elif isinstance(items, Item):
-            args = [(items.item_name,)]
+    async def delete_items_by_name(self, item_names: str or List[str]):
+        if isinstance(item_names, List):
+            args = [(iname,) for iname in item_names]
+        elif isinstance(item_names, str):
+            args = [(item_names,)]
         else:
             logging.error(f"items' type{type(items)} must be either Item or List[Item]")
             return None
 
-        return await self.delete('item', 'item_name', args)
+        return await self.delete('items', 'item_name', args)
 
     async def insert_skus(self, skus: List[Sku]):
-        stmt = """INSERT INTO sku
-                    VALUES(DEFAULT, $1, $2, $3, $4, $5)"""
-        args = [(s.sku_qty, s.item_id, s.item_size_id,
+        """
+        Initial insertion of skus
+        sku_id and sku_valid are set to default values
+        :param skus:
+        :return:
+        """
+        stmt = """INSERT INTO skus
+                    VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6)"""
+        args = [(s.bit_code, s.sku_qty, s.item_id, s.item_size_id,
                  s.item_side_id, s.expiration_date) for s in skus]
         return await self.async_execute(stmt, args)
 
     async def delete_skus(self, skus: List[Sku]):
         args = [(s.sku_id,) for s in skus]
-        return await self.delete('sku', 'sku_id', args)
+        return await self.delete('skus', 'sku_id', args)
 
     async def insert_transactions(self, trs: List[Transaction]):
         """
@@ -259,7 +271,7 @@ class InventoryDB:
                     VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7)"""
         args = [(t.user_id, t.sku_id, t.tr_type_id,
                  t.tr_qty, t.before_qty, t.after_qty,
-                 t.tr_date) for t in trs]
+                 t.tr_datetime) for t in trs]
         return await self.sync_execute(stmt, args)
 
     async def delete_transactions(self, trs: List[Transaction]):
@@ -278,7 +290,7 @@ async def main():
 
     async def insert_items():
         item_names = ['써지겔', '아토베리어', 'test1']
-        items = [Item(None, name, 1) for name in item_names]
+        items = [Item(None, True, name, 1) for name in item_names]
 
         # Inserting items
         print(await danaul_db.insert_items(items))
@@ -288,17 +300,17 @@ async def main():
 
         # Deleting from the table
         # args = [('test1',),]
-        # print(await danaul_db.delete('item', 'item_name', args))
+        # print(await danaul_db.delete('items', 'item_name', args))
 
         # Deleting items
-        print(await danaul_db.delete_items_by_name(items))
+        print(await danaul_db.delete_items_by_name(item_names))
         # Deleting item
         # print(await danaul_db.delete_items_by_name(items[0]))
 
     async def insert_skus():
         # Inserting skus
-        skus = [Sku(None, 10, 3, 3), Sku(None, 1, 1, 3),
-                Sku(None, 3, 2, 3)]
+        skus = [Sku(None, True, 'aa', 10, 3, 3), Sku(None, True, 'bb', 1, 1, 3),
+                Sku(None, True, 'cc', 3, 2, 3)]
         print(await danaul_db.insert_skus(skus))
 
     async def insert_trs():
@@ -317,17 +329,31 @@ async def main():
     await insert_items()
     await insert_skus()
     await insert_trs()
+    # await delete_items()
 
     # Select from a table
-    # stmt = """SELECT s.sku_id, i.item_name, itz.item_size
-    #             FROM item AS i
-    #             JOIN sku AS s USING(item_id)
-    #             JOIN item_size as itz USING(item_size_id)
-    #             ORDER BY item_id, sku_id"""
-    # print(await danaul_db.select_query(stmt))
-    # Deleting from the sku table
-    # skus = [Sku(1, 10, 1), Sku(2, 3, 2)]
-    # results = await danaul_db.delete_skus(skus)
+    async def select_item():
+        stmt = """
+            SELECT
+                i.item_id,
+                i.item_valid,
+                i.item_name,
+                s.sku_id,
+                s.sku_valid,
+                s.sku_qty,
+                isz.item_size,
+                isd.item_side,
+                s.expiration_date,
+                c.category_name
+            FROM items as i
+            JOIN skus as s using(item_id)
+            JOIN item_size as isz using(item_size_id)
+            JOIN item_side as isd using(item_side_id)
+            JOIN category as c using(category_id);
+               """
+        print(await danaul_db.select_query(stmt))
+        
+    await select_item()
 
 
     # stmt = """
@@ -341,7 +367,7 @@ async def main():
     #         s.expiration_date,
     #         c.category_name
     #     FROM item as i
-    #     JOIN sku as s on s.item_id = i.item_id
+    #     JOIN skus as s on s.item_id = i.item_id
     #     JOIN item_size as isz on isz.item_size_id = s.item_size_id
     #     JOIN item_side as isd on isd.item_side_id = s.item_side_id
     #     JOIN category as c on c.category_id = i.category_id

@@ -8,8 +8,9 @@ CREATE_CATEGORY_TABLE = \
 
 CREATE_ITEM_TABLE = \
     """
-    CREATE TABLE IF NOT EXISTS item(
+    CREATE TABLE IF NOT EXISTS items(
         item_id SERIAL PRIMARY KEY,
+        item_valid BOOL NOT NULL DEFAULT TRUE,
         item_name TEXT NOT NULL,
         category_id INT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES category(category_id),
@@ -34,16 +35,19 @@ CREATE_ITEM_SIDE_TABLE = \
 
 CREATE_SKU_TABLE = \
     """
-    CREATE TABLE IF NOT EXISTS sku(
+    CREATE TABLE IF NOT EXISTS skus(
         sku_id SERIAL PRIMARY KEY,
+        sku_valid BOOL NOT NULL DEFAULT TRUE,
+        bit_code VARCHAR ( 20 ) NOT NULL,
         sku_qty INT NOT NULL,
         item_id INT NOT NULL,
         item_size_id INT NOT NULL DEFAULT 1,
         item_side_id INT NOT NULL DEFAULT 1,
         expiration_date DATE NOT NULL DEFAULT '9999-01-01',
-        FOREIGN KEY (item_id) REFERENCES item(item_id),
+        FOREIGN KEY (item_id) REFERENCES items(item_id),
         FOREIGN KEY (item_size_id) REFERENCES item_size(item_size_id),
         FOREIGN KEY (item_side_id) REFERENCES item_side(item_side_id),
+        UNIQUE(bit_code),
         UNIQUE(item_id, item_size_id, item_side_id, expiration_date)
     );"""
 
@@ -72,8 +76,8 @@ CREATE_TRANSACTION_TABLE = \
         tr_qty INT NOT NULL,
         before_qty INT NOT NULL,
         after_qty INT NOT NULL,
-        tr_date DATE NOT NULL DEFAULT CURRENT_DATE,
-        FOREIGN KEY (sku_id) REFERENCES sku(sku_id),
+        tr_datetime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sku_id) REFERENCES skus(sku_id),
         FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (tr_type_id) REFERENCES transaction_type(tr_type_id)
     );"""

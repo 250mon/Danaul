@@ -7,8 +7,10 @@ def _conv_date(_date: str) -> datetime:
 
 
 class Item:
-    def __init__(self, item_id, item_name, category_id):
+    def __init__(self, item_id: int, item_valid: bool,
+                 item_name: str, category_id: int):
         self.item_id = item_id
+        self.item_valid = item_valid
         self.item_name = item_name
         self.category_id = category_id
 
@@ -19,6 +21,14 @@ class Item:
     @item_id.setter
     def item_id(self, val):
         self._item_id = val
+
+    @property
+    def item_valid(self):
+        return self._item_valid
+
+    @item_valid.setter
+    def item_valid(self, val):
+        self._item_valid = val
 
     @property
     def item_name(self):
@@ -62,10 +72,12 @@ class Item:
 
 
 class Sku:
-    def __init__(self, sku_id, sku_qty, item_id,
-                 item_size_id=1, item_side_id=1,
-                 expiration_date: str = '9999-01-01'):
+    def __init__(self, sku_id: int, sku_valid: bool, bit_code: str,
+                 sku_qty: int, item_id: int, item_size_id: int = 1,
+                 item_side_id: int = 1, expiration_date: str = '9999-01-01'):
         self.sku_id = sku_id
+        self.sku_valid = sku_valid
+        self.bit_code = bit_code
         self.sku_qty = sku_qty
         self.item_id = item_id
         self.item_size_id = item_size_id
@@ -79,6 +91,22 @@ class Sku:
     @sku_id.setter
     def sku_id(self, val):
         self._sku_id = val
+
+    @property
+    def sku_valid(self):
+        return self._sku_valid
+
+    @sku_valid.setter
+    def sku_valid(self, val):
+        self._sku_valid = val
+
+    @property
+    def bit_code(self):
+        return self._bit_code
+
+    @bit_code.setter
+    def bit_code(self, val):
+        self._bit_code = val
 
     @property
     def sku_qty(self):
@@ -124,7 +152,7 @@ class Sku:
 class Transaction:
     def __init__(self, tr_id, user_id, sku_id, tr_type_id,
                  tr_qty, before_qty, after_qty,
-                 tr_date: str = datetime.today().strftime('%Y-%m-%d')):
+                 tr_datetime: str = datetime.now()):
         self.tr_id = tr_id
         self.user_id = user_id
         self.sku_id = sku_id
@@ -132,7 +160,7 @@ class Transaction:
         self.tr_qty = tr_qty
         self.before_qty = before_qty
         self.after_qty = after_qty
-        self.tr_date = tr_date
+        self.tr_datetime = tr_datetime
 
     @property
     def tr_id(self):
@@ -191,9 +219,9 @@ class Transaction:
         self._after_qty = val
 
     @property
-    def tr_date(self) -> datetime:
+    def tr_datetime(self) -> datetime:
         return self._tr_date
 
-    @tr_date.setter
-    def tr_date(self, val: str):
+    @tr_datetime.setter
+    def tr_datetime(self, val: str):
         self._tr_date = _conv_date(val)
