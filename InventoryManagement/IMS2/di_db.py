@@ -4,10 +4,7 @@ from typing import List, Tuple
 from asyncpg import Record
 from asyncpg import UndefinedTableError
 import logging
-from functools import partial
-from datetime import date
-from db_utils import connect_pg, ConnectPG, DbConfig
-# import pyinputplus as pyip
+from db_utils import ConnectPG, DbConfig
 from inventory_schema import (
     CREATE_CATEGORY_TABLE,
     CREATE_ITEM_TABLE,
@@ -18,10 +15,13 @@ from inventory_schema import (
     CREATE_TRANSACTION_TYPE_TABLE,
     CREATE_TRANSACTION_TABLE,
 )
-from lab import Lab
-from items import Item, Sku, Transaction
+from data_classes import (
+    Item, Sku, Transaction, EtcData, Category, ItemSide,
+    ItemSize, TransactionType, User
+)
 
 logging.basicConfig(level=logging.DEBUG)
+
 
 class InventoryDB:
     def __init__(self, db_config_file):
@@ -97,34 +97,27 @@ class InventoryDB:
         await self.remove_tables()
         await self.create_tables()
 
-    async def initial_insert(self):
+    async def initial_insert(self, data: List[EtcData]):
         """
         Inserting initial data
         :return: None
         """
-        data = {
-            'category': [('외용제',), ('수액제',), ('보조기',), ('기타',)],
-            'item_side': [('None',), ('Rt',), ('Lt',)],
-            'item_size': [('None',), ('Small',), ('Medium',), ('Large',), ('40cc',), ('120cc',)],
-            'transaction_type': [('Buy',), ('Sell',), ('AdjustmentPlus',), ('AdjustmentMinus',)],
-            'users': [('admin',), ('test',)]
-        }
         async with ConnectPG(self.db_config_file) as conn:
             if conn is None:
                 logging.debug('Error while connecting to DB during removing tables')
                 return
 
-            logging.info('Inserting initial data into the tables')
-            for table, data_list in data.items():
-                try:
-                    stmt = f'INSERT INTO {table} VALUES(DEFAULT, $1)'
-                    await conn.executemany(stmt, data_list)
-                except Exception as e:
-                    logging.exception('Error during initial insert', e)
+            logging.info(f'Inserting initial data into the table "{data[0].table}"')
+            try:
+                stmt = f'INSERT INTO {data[0].table} VALUES($1, $2)'
+                args = [(d.id, d.name) for d in data]
+                await conn.executemany(stmt, args)
+            except Exception as e:
+                logging.exception('Error during initial insert', e)
 
-        logging.info('Finished inserting initial data into the tables')
+        logging.info(f'Finished inserting initial data into the table "{data[0].table}"')
 
-    async def select_query(self, query):
+    async def select_query(self, query: str, args: List = None):
         """
         Select query
         :param query
@@ -137,7 +130,10 @@ class InventoryDB:
 
             try:
                 query = await conn.prepare(query)
-                results: List[Record] = await query.fetch()
+                if args:
+                    results: List[Record] = await query.fetch(*args)
+                else:
+                    results: List[Record] = await query.fetch()
                 return results
             except Exception as e:
                 logging.exception(f'Error while executing {query}', e)
@@ -175,6 +171,7 @@ class InventoryDB:
             if successful, list of results of queries
             otherwise, exception
         """
+
         async def execute(stmt, arg, pool):
             async with pool.acquire() as conn:
                 logging.debug(stmt)
@@ -207,7 +204,7 @@ class InventoryDB:
 
     async def insert_category(self, cat_name):
         stmt = "INSERT INTO category VALUES(DEFAULT, $1)"
-        return await self.async_execute(stmt, [(cat_name),])
+        return await self.async_execute(stmt, [(cat_name), ])
 
     async def insert_items(self, items: List[Item]):
         """
@@ -271,7 +268,7 @@ class InventoryDB:
                     VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7)"""
         args = [(t.user_id, t.sku_id, t.tr_type_id,
                  t.tr_qty, t.before_qty, t.after_qty,
-                 t.tr_datetime) for t in trs]
+                 t.tr_timestamp) for t in trs]
         return await self.sync_execute(stmt, args)
 
     async def delete_transactions(self, trs: List[Transaction]):
@@ -281,12 +278,28 @@ class InventoryDB:
 
 async def main():
     danaul_db = InventoryDB('db_settings')
+
     # Initialize db by dropping all the tables and then
     # creating them all over again.
     # After creating the tables, inserting initial data
     async def initialize():
         await danaul_db.initialize_db()
-        await danaul_db.initial_insert()
+
+        # initial insert
+        etc_data = {
+            'Category': ['외용제', '수액제', '보조기', '기타'],
+            'ItemSide': ['None', 'Rt', 'Lt'],
+            'ItemSize': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc'],
+            'TransactionType': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus'],
+            'User': ['admin', 'test']
+        }
+        for data_cls, data_list in etc_data.items():
+            data_instances = []
+            for i, _data in enumerate(data_list, start=1):
+                # make a class instance for each element
+                data_instance = globals()[data_cls](i, _data)
+                data_instances.append(data_instance)
+            await danaul_db.initial_insert(data_instances)
 
     async def insert_items():
         item_names = ['써지겔', '아토베리어', 'test1']
@@ -309,7 +322,8 @@ async def main():
 
     async def insert_skus():
         # Inserting skus
-        skus = [Sku(None, True, 'aa', 10, 3, 3), Sku(None, True, 'bb', 1, 1, 3),
+        skus = [Sku(None, True, 'aa', 9, 3, 3),
+                Sku(None, True, 'bb', 1, 1, 3),
                 Sku(None, True, 'cc', 3, 2, 3)]
         print(await danaul_db.insert_skus(skus))
 
@@ -322,13 +336,14 @@ async def main():
                Transaction(None, 1, 1, 1, 10, 0, 10),
                Transaction(None, 2, 3, 2, 5, 10, 5),
                Transaction(None, 1, 2, 2, 10, 10, 0),
-               Transaction(None, 1, 1, 2, 10, 10, 0),]
+               Transaction(None, 1, 1, 2, 10, 10, 0), ]
         print(await danaul_db.insert_transactions(trs))
 
     await initialize()
     await insert_items()
     await insert_skus()
     await insert_trs()
+
     # await delete_items()
 
     # Select from a table
@@ -349,12 +364,11 @@ async def main():
             JOIN skus as s using(item_id)
             JOIN item_size as isz using(item_size_id)
             JOIN item_side as isd using(item_side_id)
-            JOIN category as c using(category_id);
+            JOIN category as c using(category_id)
                """
         print(await danaul_db.select_query(stmt))
-        
-    await select_item()
 
+    await select_item()
 
     # stmt = """
     #     SELECT

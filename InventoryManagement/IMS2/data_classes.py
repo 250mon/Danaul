@@ -2,13 +2,58 @@ import unicodedata
 from datetime import datetime
 
 
-def _conv_date(_date: str) -> datetime:
-    return datetime.strptime(_date, "%Y-%m-%d")
+class EtcData:
+    def __init__(self, id: int, name: str):
+        self.table = None
+        self.id = id
+        self.name = name
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, val):
+        self._id = val
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, val):
+        self._name = val
+
+class Category(EtcData):
+    def __init__(self, category_id: int, category_name: str):
+        super().__init__(category_id, category_name)
+        self.table = 'category'
+
+class ItemSide(EtcData):
+    def __init__(self, item_side_id: int, item_side: str):
+        super().__init__(item_side_id, item_side)
+        self.table = 'item_side'
+
+class ItemSize(EtcData):
+    def __init__(self, item_size_id: int, item_size: str):
+        super().__init__(item_size_id, item_size)
+        self.table = 'item_size'
+
+class TransactionType(EtcData):
+    def __init__(self, tr_type_id: int, tr_type: str):
+        super().__init__(tr_type_id, tr_type)
+        self.table = 'transaction_type'
+
+class User(EtcData):
+    def __init__(self, user_id: int, user_name: str):
+        super().__init__(user_id, user_name)
+        self.table = 'users'
 
 
 class Item:
     def __init__(self, item_id: int, item_valid: bool,
                  item_name: str, category_id: int):
+        self.table = 'items'
         self.item_id = item_id
         self.item_valid = item_valid
         self.item_name = item_name
@@ -74,7 +119,9 @@ class Item:
 class Sku:
     def __init__(self, sku_id: int, sku_valid: bool, bit_code: str,
                  sku_qty: int, item_id: int, item_size_id: int = 1,
-                 item_side_id: int = 1, expiration_date: str = '9999-01-01'):
+                 item_side_id: int = 1,
+                 expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d")):
+        self.table = 'skus'
         self.sku_id = sku_id
         self.sku_valid = sku_valid
         self.bit_code = bit_code
@@ -145,14 +192,15 @@ class Sku:
         return self._expiration_date
 
     @expiration_date.setter
-    def expiration_date(self, val: str):
-        self._expiration_date = _conv_date(val)
+    def expiration_date(self, val: datetime):
+        self._expiration_date = val
 
 
 class Transaction:
-    def __init__(self, tr_id, user_id, sku_id, tr_type_id,
-                 tr_qty, before_qty, after_qty,
-                 tr_datetime: str = datetime.now()):
+    def __init__(self, tr_id: int, user_id: int, sku_id: int,
+                 tr_type_id: int, tr_qty: int, before_qty: int, after_qty: int,
+                 tr_timestamp: datetime = datetime.now()):
+        self.table = 'transactions'
         self.tr_id = tr_id
         self.user_id = user_id
         self.sku_id = sku_id
@@ -160,7 +208,7 @@ class Transaction:
         self.tr_qty = tr_qty
         self.before_qty = before_qty
         self.after_qty = after_qty
-        self.tr_datetime = tr_datetime
+        self.tr_timestamp = tr_timestamp
 
     @property
     def tr_id(self):
@@ -219,9 +267,12 @@ class Transaction:
         self._after_qty = val
 
     @property
-    def tr_datetime(self) -> datetime:
-        return self._tr_date
+    def tr_timestamp(self) -> datetime:
+        return self._tr_timestamp
 
-    @tr_datetime.setter
-    def tr_datetime(self, val: str):
-        self._tr_date = _conv_date(val)
+    @tr_timestamp.setter
+    def tr_timestamp(self, val: datetime):
+        self._tr_timestamp = val
+
+
+
