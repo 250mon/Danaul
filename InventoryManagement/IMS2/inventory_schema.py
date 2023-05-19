@@ -76,7 +76,7 @@ CREATE_TRANSACTION_TABLE = \
         tr_qty INT NOT NULL,
         before_qty INT NOT NULL,
         after_qty INT NOT NULL,
-        tr_datetime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        tr_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (sku_id) REFERENCES skus(sku_id),
         FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (tr_type_id) REFERENCES transaction_type(tr_type_id)

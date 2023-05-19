@@ -1,6 +1,7 @@
 import asyncio
 from asyncpg import Record
 from typing import List, Tuple, Dict
+from datetime import date
 from data_classes import Item, Sku, Transaction
 from di_db import InventoryDb
 from di_db import logging
@@ -102,10 +103,21 @@ class Lab:
         results = await self.di_db_util.select_query(query, [id, ])
         return Transaction(*(dict(results[0]).values()))
 
-    async def get_transaction_from_db_by_sku_id(self,
-                                                id: int) -> Dict[int, Transaction]:
+    async def get_transactions_from_db_by_sku_id(self,
+                                                 id: int) -> Dict[int, Transaction]:
         query = "SELECT * FROM transactions as t WHERE t.sku_id=$1"
         results = await self.di_db_util.select_query(query, [id, ])
+        trs = [Transaction(*(dict(result).values())) for result in results]
+        return {tr.tr_id: tr for tr in trs}
+
+    async def get_transactions_from_db_by_date(self,
+                                               start_date: date,
+                                               end_date: date) -> Dict[int, Transaction]:
+        query = """ SELECT * FROM transactions as t
+                        WHERE tr_timestamp::date >= $1
+                        AND tr_timestamp::date <= $2 """
+        args = (start_date, end_date)
+        results = await self.di_db_util.select_query(query, [args, ])
         trs = [Transaction(*(dict(result).values())) for result in results]
         return {tr.tr_id: tr for tr in trs}
 
@@ -113,19 +125,24 @@ class Lab:
 async def main():
     danaul_db = InventoryDb('db_settings')
     lab = Lab(danaul_db)
-    item = await lab.get_item_from_db_by_id(1)
-    print(item.item_name)
-    transaction = await lab.get_transaction_from_db_by_id(1)
-    print(transaction.tr_timestamp)
+    # item = await lab.get_item_from_db_by_id(1)
+    # print(item.item_name)
+    # transaction = await lab.get_transaction_from_db_by_id(1)
+    # print(transaction.tr_timestamp)
+    #
+    # skus = await lab.get_sku_from_db_by_item_id(1)
+    # for sku in skus.values():
+    #     print(sku.sku_id)
+    #
+    # trs = await lab.get_transactions_from_db_by_sku_id(1)
+    # for tr in trs.values():
+    #     print(tr.tr_id)
 
-    skus = await lab.get_sku_from_db_by_item_id(1)
-    for sku in skus.values():
-        print(sku.sku_id)
-
-    trs = await lab.get_transaction_from_db_by_sku_id(1)
+    s_date = date.today()
+    e_date = date.today()
+    trs = await lab.get_transactions_from_db_by_date(s_date, e_date)
     for tr in trs.values():
         print(tr.tr_id)
-
 
 if __name__ == '__main__':
     asyncio.run(main())

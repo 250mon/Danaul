@@ -24,7 +24,7 @@ class InventoryDb:
         self.db_util = DbUtil(db_config_file)
 
         self.logs = Logs()
-        self.logger = self.logs.get_logger('lab')
+        self.logger = self.logs.get_logger('di_db')
         self.logger.setLevel(logging.DEBUG)
 
     async def create_tables(self):
@@ -69,7 +69,9 @@ class InventoryDb:
         """
         stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2)"
         args = [(item.item_name, item.category_id) for item in items]
-        self.logger.debug(args[0])
+
+        self.logger.debug("Insert Items ...")
+        self.logger.debug(args)
         return await self.db_util.async_execute(stmt, args)
 
     async def delete_items(self, items: Item or List[Item]):
@@ -82,6 +84,8 @@ class InventoryDb:
             self.logger.error(msg)
             return None
 
+        self.logger.debug("Delete Items ...")
+        self.logger.debug(args)
         return await self.db_util.delete('items', 'item_id', args)
 
     async def delete_items_by_name(self, item_names: str or List[str]):
@@ -93,6 +97,9 @@ class InventoryDb:
             msg = f"items' type{type(item_names)} must be either str or List[str]"
             self.logger.error(msg)
             return None
+
+        self.logger.debug("Delete Items ...")
+        self.logger.debug(args)
         return await self.db_util.delete('items', 'item_name', args)
 
     async def insert_skus(self, skus: List[Sku]):
@@ -106,10 +113,16 @@ class InventoryDb:
                     VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6)"""
         args = [(s.bit_code, s.sku_qty, s.item_id, s.item_size_id,
                  s.item_side_id, s.expiration_date) for s in skus]
+
+        self.logger.debug("Insert Skus ...")
+        self.logger.debug(args)
         return await self.db_util.async_execute(stmt, args)
 
     async def delete_skus(self, skus: List[Sku]):
         args = [(s.sku_id,) for s in skus]
+
+        self.logger.debug("Delete Skus ...")
+        self.logger.debug(args)
         return await self.db_util.delete('skus', 'sku_id', args)
 
     async def insert_transactions(self, trs: List[Transaction]):
@@ -124,10 +137,16 @@ class InventoryDb:
         args = [(t.user_id, t.sku_id, t.tr_type_id,
                  t.tr_qty, t.before_qty, t.after_qty,
                  t.tr_timestamp) for t in trs]
+
+        self.logger.debug("Insert Transactions ...")
+        self.logger.debug(args)
         return await self.db_util.sync_execute(stmt, args)
 
     async def delete_transactions(self, trs: List[Transaction]):
         args = [(t.tr_id,) for t in trs]
+
+        self.logger.debug("Delete Transactions ...")
+        self.logger.debug(args)
         return await self.db_util.delete('transactions', 'tr_id', args)
 
 

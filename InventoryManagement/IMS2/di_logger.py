@@ -1,4 +1,4 @@
-from di_db import logging
+import logging
 
 
 class Singleton(type):
