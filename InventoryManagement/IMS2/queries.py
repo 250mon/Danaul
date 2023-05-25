@@ -2,7 +2,8 @@
 
 sku_query = """
     SELECT
-        s.sku_id, s.sku_qty, i.item_name, isz.item_size, isd.item_side
+        s.sku_id, s.sku_qty, s.min_qty, i.item_name,
+        isz.item_size, isd.item_side
     FROM skus AS s
     JOIN items AS i USING(item_id)
     JOIN item_size AS isz USING(item_size_id)

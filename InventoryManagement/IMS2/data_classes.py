@@ -118,14 +118,15 @@ class Item:
 
 class Sku:
     def __init__(self, sku_id: int, sku_valid: bool, bit_code: str,
-                 sku_qty: int, item_id: int, item_size_id: int = 1,
-                 item_side_id: int = 1,
+                 sku_qty: int, min_qty: int, item_id: int,
+                 item_size_id: int = 1, item_side_id: int = 1,
                  expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d")):
         self.table = 'skus'
         self.sku_id = sku_id
         self.sku_valid = sku_valid
         self.bit_code = bit_code
         self.sku_qty = sku_qty
+        self.min_qty = min_qty
         self.item_id = item_id
         self.item_size_id = item_size_id
         self.item_side_id = item_side_id
@@ -154,6 +155,14 @@ class Sku:
     @bit_code.setter
     def bit_code(self, val):
         self._bit_code = val
+
+    @property
+    def min_qty(self):
+        return self._min_qty
+
+    @min_qty.setter
+    def min_qty(self, val):
+        self._min_qty = val
 
     @property
     def sku_qty(self):

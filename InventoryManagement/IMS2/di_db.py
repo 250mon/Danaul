@@ -111,7 +111,7 @@ class InventoryDb:
         """
         stmt = """INSERT INTO skus
                     VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6)"""
-        args = [(s.bit_code, s.sku_qty, s.item_id, s.item_size_id,
+        args = [(s.bit_code, s.sku_qty, s.min_qty, s.item_id, s.item_size_id,
                  s.item_side_id, s.expiration_date) for s in skus]
 
         self.logger.debug("Insert Skus ...")
@@ -196,9 +196,9 @@ async def main():
 
     async def insert_skus():
         # Inserting skus
-        skus = [Sku(None, True, 'aa', 9, 3, 3),
-                Sku(None, True, 'bb', 1, 1, 3),
-                Sku(None, True, 'cc', 3, 2, 3)]
+        skus = [Sku(None, True, 'aa', 9, 2, 3, 3),
+                Sku(None, True, 'bb', 1, 2, 1, 3),
+                Sku(None, True, 'cc', 3, 2, 2, 3)]
         print(await danaul_db.insert_skus(skus))
 
     async def insert_trs():
@@ -230,6 +230,7 @@ async def main():
                 s.sku_id,
                 s.sku_valid,
                 s.sku_qty,
+                s.min_qty,
                 isz.item_size,
                 isd.item_side,
                 s.expiration_date,
@@ -250,6 +251,7 @@ async def main():
     #         i.item_name,
     #         s.sku_id,
     #         s.sku_qty,
+    #         s.min_qty,
     #         isz.item_size,
     #         isd.item_side_name,
     #         s.expiration_date,

@@ -40,6 +40,7 @@ CREATE_SKU_TABLE = \
         sku_valid BOOL NOT NULL DEFAULT TRUE,
         bit_code VARCHAR ( 20 ) NOT NULL,
         sku_qty INT NOT NULL,
+        min_qty INT NOT NULL DEFAULT 2,
         item_id INT NOT NULL,
         item_size_id INT NOT NULL DEFAULT 1,
         item_side_id INT NOT NULL DEFAULT 1,
