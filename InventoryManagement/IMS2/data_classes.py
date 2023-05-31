@@ -120,7 +120,9 @@ class Sku:
     def __init__(self, sku_id: int, sku_valid: bool, bit_code: str,
                  sku_qty: int, min_qty: int, item_id: int,
                  item_size_id: int = 1, item_side_id: int = 1,
-                 expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d")):
+                 expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d"),
+                 item_name: str = None, item_size: str = None,
+                 item_side: str = None):
         self.table = 'skus'
         self.sku_id = sku_id
         self.sku_valid = sku_valid
@@ -131,6 +133,11 @@ class Sku:
         self.item_size_id = item_size_id
         self.item_side_id = item_side_id
         self.expiration_date = expiration_date
+
+        # relation fields
+        self.item_name = item_name
+        self.item_size = item_size
+        self.item_side = item_side
 
     @property
     def sku_id(self):
@@ -208,7 +215,9 @@ class Sku:
 class Transaction:
     def __init__(self, tr_id: int, user_id: int, sku_id: int,
                  tr_type_id: int, tr_qty: int, before_qty: int, after_qty: int,
-                 tr_timestamp: datetime = datetime.now()):
+                 tr_timestamp: datetime = datetime.now(),
+                 item_name: str = None, item_size: str = None,
+                 item_side: str = None):
         self.table = 'transactions'
         self.tr_id = tr_id
         self.user_id = user_id
@@ -218,6 +227,11 @@ class Transaction:
         self.before_qty = before_qty
         self.after_qty = after_qty
         self.tr_timestamp = tr_timestamp
+
+        # relation fields
+        self.item_name = item_name
+        self.item_size = item_size
+        self.item_side = item_side
 
     @property
     def tr_id(self):

@@ -8,6 +8,31 @@ from di_db import logging
 from di_logger import Logs
 
 
+sku_query = """
+    SELECT
+        s.sku_id, s.sku_valid, s.bit_code, s.sku_qty, s.min_qty,
+        s.item_id, s.item_size_id, s.item_side_id, s.expiration_date,
+        i.item_name, isz.item_size, isd.item_side
+    FROM skus AS s
+    JOIN items AS i USING(item_id)
+    JOIN item_size AS isz USING(item_size_id)
+    JOIN item_side AS isd USING(item_side_id)
+"""
+
+transaction_query = """
+    SELECT 
+        t.tr_id, t.user_id, t.sku_id, t.tr_type_id, t.tr_qty,
+        t.before_qty, t.after_qty, t.tr_timestamp, tt.tr_type,
+        i.item_name, isz.item_size, isd.item_side, u.user_name, 
+    FROM transactions AS t
+    JOIN skus AS s USING(sku_id)
+    JOIN items AS i USING(item_id)
+    JOIN transaction_type AS tt USING(tr_type_id)
+    JOIN item_size AS isz USING(item_size_id)
+    JOIN item_side AS isd USING(item_side_id)
+    JOIN users As u USING(user_id)
+"""
+
 class Lab:
     def __init__(self, di_db: InventoryDb):
         self.di_db_util = di_db.db_util
@@ -76,7 +101,7 @@ class Lab:
         return Item(*(dict(results[0]).values()))
 
     async def get_skus_from_db(self) -> Dict[int, Sku]:
-        query = "SELECT * FROM skus"
+        query = sku_query
         results = await self.di_db_util.select_query(query)
         skus = [Sku(*(dict(result).values())) for result in results]
         return {sku.sku_id: sku for sku in skus}
@@ -130,19 +155,20 @@ async def main():
     # transaction = await lab.get_transaction_from_db_by_id(1)
     # print(transaction.tr_timestamp)
     #
+    skus = await lab.get_skus_from_db()
     # skus = await lab.get_sku_from_db_by_item_id(1)
-    # for sku in skus.values():
-    #     print(sku.sku_id)
+    for sku in skus.values():
+        print(sku.sku_id)
     #
     # trs = await lab.get_transactions_from_db_by_sku_id(1)
     # for tr in trs.values():
     #     print(tr.tr_id)
 
-    s_date = date.today()
-    e_date = date.today()
-    trs = await lab.get_transactions_from_db_by_date(s_date, e_date)
-    for tr in trs.values():
-        print(tr.tr_id)
+    # s_date = date.today()
+    # e_date = date.today()
+    # trs = await lab.get_transactions_from_db_by_date(s_date, e_date)
+    # for tr in trs.values():
+    #     print(tr.tr_id)
 
 if __name__ == '__main__':
     asyncio.run(main())

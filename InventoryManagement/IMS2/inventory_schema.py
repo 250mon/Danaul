@@ -21,7 +21,7 @@ CREATE_ITEM_SIZE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS item_size(
         item_size_id SERIAL PRIMARY KEY,
-        item_size VARCHAR ( 20 ) NOT NULL,
+        item_size VARCHAR(20) NOT NULL,
         UNIQUE(item_size)
     );"""
 
@@ -29,7 +29,7 @@ CREATE_ITEM_SIDE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS item_side(
         item_side_id SERIAL PRIMARY KEY,
-        item_side VARCHAR ( 20 ) NOT NULL,
+        item_side VARCHAR(20) NOT NULL,
         UNIQUE(item_side)
     );"""
 
@@ -38,7 +38,7 @@ CREATE_SKU_TABLE = \
     CREATE TABLE IF NOT EXISTS skus(
         sku_id SERIAL PRIMARY KEY,
         sku_valid BOOL NOT NULL DEFAULT TRUE,
-        bit_code VARCHAR ( 20 ) NOT NULL,
+        bit_code VARCHAR(20),
         sku_qty INT NOT NULL,
         min_qty INT NOT NULL DEFAULT 2,
         item_id INT NOT NULL,
@@ -48,7 +48,6 @@ CREATE_SKU_TABLE = \
         FOREIGN KEY (item_id) REFERENCES items(item_id),
         FOREIGN KEY (item_size_id) REFERENCES item_size(item_size_id),
         FOREIGN KEY (item_side_id) REFERENCES item_side(item_side_id),
-        UNIQUE(bit_code),
         UNIQUE(item_id, item_size_id, item_side_id, expiration_date)
     );"""
 
@@ -56,7 +55,7 @@ CREATE_USER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS users(
         user_id SERIAL PRIMARY KEY,
-        user_name VARCHAR ( 20 ) NOT NULL,
+        user_name VARCHAR(20) NOT NULL,
         UNIQUE(user_name)
     );"""
 
@@ -64,7 +63,7 @@ CREATE_TRANSACTION_TYPE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS transaction_type(
         tr_type_id SERIAL PRIMARY KEY,
-        tr_type VARCHAR ( 20 ) NOT NULL
+        tr_type VARCHAR(20) NOT NULL
     );"""
 
 CREATE_TRANSACTION_TABLE = \
