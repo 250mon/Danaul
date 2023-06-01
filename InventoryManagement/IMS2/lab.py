@@ -6,6 +6,7 @@ from data_classes import Item, Sku, Transaction
 from di_db import InventoryDb
 from di_db import logging
 from di_logger import Logs
+import pandas as pd
 
 
 sku_query = """
@@ -84,55 +85,64 @@ class Lab:
     def init_transactions(self):
         self.transactions = self.get_transactions_from_db()
 
+    async def get_df_from_db(self, table) -> pd.DataFrame:
+        query = f"SELECT * FROM {table}"
+        results = await self.di_db_util.select_query(query)
+        # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
+        list_of_dict = [dict(result) for result in results]
+        df = pd.DataFrame(list_of_dict)
+        return df
+
     async def get_items_from_db(self) -> Dict[int, Item]:
         query = "SELECT * FROM items"
         results = await self.di_db_util.select_query(query)
-        items = [Item(*(dict(result).values())) for result in results]
+        items = [Item(*(tuple(result))) for result in results]
         return {item.item_id: item for item in items}
 
     async def get_item_from_db_by_id(self, id: int) -> Item:
         query = "SELECT * FROM items WHERE items.item_id=$1"
         results = await self.di_db_util.select_query(query, [id, ])
-        return Item(*(dict(results[0]).values()))
+        return Item(*(tuple(results[0])))
 
     async def get_item_from_db_by_name(self, name: str) -> Item:
         query = "SELECT * FROM items WHERE items.item_name=$1"
         results = await self.di_db_util.select_query(query, [name, ])
-        return Item(*(dict(results[0]).values()))
+        return Item(*(tuple(results[0])))
 
     async def get_skus_from_db(self) -> Dict[int, Sku]:
-        query = sku_query
+        query = "SELECT * FROM skus"
         results = await self.di_db_util.select_query(query)
-        skus = [Sku(*(dict(result).values())) for result in results]
+        # skus = [Sku(*(tuple(result))) for result in results]
+        skus = [Sku(*(tuple(result))) for result in results]
         return {sku.sku_id: sku for sku in skus}
 
     async def get_sku_from_db_by_id(self, id: int) -> Sku:
         query = "SELECT * FROM skus WHERE skus.sku_id=$1"
         results = await self.di_db_util.select_query(query, [id, ])
-        return Sku(*(dict(results[0]).values()))
+        return Sku(*(tuple(results[0])))
 
     async def get_sku_from_db_by_item_id(self, id: int) -> Dict[int, Sku]:
         query = "SELECT * FROM skus WHERE skus.item_id=$1"
         results = await self.di_db_util.select_query(query, [id, ])
-        skus = [Sku(*(dict(result).values())) for result in results]
+        skus = [Sku(*(tuple(result))) for result in results]
         return {sku.sku_id: sku for sku in skus}
 
     async def get_transactions_from_db(self, id: int) -> Dict[int, Transaction]:
         query = "SELECT * FROM transactions"
         results = await self.di_db_util.select_query(query)
-        trs = [Transaction(*(dict(result).values())) for result in results]
+        trs = [Transaction(*(tuple(result))) for result in results]
         return {tr.tr_id: tr for tr in trs}
 
     async def get_transaction_from_db_by_id(self, id: int) -> Transaction:
         query = "SELECT * FROM transactions as t WHERE t.tr_id=$1"
         results = await self.di_db_util.select_query(query, [id, ])
-        return Transaction(*(dict(results[0]).values()))
+        return Transaction(*(tuple(results[0])))
 
     async def get_transactions_from_db_by_sku_id(self,
                                                  id: int) -> Dict[int, Transaction]:
         query = "SELECT * FROM transactions as t WHERE t.sku_id=$1"
         results = await self.di_db_util.select_query(query, [id, ])
-        trs = [Transaction(*(dict(result).values())) for result in results]
+        trs = [Transaction(*(tuple(result))) for result in results]
         return {tr.tr_id: tr for tr in trs}
 
     async def get_transactions_from_db_by_date(self,
@@ -143,22 +153,31 @@ class Lab:
                         AND tr_timestamp::date <= $2 """
         args = (start_date, end_date)
         results = await self.di_db_util.select_query(query, [args, ])
-        trs = [Transaction(*(dict(result).values())) for result in results]
+        trs = [Transaction(*(tuple(result))) for result in results]
         return {tr.tr_id: tr for tr in trs}
 
 
 async def main():
     danaul_db = InventoryDb('db_settings')
     lab = Lab(danaul_db)
+
+    items_df = await lab.get_df_from_db('items')
+    print(items_df)
+    skus_df = await lab.get_df_from_db('skus')
+    print(skus_df)
+    transactions_df = await lab.get_df_from_db('transactions')
+    print(transactions_df)
+
     # item = await lab.get_item_from_db_by_id(1)
     # print(item.item_name)
+
     # transaction = await lab.get_transaction_from_db_by_id(1)
     # print(transaction.tr_timestamp)
-    #
-    skus = await lab.get_skus_from_db()
+
+    # skus = await lab.get_skus_from_db()
     # skus = await lab.get_sku_from_db_by_item_id(1)
-    for sku in skus.values():
-        print(sku.sku_id)
+    # for sku in skus.values():
+    #     print(sku.sku_id)
     #
     # trs = await lab.get_transactions_from_db_by_sku_id(1)
     # for tr in trs.values():

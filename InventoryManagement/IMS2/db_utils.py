@@ -9,7 +9,7 @@ from di_logger import Logs
 import logging
 
 logger = Logs().get_logger('db_utils')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 
 class DbConfig:

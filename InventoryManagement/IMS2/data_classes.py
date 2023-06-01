@@ -24,25 +24,30 @@ class EtcData:
     def name(self, val):
         self._name = val
 
+
 class Category(EtcData):
     def __init__(self, category_id: int, category_name: str):
         super().__init__(category_id, category_name)
         self.table = 'category'
+
 
 class ItemSide(EtcData):
     def __init__(self, item_side_id: int, item_side: str):
         super().__init__(item_side_id, item_side)
         self.table = 'item_side'
 
+
 class ItemSize(EtcData):
     def __init__(self, item_size_id: int, item_size: str):
         super().__init__(item_size_id, item_size)
         self.table = 'item_size'
 
+
 class TransactionType(EtcData):
     def __init__(self, tr_type_id: int, tr_type: str):
         super().__init__(tr_type_id, tr_type)
         self.table = 'transaction_type'
+
 
 class User(EtcData):
     def __init__(self, user_id: int, user_name: str):
@@ -101,13 +106,13 @@ class Item:
         :param fill_char:
         :return:
         """
-        l = 0
+        length = 0
         for c in input_s:
             if unicodedata.east_asian_width(c) in ['F', 'W']:
-                l += 2
+                length += 2
             else:
-                l += 1
-        return input_s + fill_char * (max_size - l)
+                length += 1
+        return input_s + fill_char * (max_size - length)
 
     def __repr__(self):
         id_str = f'{self.item_id}'.ljust(10)
@@ -120,9 +125,7 @@ class Sku:
     def __init__(self, sku_id: int, sku_valid: bool, bit_code: str,
                  sku_qty: int, min_qty: int, item_id: int,
                  item_size_id: int = 1, item_side_id: int = 1,
-                 expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d"),
-                 item_name: str = None, item_size: str = None,
-                 item_side: str = None):
+                 expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d")):
         self.table = 'skus'
         self.sku_id = sku_id
         self.sku_valid = sku_valid
@@ -133,11 +136,6 @@ class Sku:
         self.item_size_id = item_size_id
         self.item_side_id = item_side_id
         self.expiration_date = expiration_date
-
-        # relation fields
-        self.item_name = item_name
-        self.item_size = item_size
-        self.item_side = item_side
 
     @property
     def sku_id(self):
@@ -215,9 +213,7 @@ class Sku:
 class Transaction:
     def __init__(self, tr_id: int, user_id: int, sku_id: int,
                  tr_type_id: int, tr_qty: int, before_qty: int, after_qty: int,
-                 tr_timestamp: datetime = datetime.now(), user: str = None,
-                 tr_type: str = None, item_name: str = None, item_size: str = None,
-                 item_side: str = None):
+                 tr_timestamp: datetime = datetime.now()):
         self.table = 'transactions'
         self.tr_id = tr_id
         self.user_id = user_id
@@ -227,13 +223,6 @@ class Transaction:
         self.before_qty = before_qty
         self.after_qty = after_qty
         self.tr_timestamp = tr_timestamp
-
-        # relation fields
-        self.user = user
-        self.tr_type = tr_type
-        self.item_name = item_name
-        self.item_size = item_size
-        self.item_side = item_side
 
     @property
     def tr_id(self):
@@ -298,6 +287,3 @@ class Transaction:
     @tr_timestamp.setter
     def tr_timestamp(self, val: datetime):
         self._tr_timestamp = val
-
-
-
