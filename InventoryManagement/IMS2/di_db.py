@@ -110,7 +110,7 @@ class InventoryDb:
         :return:
         """
         stmt = """INSERT INTO skus
-                    VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6)"""
+                    VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6, $7)"""
         args = [(s.bit_code, s.sku_qty, s.min_qty, s.item_id, s.item_size_id,
                  s.item_side_id, s.expiration_date) for s in skus]
 
@@ -243,7 +243,7 @@ async def main():
                """
         print(await danaul_db.db_util.select_query(stmt))
 
-    await select_item()
+    # await select_item()
 
     # stmt = """
     #     SELECT

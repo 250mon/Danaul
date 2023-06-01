@@ -215,8 +215,8 @@ class Sku:
 class Transaction:
     def __init__(self, tr_id: int, user_id: int, sku_id: int,
                  tr_type_id: int, tr_qty: int, before_qty: int, after_qty: int,
-                 tr_timestamp: datetime = datetime.now(),
-                 item_name: str = None, item_size: str = None,
+                 tr_timestamp: datetime = datetime.now(), user: str = None,
+                 tr_type: str = None, item_name: str = None, item_size: str = None,
                  item_side: str = None):
         self.table = 'transactions'
         self.tr_id = tr_id
@@ -229,6 +229,8 @@ class Transaction:
         self.tr_timestamp = tr_timestamp
 
         # relation fields
+        self.user = user
+        self.tr_type = tr_type
         self.item_name = item_name
         self.item_size = item_size
         self.item_side = item_side
