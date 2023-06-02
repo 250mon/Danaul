@@ -9,7 +9,7 @@ from di_logger import Logs
 import logging
 
 logger = Logs().get_logger('db_utils')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 class DbConfig:
@@ -67,6 +67,7 @@ class ConnectPg:
         self._conn = None
 
     async def __aenter__(self):
+        logger.debug('Trying to connect to db ...')
         logger.debug('Entering context manager, waiting for connection')
         try:
             self._conn = await asyncpg.connect(host=self.host,
@@ -74,6 +75,7 @@ class ConnectPg:
                                                user=self.user,
                                                database=self.database,
                                                password=self.passwd)
+            logger.debug('Successfully connected!!!')
             return self._conn
         except Exception as e:
             logger.exception('Error while connecting to DB', e)

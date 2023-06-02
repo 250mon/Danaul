@@ -9,6 +9,14 @@ from di_logger import Logs
 import pandas as pd
 
 
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
 sku_query = """
     SELECT
         s.sku_id, s.sku_valid, s.bit_code, s.sku_qty, s.min_qty,
@@ -34,7 +42,7 @@ transaction_query = """
     JOIN users As u USING(user_id)
 """
 
-class Lab:
+class Lab(metaclass=Singleton):
     def __init__(self, di_db: InventoryDb):
         self.di_db_util = di_db.db_util
 
@@ -46,12 +54,22 @@ class Lab:
         self.logger = self.logs.get_logger('lab')
         self.logger.setLevel(logging.DEBUG)
 
-    async def initialize_etc_data(self):
-        self.categories = await self.get_etc_datas('category')
-        self.item_sizes = await self.get_etc_datas('item_size')
-        self.item_sides = await self.get_etc_datas('item_side')
-        self.users = await self.get_etc_datas('users')
-        self.tr_types = await self.get_etc_datas('transaction_type')
+        self.bool_initialized = False
+
+    async def async_init(self):
+        if self.bool_initialized is False:
+            tables = ['category', 'item_size', 'item_side', 'users',
+                      'transaction_type']
+            get_data = [self.get_etc_datas(table) for table in tables]
+            data = await asyncio.gather(*get_data)
+            self.categories, self.item_sizes, self.item_sides,\
+            self.users, self.tr_types = data
+
+        self.bool_initialized = True
+        return self
+
+    def __await__(self):
+        return self.async_init().__await__()
 
     async def get_etc_datas(self, table):
         query = f"SELECT * FROM {table}"
@@ -176,8 +194,8 @@ class Lab:
 
 async def main():
     danaul_db = InventoryDb('db_settings')
-    lab = Lab(danaul_db)
-    await lab.initialize_etc_data()
+    lab = await Lab(danaul_db)
+    lab2 = await Lab(danaul_db)
 
     items_df = await lab.get_df_from_db('items')
     items_df['category'] = items_df['category_id'].map(lab.categories)
