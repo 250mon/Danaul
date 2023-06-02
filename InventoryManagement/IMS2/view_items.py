@@ -28,8 +28,9 @@ class ItemsWindow(QMainWindow):
 
     async def createModel(self):
         inventory_db = InventoryDb('db_settings')
-        item_df = await Lab(inventory_db).get_df_from_db('items')
-        self.model = PandasModel(item_df)
+        items_df = await Lab(inventory_db).get_df_from_db('items')
+        items_df['category'] = items_df['category_id'].map(lab.categories)
+        self.model = PandasModel(items_df)
 
     def setUpMainWindow(self):
         table_view = QTableView(self)

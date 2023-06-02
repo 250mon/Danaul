@@ -37,11 +37,6 @@ transaction_query = """
 class Lab:
     def __init__(self, di_db: InventoryDb):
         self.di_db_util = di_db.db_util
-        self.categories = {}
-        self.item_sizes = {}
-        self.item_sides = {}
-        self.users = {}
-        self.tr_types = {}
 
         self.items = {}
         self.skus = {}
@@ -51,22 +46,22 @@ class Lab:
         self.logger = self.logs.get_logger('lab')
         self.logger.setLevel(logging.DEBUG)
 
-    def get_etc_datas(self):
-        tables = ['category', 'item_size', 'item_side', 'users', 'transaction_type']
-        for table in tables:
-            query = f"SELECT * FROM {table}"
-            results = await self.di_db_util.select_query(query)
-            if results:
-                for result in results:
+    async def initialize_etc_data(self):
+        self.categories = await self.get_etc_datas('category')
+        self.item_sizes = await self.get_etc_datas('item_size')
+        self.item_sides = await self.get_etc_datas('item_side')
+        self.users = await self.get_etc_datas('users')
+        self.tr_types = await self.get_etc_datas('transaction_type')
 
-
-            # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
-            list_of_dict = [dict(result) for result in results]
-        df = pd.DataFrame(list_of_dict)
-
-        items = [Item(*(tuple(result))) for result in results]
-        return {item.item_id: item for item in items}
-        return df
+    async def get_etc_datas(self, table):
+        query = f"SELECT * FROM {table}"
+        results = await self.di_db_util.select_query(query)
+        dict_result = {}
+        if results:
+            r_tuples = map(tuple, results)
+            dict_data = {r[0]: r[1] for r in r_tuples}
+            dict_result.update(dict_data)
+        return dict_result
 
     def get_item(self, id: int):
         return self.items.get(id, None)
@@ -182,13 +177,26 @@ class Lab:
 async def main():
     danaul_db = InventoryDb('db_settings')
     lab = Lab(danaul_db)
+    await lab.initialize_etc_data()
 
     items_df = await lab.get_df_from_db('items')
+    items_df['category'] = items_df['category_id'].map(lab.categories)
     print(items_df)
+
     skus_df = await lab.get_df_from_db('skus')
+    i_s = items_df.set_index('item_id')['item_name']
+    skus_df['item_name'] = skus_df['item_id'].map(i_s)
+    skus_df['item_size'] = skus_df['item_size_id'].map(lab.item_sizes)
+    skus_df['item_side'] = skus_df['item_side_id'].map(lab.item_sides)
     print(skus_df)
-    transactions_df = await lab.get_df_from_db('transactions')
-    print(transactions_df)
+
+    tr_df = await lab.get_df_from_db('transactions')
+    s_df = skus_df.set_index('sku_id')
+    tr_df['item_name'] = tr_df['sku_id'].map(s_df['item_name'])
+    tr_df['item_size'] = tr_df['sku_id'].map(s_df['item_size'])
+    tr_df['item_side'] = tr_df['sku_id'].map(s_df['item_side'])
+    tr_df['tr_type'] = tr_df['tr_type_id'].map(lab.tr_types)
+    print(tr_df)
 
     # item = await lab.get_item_from_db_by_id(1)
     # print(item.item_name)
