@@ -63,7 +63,8 @@ CREATE_TRANSACTION_TYPE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS transaction_type(
         tr_type_id SERIAL PRIMARY KEY,
-        tr_type VARCHAR(20) NOT NULL
+        tr_type VARCHAR(20) NOT NULL,
+        UNIQUE(tr_type)
     );"""
 
 CREATE_TRANSACTION_TABLE = \

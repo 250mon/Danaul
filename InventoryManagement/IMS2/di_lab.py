@@ -37,7 +37,12 @@ transaction_query = """
 class Lab:
     def __init__(self, di_db: InventoryDb):
         self.di_db_util = di_db.db_util
-        self.category = {}
+        self.categories = {}
+        self.item_sizes = {}
+        self.item_sides = {}
+        self.users = {}
+        self.tr_types = {}
+
         self.items = {}
         self.skus = {}
         self.transactions = {}
@@ -45,6 +50,23 @@ class Lab:
         self.logs = Logs()
         self.logger = self.logs.get_logger('lab')
         self.logger.setLevel(logging.DEBUG)
+
+    def get_etc_datas(self):
+        tables = ['category', 'item_size', 'item_side', 'users', 'transaction_type']
+        for table in tables:
+            query = f"SELECT * FROM {table}"
+            results = await self.di_db_util.select_query(query)
+            if results:
+                for result in results:
+
+
+            # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
+            list_of_dict = [dict(result) for result in results]
+        df = pd.DataFrame(list_of_dict)
+
+        items = [Item(*(tuple(result))) for result in results]
+        return {item.item_id: item for item in items}
+        return df
 
     def get_item(self, id: int):
         return self.items.get(id, None)
