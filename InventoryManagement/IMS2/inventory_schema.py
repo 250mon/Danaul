@@ -13,6 +13,7 @@ CREATE_ITEM_TABLE = \
         item_valid BOOL NOT NULL DEFAULT TRUE,
         item_name TEXT NOT NULL,
         category_id INT NOT NULL,
+        description TEXT,
         FOREIGN KEY (category_id) REFERENCES category(category_id),
         UNIQUE(item_name)
     );"""
@@ -45,6 +46,7 @@ CREATE_SKU_TABLE = \
         item_size_id INT NOT NULL DEFAULT 1,
         item_side_id INT NOT NULL DEFAULT 1,
         expiration_date DATE NOT NULL DEFAULT '9999-01-01',
+        description TEXT,
         FOREIGN KEY (item_id) REFERENCES items(item_id),
         FOREIGN KEY (item_size_id) REFERENCES item_size(item_size_id),
         FOREIGN KEY (item_side_id) REFERENCES item_side(item_side_id),
@@ -78,6 +80,7 @@ CREATE_TRANSACTION_TABLE = \
         before_qty INT NOT NULL,
         after_qty INT NOT NULL,
         tr_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        description TEXT,
         FOREIGN KEY (sku_id) REFERENCES skus(sku_id),
         FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (tr_type_id) REFERENCES transaction_type(tr_type_id)

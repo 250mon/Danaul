@@ -67,8 +67,8 @@ class InventoryDb:
         :param items:
         :return:
         """
-        stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2)"
-        args = [(item.item_name, item.category_id) for item in items]
+        stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2, $3)"
+        args = [(item.item_name, item.category_id, item.description) for item in items]
 
         self.logger.debug("Insert Items ...")
         self.logger.debug(args)
@@ -110,9 +110,9 @@ class InventoryDb:
         :return:
         """
         stmt = """INSERT INTO skus
-                    VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6, $7)"""
+                    VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8)"""
         args = [(s.bit_code, s.sku_qty, s.min_qty, s.item_id, s.item_size_id,
-                 s.item_side_id, s.expiration_date) for s in skus]
+                 s.item_side_id, s.expiration_date, s.description) for s in skus]
 
         self.logger.debug("Insert Skus ...")
         self.logger.debug(args)
@@ -133,10 +133,10 @@ class InventoryDb:
         :return: results from DB
         """
         stmt = """INSERT INTO transactions
-                    VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7)"""
+                    VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8)"""
         args = [(t.user_id, t.sku_id, t.tr_type_id,
                  t.tr_qty, t.before_qty, t.after_qty,
-                 t.tr_timestamp) for t in trs]
+                 t.tr_timestamp, t.description) for t in trs]
 
         self.logger.debug("Insert Transactions ...")
         self.logger.debug(args)
@@ -203,8 +203,8 @@ async def main():
 
     async def insert_trs():
         # Inserting transactions
-        trs = [Transaction(None, 1, 1, 1, 10, 0, 10),
-               Transaction(None, 2, 3, 1, 10, 0, 10),
+        trs = [Transaction(None, 1, 1, 1, 10, 0, 10, description='Initial'),
+               Transaction(None, 2, 3, 1, 10, 0, 10, description='Initial'),
                Transaction(None, 1, 2, 1, 10, 0, 10),
                Transaction(None, 1, 1, 2, 10, 10, 0),
                Transaction(None, 1, 1, 1, 10, 0, 10),

@@ -126,6 +126,7 @@ class Lab(metaclass=Singleton):
         # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
         list_of_dict = [dict(result) for result in results]
         df = pd.DataFrame(list_of_dict)
+        df.fillna("", inplace=True)
         return df
 
     async def get_items_from_db(self) -> Dict[int, Item]:
@@ -195,7 +196,6 @@ class Lab(metaclass=Singleton):
 async def main():
     danaul_db = InventoryDb('db_settings')
     lab = await Lab(danaul_db)
-    lab2 = await Lab(danaul_db)
 
     items_df = await lab.get_df_from_db('items')
     items_df['category'] = items_df['category_id'].map(lab.categories)
