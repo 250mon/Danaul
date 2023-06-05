@@ -56,13 +56,14 @@ class User(EtcData):
 
 
 class Item:
-    def __init__(self, item_id: int, item_valid: bool,
-                 item_name: str, category_id: int):
+    def __init__(self, item_id: int, item_valid: bool, item_name: str,
+                 category_id: int, description: str = None):
         self.table = 'items'
         self.item_id = item_id
         self.item_valid = item_valid
         self.item_name = item_name
         self.category_id = category_id
+        self.description = description
 
     @property
     def item_id(self):
@@ -96,6 +97,14 @@ class Item:
     def category_id(self, val):
         self._category_id = val
 
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, val):
+        self._description = val
+
     def fill_str_with_space(self, input_s="", max_size=40, fill_char="."):
         """
         길이가 긴 문자는 2칸으로 체크하고, 짧으면 1칸으로 체크함.
@@ -125,7 +134,8 @@ class Sku:
     def __init__(self, sku_id: int, sku_valid: bool, bit_code: str,
                  sku_qty: int, min_qty: int, item_id: int,
                  item_size_id: int = 1, item_side_id: int = 1,
-                 expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d")):
+                 expiration_date=datetime.strptime('9999-01-01', "%Y-%m-%d"),
+                 description: str = None):
         self.table = 'skus'
         self.sku_id = sku_id
         self.sku_valid = sku_valid
@@ -136,6 +146,7 @@ class Sku:
         self.item_size_id = item_size_id
         self.item_side_id = item_side_id
         self.expiration_date = expiration_date
+        self.description = description
 
     @property
     def sku_id(self):
@@ -209,11 +220,18 @@ class Sku:
     def expiration_date(self, val: datetime):
         self._expiration_date = val
 
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, val):
+        self._description = val
 
 class Transaction:
     def __init__(self, tr_id: int, user_id: int, sku_id: int,
                  tr_type_id: int, tr_qty: int, before_qty: int, after_qty: int,
-                 tr_timestamp: datetime = datetime.now()):
+                 tr_timestamp: datetime = datetime.now(), description: str = None):
         self.table = 'transactions'
         self.tr_id = tr_id
         self.user_id = user_id
@@ -223,6 +241,7 @@ class Transaction:
         self.before_qty = before_qty
         self.after_qty = after_qty
         self.tr_timestamp = tr_timestamp
+        self.description = description
 
     @property
     def tr_id(self):
@@ -287,3 +306,11 @@ class Transaction:
     @tr_timestamp.setter
     def tr_timestamp(self, val: datetime):
         self._tr_timestamp = val
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, val):
+        self._description = val
