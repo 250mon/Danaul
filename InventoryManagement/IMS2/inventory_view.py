@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QVBoxLayout,
     QMessageBox, QSizePolicy
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSortFilterProxyModel
 from PySide6.QtGui import QIcon
 from pandas_model import PandasModel
 from di_db import InventoryDb
@@ -72,27 +72,55 @@ class InventoryWindow(QMainWindow):
         item_view.horizontalHeader().setStretchLastSection(True)
         item_view.setAlternatingRowColors(True)
         item_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        item_view.setModel(self.item_model)
         item_view.resizeColumnsToContents()
+        item_view.setSortingEnabled(True)
+
+        self.item_proxy_model = QSortFilterProxyModel(self.item_model)
+        self.item_proxy_model.setSourceModel(self.item_model)
+        item_view.setModel(self.item_proxy_model)
 
         sku_view = QTableView(self)
         sku_view.horizontalHeader().setStretchLastSection(True)
         sku_view.setAlternatingRowColors(True)
         sku_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        sku_view.setModel(self.sku_model)
         sku_view.resizeColumnsToContents()
+        sku_view.setSortingEnabled(True)
+
+        self.sku_proxy_model = QSortFilterProxyModel(self.sku_model)
+        self.sku_proxy_model.setSourceModel(self.sku_model)
+        sku_view.setModel(self.sku_proxy_model)
 
         tr_view = QTableView(self)
         tr_view.horizontalHeader().setStretchLastSection(True)
         tr_view.setAlternatingRowColors(True)
         tr_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        tr_view.setModel(self.tr_model)
         tr_view.resizeColumnsToContents()
+        tr_view.setSortingEnabled(True)
+
+        self.tr_proxy_model = QSortFilterProxyModel(self.tr_model)
+        self.tr_proxy_model.setSourceModel(self.tr_model)
+        tr_view.setModel(self.tr_proxy_model)
 
         item_dock_widget = QDockWidget('품목', self)
         item_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
                                          Qt.LeftDockWidgetArea)
-        item_dock_widget.setWidget(item_view)
+        item_widget = QWidget(self)
+        add_item_btn = QPushButton('추가')
+        del_item_btn = QPushButton('삭제')
+        mod_item_btn = QPushButton('변경')
+
+        item_hbox = QHBoxLayout()
+        item_hbox.addWidget(add_item_btn)
+        item_hbox.addWidget(del_item_btn)
+        item_hbox.addWidget(mod_item_btn)
+        item_hbox.addStretch(1)
+
+        item_vbox = QVBoxLayout()
+        item_vbox.addLayout(item_hbox)
+        item_vbox.addWidget(item_view)
+        item_widget.setLayout(item_vbox)
+
+        item_dock_widget.setWidget(item_widget)
         self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
 
         sku_dock_widget = QDockWidget('세부품목', self)
@@ -106,6 +134,8 @@ class InventoryWindow(QMainWindow):
         sell_btn = QPushButton('매도')
         modify_btn = QPushButton('매매수정')
         delete_btn = QPushButton('매매삭제')
+        adjust_plus_btn = QPushButton('조정+')
+        adjust_minus_btn = QPushButton('조정-')
 
         tr_hbox = QHBoxLayout()
         tr_hbox.addWidget(buy_btn)
@@ -113,6 +143,9 @@ class InventoryWindow(QMainWindow):
         tr_hbox.addStretch(1)
         tr_hbox.addWidget(modify_btn)
         tr_hbox.addWidget(delete_btn)
+        tr_hbox.addStretch(1)
+        tr_hbox.addWidget(adjust_plus_btn)
+        tr_hbox.addWidget(adjust_minus_btn)
         tr_hbox.addStretch(10)
 
         tr_vbox = QVBoxLayout()
