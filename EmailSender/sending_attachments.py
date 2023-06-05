@@ -29,6 +29,8 @@ class EmailSender:
         pw = self.options['password']
         self.password = pw if pw else input("Type your password and press enter: ")
 
+        self.ans = False
+
     def create_contents(self):
         '''
         make subject, body text and dir_path of the files to be attached
@@ -121,8 +123,10 @@ class EmailSender:
         print(f'\nfiles are {files}')
         files_to_send = []
         for file in files:
-            ans = input(f'{file}: are you sure to send? (y or n) ')
-            if ans.lower() == 'y':
+            ans = input(f'{file}: are you sure to send? (a(all) / y(yes) / n(no)) ')
+            if not self.ans and ans.lower() == 'a':
+                self.ans = True
+            if self.ans or ans.lower() == 'y':
                 files_to_send.append(file)
         return files_to_send
 
