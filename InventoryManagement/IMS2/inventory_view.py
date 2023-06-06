@@ -71,8 +71,13 @@ class InventoryWindow(QMainWindow):
     def setupItemView(self, item_name=None):
         # items view
         item_view = QTableView(self)
+
         item_view.horizontalHeader().setStretchLastSection(True)
         item_view.setAlternatingRowColors(True)
+        item_view.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
+
         item_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         item_view.resizeColumnsToContents()
         item_view.setSortingEnabled(True)
@@ -125,7 +130,7 @@ class InventoryWindow(QMainWindow):
         self.sku_proxy_model = QSortFilterProxyModel()
         self.sku_proxy_model.setSourceModel(self.sku_model)
         self.sku_proxy_model.setFilterKeyColumn(1)
-        self.item_search_bar.textChanged.connect(self.sku_proxy_model.setFilterFixedString)
+        # self.item_search_bar.textChanged.connect(self.sku_proxy_model.setFilterFixedString)
         sku_view.setModel(self.sku_proxy_model)
 
         sku_widget = QWidget(self)

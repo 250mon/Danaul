@@ -6,8 +6,7 @@ from di_lab import Lab
 class ItemViewDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.lab = Lab()
-        self.combo_box_items = self.lab.get_etc_datas('category')
+        self.combo_box_items = Lab().categories.values()
 
     def createEditor(self,
                      parent: QWidget,
@@ -15,6 +14,7 @@ class ItemViewDelegate(QStyledItemDelegate):
                      index: QModelIndex) -> QWidget:
         editor = QComboBox(parent)
         editor.addItems(self.combo_box_items)
+        print('editor created')
         return editor
 
     def setEditorData(self,
@@ -24,6 +24,7 @@ class ItemViewDelegate(QStyledItemDelegate):
         idx = self.combo_box_items.index(current_value)
         if idx:
             editor.setCurrentIndex(idx)
+        print('setEditorData')
 
     def setModelData(self,
                      editor: QComboBox,

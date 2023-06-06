@@ -40,10 +40,14 @@ class PandasModel(QAbstractTableModel):
 
         if role == Qt.DisplayRole:
             return str(self._dataframe.iloc[index.row(), index.column()])
+        elif role == Qt.EditRole:
+            return str(self._dataframe.iloc[index.row(), index.column()])
 
         return None
 
-    def headerData(self, section: int, orientation: Qt.Orientation,
+    def headerData(self,
+                   section: int,
+                   orientation: Qt.Orientation,
                    role: Qt.ItemDataRole) -> str or None:
         """Override method from QAbstractTableModel
 
