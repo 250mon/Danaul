@@ -2,7 +2,7 @@ import sys
 import asyncio
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDockWidget,
-    QLabel, QPushButton, QComboBox,
+    QLabel, QPushButton, QLineEdit,
     QTableView, QHeaderView, QAbstractItemView,
     QHBoxLayout, QVBoxLayout,
     QMessageBox, QSizePolicy
@@ -12,6 +12,7 @@ from PySide6.QtGui import QIcon
 from pandas_model import PandasModel
 from di_db import InventoryDb
 from di_lab import Lab
+from itemview_delegate import ItemViewDelegate
 
 
 class InventoryWindow(QMainWindow):
@@ -67,7 +68,8 @@ class InventoryWindow(QMainWindow):
                                     'tr_timestamp', 'description']]
         self.tr_model = PandasModel(trs_model_data_df)
 
-    def setUpMainWindow(self):
+    def setupItemView(self, item_name=None):
+        # items view
         item_view = QTableView(self)
         item_view.horizontalHeader().setStretchLastSection(True)
         item_view.setAlternatingRowColors(True)
@@ -75,10 +77,44 @@ class InventoryWindow(QMainWindow):
         item_view.resizeColumnsToContents()
         item_view.setSortingEnabled(True)
 
-        self.item_proxy_model = QSortFilterProxyModel(self.item_model)
+        self.item_proxy_model = QSortFilterProxyModel()
         self.item_proxy_model.setSourceModel(self.item_model)
+        self.item_proxy_model.setFilterKeyColumn(1)
         item_view.setModel(self.item_proxy_model)
 
+        delegate = ItemViewDelegate(self)
+        item_view.setItemDelegateForColumn(2, delegate)
+
+        item_widget = QWidget(self)
+        self.item_search_bar = QLineEdit(self)
+        self.item_search_bar.setPlaceholderText('품목명 입력')
+        self.item_search_bar.textChanged.connect(self.item_proxy_model.setFilterFixedString)
+        add_item_btn = QPushButton('추가')
+        del_item_btn = QPushButton('삭제')
+        mod_item_btn = QPushButton('변경')
+
+        item_hbox = QHBoxLayout()
+        item_hbox.addWidget(self.item_search_bar)
+        item_hbox.addStretch(1)
+        item_hbox.addWidget(add_item_btn)
+        item_hbox.addWidget(del_item_btn)
+        item_hbox.addWidget(mod_item_btn)
+
+        item_vbox = QVBoxLayout()
+        item_vbox.addLayout(item_hbox)
+        item_vbox.addWidget(item_view)
+        item_widget.setLayout(item_vbox)
+
+        item_widget.setMaximumWidth(500)
+
+        item_dock_widget = QDockWidget('품목', self)
+        item_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
+                                         Qt.LeftDockWidgetArea)
+        item_dock_widget.setWidget(item_widget)
+        self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
+
+    def setupSkuView(self):
+        # skus view
         sku_view = QTableView(self)
         sku_view.horizontalHeader().setStretchLastSection(True)
         sku_view.setAlternatingRowColors(True)
@@ -86,10 +122,36 @@ class InventoryWindow(QMainWindow):
         sku_view.resizeColumnsToContents()
         sku_view.setSortingEnabled(True)
 
-        self.sku_proxy_model = QSortFilterProxyModel(self.sku_model)
+        self.sku_proxy_model = QSortFilterProxyModel()
         self.sku_proxy_model.setSourceModel(self.sku_model)
+        self.sku_proxy_model.setFilterKeyColumn(1)
+        self.item_search_bar.textChanged.connect(self.sku_proxy_model.setFilterFixedString)
         sku_view.setModel(self.sku_proxy_model)
 
+        sku_widget = QWidget(self)
+        add_sku_btn = QPushButton('추가')
+        del_sku_btn = QPushButton('삭제')
+        mod_sku_btn = QPushButton('변경')
+
+        sku_hbox = QHBoxLayout()
+        sku_hbox.addStretch(1)
+        sku_hbox.addWidget(add_sku_btn)
+        sku_hbox.addWidget(del_sku_btn)
+        sku_hbox.addWidget(mod_sku_btn)
+
+        sku_vbox = QVBoxLayout()
+        sku_vbox.addLayout(sku_hbox)
+        sku_vbox.addWidget(sku_view)
+        sku_widget.setLayout(sku_vbox)
+
+        sku_dock_widget = QDockWidget('세부품목', self)
+        sku_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
+                                        Qt.RightDockWidgetArea)
+        sku_dock_widget.setWidget(sku_widget)
+        self.addDockWidget(Qt.TopDockWidgetArea, sku_dock_widget)
+
+    def setupTransactionView(self):
+        # transaction view
         tr_view = QTableView(self)
         tr_view.horizontalHeader().setStretchLastSection(True)
         tr_view.setAlternatingRowColors(True)
@@ -100,36 +162,8 @@ class InventoryWindow(QMainWindow):
         self.tr_proxy_model = QSortFilterProxyModel(self.tr_model)
         self.tr_proxy_model.setSourceModel(self.tr_model)
         tr_view.setModel(self.tr_proxy_model)
-
-        item_dock_widget = QDockWidget('품목', self)
-        item_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
-                                         Qt.LeftDockWidgetArea)
-        item_widget = QWidget(self)
-        add_item_btn = QPushButton('추가')
-        del_item_btn = QPushButton('삭제')
-        mod_item_btn = QPushButton('변경')
-
-        item_hbox = QHBoxLayout()
-        item_hbox.addWidget(add_item_btn)
-        item_hbox.addWidget(del_item_btn)
-        item_hbox.addWidget(mod_item_btn)
-        item_hbox.addStretch(1)
-
-        item_vbox = QVBoxLayout()
-        item_vbox.addLayout(item_hbox)
-        item_vbox.addWidget(item_view)
-        item_widget.setLayout(item_vbox)
-
-        item_dock_widget.setWidget(item_widget)
-        self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
-
-        sku_dock_widget = QDockWidget('세부품목', self)
-        sku_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
-                                        Qt.RightDockWidgetArea)
-        sku_dock_widget.setWidget(sku_view)
-        self.addDockWidget(Qt.TopDockWidgetArea, sku_dock_widget)
-
         tr_widget = QWidget(self)
+
         buy_btn = QPushButton('매입')
         sell_btn = QPushButton('매도')
         modify_btn = QPushButton('매매수정')
@@ -154,6 +188,11 @@ class InventoryWindow(QMainWindow):
 
         tr_widget.setLayout(tr_vbox)
         self.setCentralWidget(tr_widget)
+
+    def setUpMainWindow(self):
+        self.setupItemView()
+        self.setupSkuView()
+        self.setupTransactionView()
 
 
 async def main():
