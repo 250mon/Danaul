@@ -58,12 +58,30 @@ class Lab(metaclass=Singleton):
 
     async def async_init(self):
         if self.bool_initialized is False:
-            tables = ['category', 'item_size', 'item_side', 'users',
-                      'transaction_type']
-            get_data = [self.get_etc_datas(table) for table in tables]
+            tables = ['category', 'item_size', 'item_side',
+                      'users', 'transaction_type', 'items',
+                      'skus', 'transactions']
+
+            # get etc dicts
+            # get_data = [self.get_etc_datas(table) for table in tables]
+            # data = await asyncio.gather(*get_data)
+            # (self.categories, self.item_sizes, self.item_sides,
+            #  self.users, self.tr_types, self.items, self.skus,
+            #  self.trs) = data
+
+            # get etc dfs
+            get_data = [self.get_df_from_db(table) for table in tables]
+
             data = await asyncio.gather(*get_data)
-            self.categories, self.item_sizes, self.item_sides,\
-            self.users, self.tr_types = data
+            (self.categories_df, self.item_sizes_df, self.item_sides_df,
+             self.users_df, self.tr_types_df, self.items_df, self.skus_df,
+             self.trs_df) = data
+
+            self.categories_df.set_index('category_id')
+            self.item_sizes_df.set_index('item_size_id')
+            self.item_sides_df.set_index('item_side_id')
+            self.users_df.set_index('user_id')
+            self.tr_types_df.set_index('tr_type_id')
 
         self.bool_initialized = True
         return self
@@ -71,7 +89,16 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
-    async def get_etc_datas(self, table):
+    async def get_df_from_db(self, table: str) -> pd.DataFrame:
+        query = f"SELECT * FROM {table}"
+        results = await self.di_db_util.select_query(query)
+        # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
+        list_of_dict = [dict(result) for result in results]
+        df = pd.DataFrame(list_of_dict)
+        df.fillna("", inplace=True)
+        return df
+
+    async def get_etc_datas(self, table: str):
         query = f"SELECT * FROM {table}"
         results = await self.di_db_util.select_query(query)
         dict_result = {}
@@ -119,15 +146,6 @@ class Lab(metaclass=Singleton):
 
     def init_transactions(self):
         self.transactions = self.get_transactions_from_db()
-
-    async def get_df_from_db(self, table) -> pd.DataFrame:
-        query = f"SELECT * FROM {table}"
-        results = await self.di_db_util.select_query(query)
-        # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
-        list_of_dict = [dict(result) for result in results]
-        df = pd.DataFrame(list_of_dict)
-        df.fillna("", inplace=True)
-        return df
 
     async def get_items_from_db(self) -> Dict[int, Item]:
         query = "SELECT * FROM items"
