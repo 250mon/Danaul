@@ -74,9 +74,9 @@ class InventoryWindow(QMainWindow):
 
         item_view.horizontalHeader().setStretchLastSection(True)
         item_view.setAlternatingRowColors(True)
-        item_view.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
+        # item_view.setSelectionMode(
+        #     QAbstractItemView.SelectionMode.ExtendedSelection
+        # )
 
         item_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         item_view.resizeColumnsToContents()
@@ -87,16 +87,18 @@ class InventoryWindow(QMainWindow):
         self.item_proxy_model.setFilterKeyColumn(1)
         item_view.setModel(self.item_proxy_model)
 
+        self.item_model.set_editable_cols([2, 3])
         delegate = ItemViewDelegate(self)
         item_view.setItemDelegateForColumn(2, delegate)
 
         item_widget = QWidget(self)
         self.item_search_bar = QLineEdit(self)
         self.item_search_bar.setPlaceholderText('품목명 입력')
-        self.item_search_bar.textChanged.connect(self.item_proxy_model.setFilterFixedString)
+        self.item_search_bar.textChanged.connect(
+            self.item_proxy_model.setFilterFixedString)
         add_item_btn = QPushButton('추가')
         del_item_btn = QPushButton('삭제')
-        mod_item_btn = QPushButton('변경')
+        mod_item_btn = QPushButton('저장')
 
         item_hbox = QHBoxLayout()
         item_hbox.addWidget(self.item_search_bar)

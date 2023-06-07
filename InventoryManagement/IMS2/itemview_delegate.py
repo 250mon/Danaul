@@ -6,7 +6,7 @@ from di_lab import Lab
 class ItemViewDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.combo_box_items = Lab().categories.values()
+        self.combo_box_items = list(Lab().categories.values())
 
     def createEditor(self,
                      parent: QWidget,
