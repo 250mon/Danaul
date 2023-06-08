@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSortFilterProxyModel
 from PySide6.QtGui import QIcon
 from pandas_model import PandasModel
+from model_item import ItemModel
 from di_db import InventoryDb
 from di_lab import Lab
 from itemview_delegate import ItemViewDelegate
@@ -31,20 +32,17 @@ class InventoryWindow(QMainWindow):
         inventory_db = InventoryDb('db_settings')
         lab = await Lab(inventory_db)
 
+        self.item_model = ItemModel()
+
         # get raw data from db
-        tables = ['items', 'skus', 'transactions']
+        tables = ['skus', 'transactions']
         get_dfs = [lab.get_df_from_db(table) for table in tables]
         dfs_from_db = await asyncio.gather(*get_dfs)
-        items_df, skus_df, trs_df = dfs_from_db
+        skus_df, trs_df = dfs_from_db
 
         # make model data
-        items_df['category'] = items_df['category_id'].map(lab.categories)
-        items_df.fillna("", inplace=True)
-        # items_model_data_df = items_df.drop(['category_id'], axis=1)
-        items_model_data_df = items_df[['item_id', 'item_name', 'category', 'description']]
-        self.item_model = PandasModel(items_model_data_df)
 
-        i_s = items_df.set_index('item_id')['item_name']
+        i_s = lab.items_df.set_index('item_id')['item_name']
         skus_df['item_name'] = skus_df['item_id'].map(i_s)
         skus_df['item_size'] = skus_df['item_size_id'].map(lab.item_sizes)
         skus_df['item_side'] = skus_df['item_side_id'].map(lab.item_sides)

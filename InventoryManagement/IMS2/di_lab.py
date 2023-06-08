@@ -63,15 +63,13 @@ class Lab(metaclass=Singleton):
                       'skus', 'transactions']
 
             # get etc dicts
-            # get_data = [self.get_etc_datas(table) for table in tables]
-            # data = await asyncio.gather(*get_data)
-            # (self.categories, self.item_sizes, self.item_sides,
-            #  self.users, self.tr_types, self.items, self.skus,
-            #  self.trs) = data
+            get_data = [self.get_etc_datas(table) for table in tables[:-3]]
+            data = await asyncio.gather(*get_data)
+            (self.categories, self.item_sizes, self.item_sides,
+             self.users, self.tr_types) = data
 
             # get etc dfs
             get_data = [self.get_df_from_db(table) for table in tables]
-
             data = await asyncio.gather(*get_data)
             (self.categories_df, self.item_sizes_df, self.item_sides_df,
              self.users_df, self.tr_types_df, self.items_df, self.skus_df,

@@ -8,7 +8,7 @@ from typing import List
 class PandasModel(QAbstractTableModel):
     """A model to interface a Qt view with pandas dataframe """
 
-    def __init__(self, dataframe: pd.DataFrame, parent=None):
+    def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
         self._dataframe = dataframe
         self.editable_cols = []
