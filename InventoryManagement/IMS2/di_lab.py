@@ -44,7 +44,8 @@ transaction_query = """
 
 class Lab(metaclass=Singleton):
     def __init__(self, di_db: InventoryDb):
-        self.di_db_util = di_db.db_util
+        self.di_db = di_db
+        self.di_db_util = self.di_db.db_util
 
         self.items = {}
         self.skus = {}
@@ -208,29 +209,48 @@ class Lab(metaclass=Singleton):
         trs = [Transaction(*(tuple(result))) for result in results]
         return {tr.tr_id: tr for tr in trs}
 
+    async def insert_items_df(self, items_df: pd.DataFrame):
+        return await self.di_db.insert_items_df(items_df)
+
+    async def update_items_df(self):
+        self.items_df = await self.get_df_from_db('items')
+
 
 async def main():
     danaul_db = InventoryDb('db_settings')
     lab = await Lab(danaul_db)
 
-    items_df = await lab.get_df_from_db('items')
-    items_df['category'] = items_df['category_id'].map(lab.categories)
-    print(items_df)
+    cat_s = lab.categories_df.set_index('category_id')['category_name']
+    isz_s = lab.item_sizes_df.set_index('item_size_id')['item_size']
+    isd_s = lab.item_sides_df.set_index('item_side_id')['item_side']
+    tr_type_s = lab.tr_types_df.set_index('tr_type_id')['tr_type']
 
-    skus_df = await lab.get_df_from_db('skus')
-    i_s = items_df.set_index('item_id')['item_name']
-    skus_df['item_name'] = skus_df['item_id'].map(i_s)
-    skus_df['item_size'] = skus_df['item_size_id'].map(lab.item_sizes)
-    skus_df['item_side'] = skus_df['item_side_id'].map(lab.item_sides)
-    print(skus_df)
+    # Convert a dataframe into classes and insert them into DB
+    new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
+                                 [None, True, 'n6', 3, 'lolo']],
+                                columns=['item_id', 'item_valid', 'item_name',
+                                         'category_id', 'description'])
+    await lab.di_db.insert_items_df(new_items_df)
+    await lab.update_items_df()
 
-    tr_df = await lab.get_df_from_db('transactions')
-    s_df = skus_df.set_index('sku_id')
-    tr_df['item_name'] = tr_df['sku_id'].map(s_df['item_name'])
-    tr_df['item_size'] = tr_df['sku_id'].map(s_df['item_size'])
-    tr_df['item_side'] = tr_df['sku_id'].map(s_df['item_side'])
-    tr_df['tr_type'] = tr_df['tr_type_id'].map(lab.tr_types)
-    print(tr_df)
+    # Get data from db
+    lab.items_df['category'] = lab.items_df['category_id'].map(cat_s)
+    print(lab.items_df)
+
+    # i_s = lab.items_df.set_index('item_id')['item_name']
+    #
+    # lab.skus_df['item_name'] = lab.skus_df['item_id'].map(i_s)
+    # lab.skus_df['item_size'] = lab.skus_df['item_size_id'].map(isz_s)
+    # lab.skus_df['item_side'] = lab.skus_df['item_side_id'].map(isd_s)
+    # print(lab.skus_df)
+    #
+    # sku_idx_df = lab.skus_df.set_index('sku_id')
+    #
+    # lab.trs_df['item_name'] = lab.trs_df['sku_id'].map(sku_idx_df['item_name'])
+    # lab.trs_df['item_size'] = lab.trs_df['sku_id'].map(sku_idx_df['item_size'])
+    # lab.trs_df['item_side'] = lab.trs_df['sku_id'].map(sku_idx_df['item_side'])
+    # lab.trs_df['tr_type'] = lab.trs_df['tr_type_id'].map(tr_type_s)
+    # print(lab.trs_df)
 
     # item = await lab.get_item_from_db_by_id(1)
     # print(item.item_name)
@@ -252,6 +272,9 @@ async def main():
     # trs = await lab.get_transactions_from_db_by_date(s_date, e_date)
     # for tr in trs.values():
     #     print(tr.tr_id)
+
+
+
 
 if __name__ == '__main__':
     asyncio.run(main())

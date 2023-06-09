@@ -1,4 +1,5 @@
 import asyncio
+import pandas as pd
 from typing import List, Tuple
 import logging
 from db_utils import DbUtil
@@ -59,6 +60,21 @@ class InventoryDb:
     async def insert_category(self, cat_name):
         stmt = "INSERT INTO category VALUES(DEFAULT, $1)"
         return await self.db_util.async_execute(stmt, [(cat_name), ])
+
+    async def insert_items_df(self, items_df: pd.DataFrame):
+        """
+        Initial insertion of items
+        item_id and item_valid are set to default values
+        :param items:
+        :return:
+        """
+        stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2, $3)"
+        args = [(item.item_name, item.category_id, item.description)
+                for item in items_df.itertuples()]
+
+        self.logger.debug("Insert Items ...")
+        self.logger.debug(args)
+        return await self.db_util.async_execute(stmt, args)
 
     async def insert_items(self, items: List[Item]):
         """
