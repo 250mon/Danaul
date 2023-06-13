@@ -1,4 +1,5 @@
 import asyncio
+import pandas as pd
 from pandas_model import PandasModel
 from di_db import InventoryDb
 from di_lab import Lab
@@ -24,3 +25,10 @@ class ItemModel(PandasModel):
         # the model data for PandasModel is _dataframe
         model_df = self.db_df.fillna("")
         self._dataframe = model_df[['item_id', 'item_name', 'category', 'description']]
+
+    def get_changes(self):
+        new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
+                                     [None, True, 'n6', 3, 'lolo']],
+                                    columns=['item_id', 'item_valid', 'item_name',
+                                             'category_id', 'description'])
+        return new_items_df

@@ -4,8 +4,7 @@ from typing import List, Tuple, Dict
 from datetime import date
 from data_classes import Item, Sku, Transaction
 from di_db import InventoryDb
-from di_db import logging
-from di_logger import Logs
+from di_logger import Logs, logging
 import pandas as pd
 
 
