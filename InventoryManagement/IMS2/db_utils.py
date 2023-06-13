@@ -169,7 +169,7 @@ class DbUtil:
                 return None
 
 
-    async def sync_execute(self, statement: str, args: List[Tuple]):
+    async def executemany(self, statement: str, args: List[Tuple]):
         """
         Execute a statement through connection.executemany()
         :param statement: statement to execute
@@ -193,7 +193,7 @@ class DbUtil:
                 return e
 
 
-    async def async_execute(self, statement: str, args: List[Tuple]):
+    async def pool_execute(self, statement: str, args: List[Tuple]):
         """
         Execute a statement through ascynpg.pool
         :param statement: statement to execute
@@ -237,4 +237,4 @@ class DbUtil:
 
         stmt = f"DELETE FROM {table} WHERE {col_name} = $1"
         logger.debug(args)
-        return await self.async_execute(stmt, args)
+        return await self.pool_execute(stmt, args)

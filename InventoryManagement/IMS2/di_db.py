@@ -24,8 +24,7 @@ class InventoryDb:
     def __init__(self, db_config_file):
         self.db_util = DbUtil(db_config_file)
 
-        self.logs = Logs()
-        self.logger = self.logs.get_logger('di_db')
+        self.logger = Logs().get_logger('di_db')
         self.logger.setLevel(logging.DEBUG)
 
     async def create_tables(self):
@@ -55,11 +54,11 @@ class InventoryDb:
         """
         stmt = f'INSERT INTO {data[0].table} VALUES($1, $2)'
         args = [(d.id, d.name) for d in data]
-        return await self.db_util.sync_execute(stmt, args)
+        return await self.db_util.executemany(stmt, args)
 
     async def insert_category(self, cat_name):
         stmt = "INSERT INTO category VALUES(DEFAULT, $1)"
-        return await self.db_util.async_execute(stmt, [(cat_name), ])
+        return await self.db_util.pool_execute(stmt, [(cat_name), ])
 
     async def insert_items_df(self, items_df: pd.DataFrame):
         """
@@ -74,7 +73,7 @@ class InventoryDb:
 
         self.logger.debug("Insert Items ...")
         self.logger.debug(args)
-        return await self.db_util.async_execute(stmt, args)
+        return await self.db_util.pool_execute(stmt, args)
 
     async def insert_items(self, items: List[Item]):
         """
@@ -88,7 +87,7 @@ class InventoryDb:
 
         self.logger.debug("Insert Items ...")
         self.logger.debug(args)
-        return await self.db_util.async_execute(stmt, args)
+        return await self.db_util.pool_execute(stmt, args)
 
     async def delete_items(self, items: Item or List[Item]):
         if isinstance(items, List):
@@ -132,7 +131,7 @@ class InventoryDb:
 
         self.logger.debug("Insert Skus ...")
         self.logger.debug(args)
-        return await self.db_util.async_execute(stmt, args)
+        return await self.db_util.pool_execute(stmt, args)
 
     async def delete_skus(self, skus: List[Sku]):
         args = [(s.sku_id,) for s in skus]
@@ -156,7 +155,7 @@ class InventoryDb:
 
         self.logger.debug("Insert Transactions ...")
         self.logger.debug(args)
-        return await self.db_util.sync_execute(stmt, args)
+        return await self.db_util.executemany(stmt, args)
 
     async def delete_transactions(self, trs: List[Transaction]):
         args = [(t.tr_id,) for t in trs]
