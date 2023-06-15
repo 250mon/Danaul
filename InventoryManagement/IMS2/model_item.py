@@ -24,7 +24,7 @@ class ItemModel(PandasModel):
 
         # the model data for PandasModel is _dataframe
         model_df = self.db_df.fillna("")
-        self._dataframe = model_df[['item_id', 'item_name', 'category', 'description']]
+        self._dataframe = model_df[['item_id', 'item_valid', 'item_name', 'category', 'description']]
 
     def get_changes(self):
         new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
