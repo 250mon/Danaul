@@ -20,6 +20,7 @@ from di_db import InventoryDb
 from di_lab import Lab
 from di_logger import Logs, logging
 from itemview_delegate import ItemViewDelegate
+from item_widget_mapper import ItemWidget
 
 
 logger = Logs().get_logger('inventory_view')
@@ -222,10 +223,11 @@ class InventoryWindow(QMainWindow):
         logger.debug(f'{action}')
         if action == "update_items":
             logger.debug('Updating DB ... update_items')
+            new_item_widget = ItemWidget(self.item_model)
             logger.debug(self.item_model.get_changes())
-            results = await self.lab.di_db.insert_items_df(
-                self.item_model.get_changes())
-            logger.info(results)
+            # results = await self.lab.di_db.insert_items_df(
+            #     self.item_model.get_changes())
+            # logger.info(results)
 
     def setupSkuView(self):
         # skus view

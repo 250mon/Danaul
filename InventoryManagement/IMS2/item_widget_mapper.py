@@ -1,6 +1,6 @@
 import sys
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QRadioButton,
+    QApplication, QWidget, QComboBox,
     QVBoxLayout, QSpinBox, QLabel, QLineEdit, QTextEdit,
     QPushButton, QDataWidgetMapper, QGridLayout
 )
@@ -14,13 +14,11 @@ class ItemWidget(QWidget):
         self.nameLabel = QLabel("아이템명:")
         self.nameLineEdit = QLineEdit()
 
-        self.validityLabel = QLabel("유효:")
-        self.validRadioButton = QRadioButton("사용")
-        self.invalidRadioButton = QRadioButton("폐기")
-        self.validRadioButton.setChecked(True)
+        self.validLabel = QLabel("유효:")
+        self.validComboBox = QComboBox()
 
         self.categoryLabel = QLabel("제품군:")
-        self.categorySpinBox = QSpinBox()
+        self.categoryComboBox = QComboBox()
 
         self.descriptionLabel = QLabel("비고:")
         self.descriptionTextEdit = QTextEdit()
@@ -29,8 +27,8 @@ class ItemWidget(QWidget):
         self.previousButton = QPushButton("&Previous")
 
         self.nameLabel.setBuddy(self.nameLineEdit)
-        self.validityLabel.setBuddy(self.validitySpinBox)
-        self.categoryLabel.setBuddy(self.categorySpinBox)
+        self.validLabel.setBuddy(self.validComboBox)
+        self.categoryLabel.setBuddy(self.categoryComboBox)
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
         self.addMapper()
         self.initializeUI()
@@ -38,8 +36,9 @@ class ItemWidget(QWidget):
     def addMapper(self):
         self.mapper = QDataWidgetMapper(self)
         self.mapper.setModel(self.model)
+        self.mapper.addMapping(self.validComboBox, 0)
         self.mapper.addMapping(self.nameLineEdit, 1)
-        self.mapper.addMapping(self.categorySpinBox, 2)
+        self.mapper.addMapping(self.categoryComboBox, 2)
         self.mapper.addMapping(self.descriptionTextEdit, 3)
 
         self.previousButton.clicked.connect(self.mapper.toPrevious)
@@ -53,13 +52,13 @@ class ItemWidget(QWidget):
     def initializeUI(self):
         layout = QGridLayout()
         layout.addWidget(self.nameLabel, 0, 0, 1, 1)
-        layout.addWidget(self.nameEdit, 0, 1, 1, 1)
+        layout.addWidget(self.nameLineEdit, 0, 1, 1, 1)
         layout.addWidget(self.previousButton, 0, 2, 1, 1)
-        layout.addWidget(self.addressLabel, 1, 0, 1, 1)
-        layout.addWidget(self.addressEdit, 1, 1, 2, 1)
+        layout.addWidget(self.categoryLabel, 1, 0, 1, 1)
+        layout.addWidget(self.categoryComboBox, 1, 1, 2, 1)
         layout.addWidget(self.nextButton, 1, 2, 1, 1)
-        layout.addWidget(self.ageLabel, 3, 0, 1, 1)
-        layout.addWidget(self.ageSpinBox, 3, 1, 1, 1)
+        layout.addWidget(self.validLabel, 3, 0, 1, 1)
+        layout.addWidget(self.validComboBox, 3, 1, 1, 1)
         self.setLayout(layout)
 
         self.setWindowTitle("Simple Widget Mapper")
@@ -70,5 +69,5 @@ class ItemWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = ItemWidget()
     sys.exit(app.exec())
