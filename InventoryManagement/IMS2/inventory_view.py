@@ -15,11 +15,11 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QIcon
 from pandas_model import PandasModel
-from model_item import ItemModel
+from item_model import ItemModel
 from di_db import InventoryDb
 from di_lab import Lab
 from di_logger import Logs, logging
-from itemview_delegate import ItemViewDelegate
+from combobox_delegate import ComboBoxDelegate
 from item_widget_mapper import ItemWidget
 
 
@@ -181,9 +181,14 @@ class InventoryWindow(QMainWindow):
         self.item_proxy_model.setFilterKeyColumn(1)
         item_view.setModel(self.item_proxy_model)
 
-        self.item_model.set_editable_cols([2, 3])
-        delegate = ItemViewDelegate(self)
-        item_view.setItemDelegateForColumn(2, delegate)
+        # editable columns: category and description
+        # a line edit is used as a default delegate
+        editable_col_idx = [self.item_model.col_names.index(val)
+                            for val in ['category', 'description']]
+        self.item_model.set_editable_cols(editable_col_idx)
+        # for category col, combobox delegate is used
+        delegate = ComboBoxDelegate(list(Lab().categories.values()), self)
+        item_view.setItemDelegateForColumn(editable_col_idx[0], delegate)
 
         item_widget = QWidget(self)
         self.item_search_bar = QLineEdit(self)
@@ -223,7 +228,7 @@ class InventoryWindow(QMainWindow):
         logger.debug(f'{action}')
         if action == "update_items":
             logger.debug('Updating DB ... update_items')
-            new_item_widget = ItemWidget(self.item_model)
+            self.new_item_widget = ItemWidget(self.item_model)
             logger.debug(self.item_model.get_changes())
             # results = await self.lab.di_db.insert_items_df(
             #     self.item_model.get_changes())
@@ -316,5 +321,5 @@ if __name__ == '__main__':
     main_window = InventoryWindow()
     async_helper = AsyncHelper(main_window, main_window.update_db)
 
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    # signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.exec()

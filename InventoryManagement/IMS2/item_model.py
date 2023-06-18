@@ -14,17 +14,26 @@ class ItemModel(PandasModel):
         super().__init__()
         self.lab = Lab(InventoryDb('db_settings'))
         self.db_df = self.lab.items_df
+
+        # lists of etc(reference data)
+        self.categories = None
+
+        # column names that will be appearing in the view
+        self.col_names = ['item_id', 'item_valid', 'item_name', 'category', 'description']
+
+        # set data to model
         self.set_model_data()
 
     def set_model_data(self):
         # for category name mapping
-        cat_df = self.lab.categories_df.set_index('category_id')
-        cat_s = cat_df['category_name']
+        cat_df: pd.DataFrame = self.lab.categories_df.set_index('category_id')
+        cat_s: pd.Series = cat_df['category_name']
+        self.categories = cat_s.to_list()
         self.db_df['category'] = self.db_df['category_id'].map(cat_s)
 
         # the model data for PandasModel is _dataframe
         model_df = self.db_df.fillna("")
-        self._dataframe = model_df[['item_id', 'item_valid', 'item_name', 'category', 'description']]
+        self._dataframe = model_df[self.col_names]
 
     def get_changes(self):
         new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
