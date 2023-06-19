@@ -54,6 +54,12 @@ class Lab(metaclass=Singleton):
         self.logger.setLevel(logging.DEBUG)
 
         self.bool_initialized = False
+        if not self.bool_initialized:
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(self.async_init())
+            finally:
+                loop.close()
 
     async def async_init(self):
         if self.bool_initialized is False:

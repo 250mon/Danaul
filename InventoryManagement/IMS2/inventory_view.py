@@ -114,22 +114,17 @@ class InventoryWindow(QMainWindow):
     def initializeUI(self):
         self.setMinimumSize(1400, 800)
         self.setWindowTitle("다나을 재고관리")
-
+        self.item_model = ItemModel()
         loop = asyncio.new_event_loop()
         try:
             loop.run_until_complete(self.createModel())
         finally:
             loop.close()
-
         self.setUpMainWindow()
         self.show()
 
     async def createModel(self):
-        inventory_db = InventoryDb('db_settings')
-        self.lab = await Lab(inventory_db)
-
-        self.item_model = ItemModel()
-
+        self.lab = Lab(InventoryDb('db_settings'))
         # get raw data from db
         tables = ['skus', 'transactions']
         get_dfs = [self.lab.get_df_from_db(table) for table in tables]

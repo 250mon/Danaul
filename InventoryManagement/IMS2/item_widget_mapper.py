@@ -1,14 +1,18 @@
 import sys
+import asyncio
 from PySide6.QtWidgets import (
     QApplication, QWidget, QComboBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
     QPushButton, QDataWidgetMapper, QGridLayout
 )
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent
 from di_lab import Lab
+from item_model import ItemModel
 
 
 class ItemWidgetMapper(QWidget):
-    def __init__(self, model, parent=None):
+    def __init__(self, model: ItemModel, parent=None):
         super().__init__(parent)
         self.model = model
 
@@ -38,6 +42,9 @@ class ItemWidgetMapper(QWidget):
         self.categoryLabel.setBuddy(self.categoryComboBox)
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
         self.addMapper()
+
+        self.save_flag = False
+
         self.initializeUI()
 
     def addMapper(self):
@@ -52,65 +59,57 @@ class ItemWidgetMapper(QWidget):
         self.nextButton.clicked.connect(self.mapper.toNext)
         self.mapper.currentIndexChanged.connect(self.updateButtons)
 
+        self.okButton.clicked.connect(self.ok_clicked)
+        self.cancelButton.clicked.connect(self.cancel_clicked)
+
     def updateButtons(self, row):
         self.previousButton.setEnabled(row > 0)
         self.nextButton.setEnabled(row < self.model.rowCount() - 1)
 
+    def ok_clicked(self):
+        self.save_flag = True
+        self.close()
+
+    def cancel_clicked(self):
+        self.save_flag = False
+        self.close()
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if self.save_flag:
+            pass
+        else:
+            self.model.cancel_add_new_row()
+        super().closeEvent(event)
+
     def initializeUI(self):
+        vbox1 = QVBoxLayout()
+        vbox1.addWidget(self.okButton, Qt.AlignTop)
+        vbox1.addWidget(self.cancelButton)
+        vbox1.addStretch()
+
         hbox1 = QHBoxLayout()
-        hbox2 = QHBoxLayout()
-        hbox3 = QHBoxLayout()
-        hbox4 = QHBoxLayout()
-        hbox5 = QHBoxLayout()
+        hbox1.addWidget(self.previousButton)
+        hbox1.addWidget(self.nextButton)
 
-        hbox1.addWidget(self.nameLabel)
-        hbox1.addWidget(self.nameLineEdit)
-        hbox2.addWidget(self.categoryLabel)
-        hbox2.addWidget(self.categoryComboBox)
-        hbox3.addWidget(self.descriptionLabel)
-        hbox3.addWidget(self.descriptionTextEdit)
-        hbox4.addWidget(self.validLabel)
-        hbox4.addWidget(self.validComboBox)
-        hbox5.addWidget(self.nextButton)
-        hbox5.addWidget(self.previousButton)
-        hbox5.addWidget(self.okButton)
-        hbox5.addWidget(self.cancelButton)
+        gridbox = QGridLayout()
+        gridbox.addWidget(self.nameLabel, 0, 0, 1, 1)
+        gridbox.addWidget(self.nameLineEdit, 0, 1, 1, 1)
+        gridbox.addWidget(self.categoryLabel, 1, 0, 1, 1)
+        gridbox.addWidget(self.categoryComboBox, 1, 1, 1, 1)
+        gridbox.addWidget(self.descriptionLabel, 3, 0, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.descriptionTextEdit, 3, 1, 1, 1)
+        gridbox.addLayout(vbox1, 3, 2, 1, 1)
+        gridbox.addWidget(self.validLabel, 4, 0, 1, 1)
+        gridbox.addWidget(self.validComboBox, 4, 1, 1, 1)
+        gridbox.addLayout(hbox1, 5, 1, 1, 1)
 
-        vbox = QVBoxLayout()
-        vbox.addLayout(hbox1)
-        vbox.addLayout(hbox2)
-        vbox.addLayout(hbox3)
-        vbox.addLayout(hbox4)
-        vbox.addLayout(hbox5)
-
-
-        # layout = QGridLayout()
-        # layout.addWidget(self.nameLabel, 0, 0, 1, 1)
-        # layout.addWidget(self.nameLineEdit, 0, 1, 1, 1)
-        # layout.addWidget(self.previousButton, 0, 2, 1, 1)
-        # layout.addWidget(self.categoryLabel, 1, 0, 1, 1)
-        # layout.addWidget(self.categoryComboBox, 1, 1, 1, 1)
-        # layout.addWidget(self.nextButton, 1, 2, 1, 1)
-        # layout.addWidget(self.descriptionLabel, 3, 0, 1, 1)
-        # layout.addWidget(self.descriptionTextEdit, 3, 1, 1, 1)
-        # layout.addWidget(self.validLabel, 4, 0, 1, 1)
-        # layout.addWidget(self.validComboBox, 4, 1, 1, 1)
-        #
-        # vbox = QVBoxLayout()
-        # vbox.addWidget(self.okButton)
-        # vbox.addWidget(self.cancelButton)
-        # layout.addLayout(vbox, 3, 2, 1, 1)
-        #
-        # self.setLayout(layout)
-        self.setLayout(vbox)
-
+        self.setLayout(gridbox)
         self.setWindowTitle("아이템 입력")
         self.mapper.toLast()
-
         self.show()
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = ItemWidgetMapper()
+    model = ItemModel()
+    window = ItemWidgetMapper(model)
     sys.exit(app.exec())
