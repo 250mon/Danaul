@@ -20,7 +20,7 @@ from di_db import InventoryDb
 from di_lab import Lab
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
-from item_widget_mapper import ItemWidget
+from item_widget_mapper import ItemWidgetMapper
 
 
 logger = Logs().get_logger('inventory_view')
@@ -162,24 +162,24 @@ class InventoryWindow(QMainWindow):
                                     'tr_timestamp', 'description']]
         self.tr_model = PandasModel(trs_model_data_df)
 
-    def setupItemView(self, item_name=None):
+    def setupItemView(self):
         # items view
-        item_view = QTableView(self)
 
-        item_view.horizontalHeader().setStretchLastSection(True)
-        item_view.setAlternatingRowColors(True)
+        self.item_view = QTableView(self)
+        self.item_view.horizontalHeader().setStretchLastSection(True)
+        self.item_view.setAlternatingRowColors(True)
         # item_view.setSelectionMode(
         #     QAbstractItemView.SelectionMode.ExtendedSelection
         # )
 
-        item_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        item_view.resizeColumnsToContents()
-        item_view.setSortingEnabled(True)
+        self.item_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.item_view.resizeColumnsToContents()
+        self.item_view.setSortingEnabled(True)
 
         self.item_proxy_model = QSortFilterProxyModel()
         self.item_proxy_model.setSourceModel(self.item_model)
         self.item_proxy_model.setFilterKeyColumn(1)
-        item_view.setModel(self.item_proxy_model)
+        self.item_view.setModel(self.item_proxy_model)
 
         # editable columns: category and description
         # a line edit is used as a default delegate
@@ -188,7 +188,7 @@ class InventoryWindow(QMainWindow):
         self.item_model.set_editable_cols(editable_col_idx)
         # for category col, combobox delegate is used
         delegate = ComboBoxDelegate(list(Lab().categories.values()), self)
-        item_view.setItemDelegateForColumn(editable_col_idx[0], delegate)
+        self.item_view.setItemDelegateForColumn(editable_col_idx[0], delegate)
 
         item_widget = QWidget(self)
         self.item_search_bar = QLineEdit(self)
@@ -209,7 +209,7 @@ class InventoryWindow(QMainWindow):
 
         item_vbox = QVBoxLayout()
         item_vbox.addLayout(item_hbox)
-        item_vbox.addWidget(item_view)
+        item_vbox.addWidget(self.item_view)
         item_widget.setLayout(item_vbox)
 
         item_widget.setMaximumWidth(500)
@@ -224,12 +224,14 @@ class InventoryWindow(QMainWindow):
     def async_start(self, action: str, df: pd.DataFrame):
         self.start_signal.emit(action, df)
 
-    async def update_db(self, action: str, df: pd.DataFrame):
+    async def update_df(self, action: str, df: pd.DataFrame):
         logger.debug(f'{action}')
         if action == "update_items":
             logger.debug('Updating DB ... update_items')
-            self.new_item_widget = ItemWidget(self.item_model)
-            logger.debug(self.item_model.get_changes())
+            self.item_model.add_new_row()
+            self.item_widget_mapper = ItemWidgetMapper(self.item_model)
+            # trigger refresh
+            self.item_model.layoutChanged.emit()
             # results = await self.lab.di_db.insert_items_df(
             #     self.item_model.get_changes())
             # logger.info(results)
@@ -319,7 +321,7 @@ class InventoryWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_window = InventoryWindow()
-    async_helper = AsyncHelper(main_window, main_window.update_db)
+    async_helper = AsyncHelper(main_window, main_window.update_df)
 
     # signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.exec()

@@ -35,9 +35,15 @@ class ItemModel(PandasModel):
         model_df = self.db_df.fillna("")
         self._dataframe = model_df[self.col_names]
 
+    def add_new_row(self):
+        new_df = pd.DataFrame([(-1, True, "", self.categories[0], "")],
+                              columns=self.col_names)
+        self._dataframe = pd.concat([self._dataframe, new_df])
+
     def get_changes(self):
         new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
                                      [None, True, 'n6', 3, 'lolo']],
                                     columns=['item_id', 'item_valid', 'item_name',
                                              'category_id', 'description'])
         return new_items_df
+
