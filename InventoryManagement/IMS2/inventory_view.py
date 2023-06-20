@@ -1,20 +1,13 @@
 import sys
 import asyncio
-import signal
-
 import pandas as pd
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDockWidget,
-    QLabel, QPushButton, QLineEdit,
-    QTableView, QHeaderView, QAbstractItemView,
-    QHBoxLayout, QVBoxLayout,
-    QMessageBox, QSizePolicy
+    QPushButton, QLineEdit, QTableView, QHBoxLayout, QVBoxLayout
 )
-from PySide6.QtCore import (
-    Qt, QObject, Signal, Slot, QEvent, QSortFilterProxyModel
-)
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel
 from pandas_model import PandasModel
+from async_helper import AsyncHelper
 from item_model import ItemModel
 from di_db import InventoryDb
 from di_lab import Lab
@@ -25,82 +18,6 @@ from item_widget_mapper import ItemWidgetMapper
 
 logger = Logs().get_logger('inventory_view')
 logger.setLevel(logging.DEBUG)
-
-class AsyncHelper(QObject):
-
-    class ReenterQtObject(QObject):
-        """ This is a QObject to which an event will be posted, allowing
-            asyncio to resume when the event is handled. event.fn() is
-            the next entry point of the asyncio event loop. """
-        def event(self, event: QEvent):
-            if event.type() == QEvent.Type.User + 1:
-                event.fn()
-                return True
-            return False
-
-    class ReenterQtEvent(QEvent):
-        """ This is the QEvent that will be handled by the ReenterQtObject.
-            self.fn is the next entry point of the asyncio event loop. """
-        def __init__(self, fn):
-            super().__init__(QEvent.Type(QEvent.Type.User + 1))
-            self.fn = fn
-
-    def __init__(self, worker, entry):
-        super().__init__()
-        self.reenter_qt = self.ReenterQtObject()
-        self.entry = entry
-        self.loop = asyncio.new_event_loop()
-        self.done = {}
-
-        self.worker = worker
-        if hasattr(self.worker, "start_signal") and isinstance(self.worker.start_signal, Signal):
-            self.worker.start_signal.connect(self.on_worker_started)
-        if hasattr(self.worker, "done_signal") and isinstance(self.worker.done_signal, Signal):
-            self.worker.done_signal.connect(self.on_worker_done)
-
-    @Slot(str, pd.DataFrame)
-    def on_worker_started(self, action: str, df: pd.DataFrame):
-        """ To use asyncio and Qt together, one must run the asyncio
-            event loop as a "guest" inside the Qt "host" event loop. """
-        logger.debug(f'on_worker_started... {action}')
-        if not self.entry:
-            raise Exception("No entry point for the asyncio event loop was set.")
-        asyncio.set_event_loop(self.loop)
-        self.loop.create_task(self.entry(action, df))
-        self.loop.call_soon(lambda: self.next_guest_run_schedule(action))
-        self.done[action] = False  # Set this explicitly as we might want to restart the guest run.
-        self.loop.run_forever()
-
-    @Slot(str)
-    def on_worker_done(self, action: str):
-        """ When all our current asyncio tasks are finished, we must end
-            the "guest run" lest we enter a quasi idle loop of switching
-            back and forth between the asyncio and Qt loops. We can
-            launch a new guest run by calling launch_guest_run() again. """
-        self.done[action] = True
-
-    def continue_loop(self, action: str):
-        """ This function is called by an event posted to the Qt event
-            loop to continue the asyncio event loop. """
-        if not self.done[action]:
-            self.loop.call_soon(lambda: self.next_guest_run_schedule(action))
-            if not self.loop.is_running():
-                self.loop.run_forever()
-
-    def next_guest_run_schedule(self, action: str):
-        """ This function serves to pause and re-schedule the guest
-            (asyncio) event loop inside the host (Qt) event loop. It is
-            registered in asyncio as a callback to be called at the next
-            iteration of the event loop. When this function runs, it
-            first stops the asyncio event loop, then by posting an event
-            on the Qt event loop, it both relinquishes to Qt's event
-            loop and also schedules the asyncio event loop to run again.
-            Upon handling this event, a function will be called that
-            resumes the asyncio event loop. """
-        self.loop.stop()
-        QApplication.postEvent(self.reenter_qt,
-                               self.ReenterQtEvent(lambda: self.continue_loop(action)))
-
 
 class InventoryWindow(QMainWindow):
     start_signal = Signal(str, pd.DataFrame)
@@ -115,11 +32,11 @@ class InventoryWindow(QMainWindow):
         self.setMinimumSize(1400, 800)
         self.setWindowTitle("다나을 재고관리")
         self.item_model = ItemModel()
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(self.createModel())
-        finally:
-            loop.close()
+        # loop = asyncio.new_event_loop()
+        # try:
+        #     loop.run_until_complete(self.createModel())
+        # finally:
+        #     loop.close()
         self.setUpMainWindow()
         self.show()
 
@@ -191,7 +108,7 @@ class InventoryWindow(QMainWindow):
         self.item_search_bar.textChanged.connect(
             self.item_proxy_model.setFilterFixedString)
         add_item_btn = QPushButton('추가')
-        add_item_btn.clicked.connect(lambda: self.async_start("update_items", None))
+        add_item_btn.clicked.connect(lambda: self.async_start("update_items"))
         del_item_btn = QPushButton('삭제')
         mod_item_btn = QPushButton('저장')
 
@@ -216,16 +133,19 @@ class InventoryWindow(QMainWindow):
         self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
 
     @Slot(str, pd.DataFrame)
-    def async_start(self, action: str, df: pd.DataFrame):
+    def async_start(self, action: str, df: pd.DataFrame = None):
         self.start_signal.emit(action, df)
 
-    async def update_df(self, action: str, df: pd.DataFrame):
+    async def update_df(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')
         if action == "update_items":
             logger.debug('Updating DB ... update_items')
             self.item_model.add_new_row()
             self.item_widget_mapper = ItemWidgetMapper(self.item_model)
             # trigger refresh
+            # This signal is emitted just before the layout of a model is changed.
+            # Components connected to this signal use it to adapt to changes in the model’s layout.
+            self.item_model.layoutAboutToBeChanged.emit()
             self.item_model.layoutChanged.emit()
             # results = await self.lab.di_db.insert_items_df(
             #     self.item_model.get_changes())
@@ -309,8 +229,8 @@ class InventoryWindow(QMainWindow):
 
     def setUpMainWindow(self):
         self.setupItemView()
-        self.setupSkuView()
-        self.setupTransactionView()
+        # self.setupSkuView()
+        # self.setupTransactionView()
 
 
 if __name__ == '__main__':

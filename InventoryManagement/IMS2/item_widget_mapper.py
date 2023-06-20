@@ -1,5 +1,4 @@
 import sys
-import asyncio
 from PySide6.QtWidgets import (
     QApplication, QWidget, QComboBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
@@ -78,7 +77,8 @@ class ItemWidgetMapper(QWidget):
         if self.save_flag:
             pass
         else:
-            self.model.cancel_add_new_row()
+            pass
+            # self.model.cancel_add_new_row()
         super().closeEvent(event)
 
     def initializeUI(self):

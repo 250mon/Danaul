@@ -1,4 +1,3 @@
-import asyncio
 import pandas as pd
 from pandas_model import PandasModel
 from di_db import InventoryDb
@@ -24,6 +23,9 @@ class ItemModel(PandasModel):
         # set data to model
         self.set_model_data()
 
+        # for later use
+        self.tmp_df = None
+
     def set_model_data(self):
         # for category name mapping
         cat_df: pd.DataFrame = self.lab.categories_df.set_index('category_id')
@@ -38,11 +40,14 @@ class ItemModel(PandasModel):
     def add_new_row(self):
         new_df = pd.DataFrame([(-1, True, "", self.categories[0], "")],
                               columns=self.col_names)
-        self.tmp_df = self._dataframe
+        # self.tmp_df = self._dataframe
         self._dataframe = pd.concat([self._dataframe, new_df])
 
     def cancel_add_new_row(self):
-        self._dataframe = self.tmp_df
+        if self.tmp_df:
+            pass
+            # self._dataframe = self.tmp_df
+            # self.tmp_df = None
 
     def get_changes(self):
         new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
