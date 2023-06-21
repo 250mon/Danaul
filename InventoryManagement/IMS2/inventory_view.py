@@ -108,16 +108,17 @@ class InventoryWindow(QMainWindow):
         self.item_search_bar.textChanged.connect(
             self.item_proxy_model.setFilterFixedString)
         add_item_btn = QPushButton('추가')
-        add_item_btn.clicked.connect(lambda: self.async_start("update_items"))
+        add_item_btn.clicked.connect(lambda: self.async_start("add_item"))
+        mod_item_btn = QPushButton('수정')
+        mod_item_btn.clicked.connect(lambda: self.async_start("mod_item"))
         del_item_btn = QPushButton('삭제')
-        mod_item_btn = QPushButton('저장')
 
         item_hbox = QHBoxLayout()
         item_hbox.addWidget(self.item_search_bar)
         item_hbox.addStretch(1)
         item_hbox.addWidget(add_item_btn)
-        item_hbox.addWidget(del_item_btn)
         item_hbox.addWidget(mod_item_btn)
+        item_hbox.addWidget(del_item_btn)
 
         item_vbox = QVBoxLayout()
         item_vbox.addLayout(item_hbox)
@@ -138,8 +139,8 @@ class InventoryWindow(QMainWindow):
 
     async def update_df(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')
-        if action == "update_items":
-            logger.debug('Updating DB ... update_items')
+        if action == "add_item":
+            logger.debug('Adding item ...')
             self.item_model.add_new_row()
             self.item_widget_mapper = ItemWidgetMapper(self.item_model)
             # trigger refresh
@@ -150,6 +151,15 @@ class InventoryWindow(QMainWindow):
             # results = await self.lab.di_db.insert_items_df(
             #     self.item_model.get_changes())
             # logger.info(results)
+        elif action == "mod_item":
+            logger.debug('Modifying item ...')
+            selected_indexes = self.item_view.selectedIndexes()
+            print(selected_indexes)
+            check_indexes = [idx.isValid() for idx in selected_indexes]
+            print(check_indexes)
+            if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
+                self.item_widget_mapper = ItemWidgetMapper(self.item_model,
+                                                           selected_indexes)
 
     def setupSkuView(self):
         # skus view

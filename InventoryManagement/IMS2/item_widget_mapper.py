@@ -1,19 +1,23 @@
 import sys
+from typing import List
 from PySide6.QtWidgets import (
     QApplication, QWidget, QComboBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
     QPushButton, QDataWidgetMapper, QGridLayout
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QCloseEvent
 from di_lab import Lab
 from item_model import ItemModel
 
 
 class ItemWidgetMapper(QWidget):
-    def __init__(self, model: ItemModel, parent=None):
+    def __init__(self, model: ItemModel,
+                 indexes: List[QModelIndex] = None,
+                 parent=None):
         super().__init__(parent)
         self.model = model
+        self.model_indexes = indexes
 
         self.nameLabel = QLabel("제품명:")
         self.nameLineEdit = QLineEdit()
@@ -61,9 +65,18 @@ class ItemWidgetMapper(QWidget):
         self.okButton.clicked.connect(self.ok_clicked)
         self.cancelButton.clicked.connect(self.cancel_clicked)
 
+        if self.model_indexes is None:
+            self.mapper.toLast()
+        else:
+            self.mapper.setCurrentIndex(self.model_indexes[0].row())
+
     def updateButtons(self, row):
-        self.previousButton.setEnabled(row > 0)
-        self.nextButton.setEnabled(row < self.model.rowCount() - 1)
+        if self.model_indexes is None:
+            self.previousButton.setEnabled(False)
+            self.nextButton.setEnabled(False)
+        else:
+            self.previousButton.setEnabled(row > self.model_indexes[0].row())
+            self.nextButton.setEnabled(row < self.model_indexes[-1].row())
 
     def ok_clicked(self):
         self.save_flag = True
@@ -77,8 +90,7 @@ class ItemWidgetMapper(QWidget):
         if self.save_flag:
             pass
         else:
-            pass
-            # self.model.cancel_add_new_row()
+            self.model.cancel_add_new_row()
         super().closeEvent(event)
 
     def initializeUI(self):
@@ -105,7 +117,6 @@ class ItemWidgetMapper(QWidget):
 
         self.setLayout(gridbox)
         self.setWindowTitle("아이템 입력")
-        self.mapper.toLast()
         self.show()
 
 if __name__ == '__main__':

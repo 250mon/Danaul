@@ -40,14 +40,17 @@ class ItemModel(PandasModel):
     def add_new_row(self):
         new_df = pd.DataFrame([(-1, True, "", self.categories[0], "")],
                               columns=self.col_names)
-        # self.tmp_df = self._dataframe
+        self.tmp_df = self._dataframe
         self._dataframe = pd.concat([self._dataframe, new_df])
 
     def cancel_add_new_row(self):
-        if self.tmp_df:
-            pass
-            # self._dataframe = self.tmp_df
-            # self.tmp_df = None
+        if self.tmp_df is not None:
+            self._dataframe = self.tmp_df
+            self.tmp_df = None
+
+    def update_db(self):
+        pass
+
 
     def get_changes(self):
         new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
