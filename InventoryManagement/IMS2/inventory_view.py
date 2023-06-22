@@ -13,7 +13,7 @@ from di_db import InventoryDb
 from di_lab import Lab
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
-from item_widget_mapper import ItemWidgetMapper
+from single_item_window import SingleItemWindow
 
 
 logger = Logs().get_logger('inventory_view')
@@ -142,7 +142,7 @@ class InventoryWindow(QMainWindow):
         if action == "add_item":
             logger.debug('Adding item ...')
             self.item_model.add_new_row()
-            self.item_widget_mapper = ItemWidgetMapper(self.item_model)
+            self.item_window = SingleItemWindow(self.item_model)
             # trigger refresh
             # This signal is emitted just before the layout of a model is changed.
             # Components connected to this signal use it to adapt to changes in the model’s layout.
@@ -158,8 +158,8 @@ class InventoryWindow(QMainWindow):
             check_indexes = [idx.isValid() for idx in selected_indexes]
             print(check_indexes)
             if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
-                self.item_widget_mapper = ItemWidgetMapper(self.item_model,
-                                                           selected_indexes)
+                self.item_window = SingleItemWindow(self.item_model,
+                                                    selected_indexes)
 
     def setupSkuView(self):
         # skus view

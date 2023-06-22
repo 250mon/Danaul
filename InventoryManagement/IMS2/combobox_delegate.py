@@ -1,6 +1,5 @@
 from PySide6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QComboBox
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
-from di_lab import Lab
 from typing import List
 
 

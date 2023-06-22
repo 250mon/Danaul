@@ -11,7 +11,7 @@ from di_lab import Lab
 from item_model import ItemModel
 
 
-class ItemWidgetMapper(QWidget):
+class SingleItemWindow(QWidget):
     def __init__(self, model: ItemModel,
                  indexes: List[QModelIndex] = None,
                  parent=None):
@@ -122,5 +122,5 @@ class ItemWidgetMapper(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     model = ItemModel()
-    window = ItemWidgetMapper(model)
+    window = SingleItemWindow(model)
     sys.exit(app.exec())
