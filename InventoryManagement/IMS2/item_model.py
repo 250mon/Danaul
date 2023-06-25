@@ -16,6 +16,7 @@ class ItemModel(PandasModel):
 
         # lists of etc(reference data)
         self.categories = None
+        self.cat_df: pd.DataFrame = self.lab.categories_df.set_index('category_id')
 
         # column names that will be appearing in the view
         self.col_names = ['item_id', 'item_valid', 'item_name', 'category', 'description']
@@ -28,8 +29,7 @@ class ItemModel(PandasModel):
 
     def set_model_data(self):
         # for category name mapping
-        cat_df: pd.DataFrame = self.lab.categories_df.set_index('category_id')
-        cat_s: pd.Series = cat_df['category_name']
+        cat_s: pd.Series = self.cat_df['category_name']
         self.categories = cat_s.to_list()
         self.db_df['category'] = self.db_df['category_id'].map(cat_s)
 
@@ -52,7 +52,10 @@ class ItemModel(PandasModel):
         pass
 
 
-    def get_changes(self):
+    def get_new_row(self):
+        # ['item_id', 'item_valid', 'item_name', 'category', 'description']
+        # ['item_id', 'item_valid', 'item_name', 'category_id', 'description']
+
         new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
                                      [None, True, 'n6', 3, 'lolo']],
                                     columns=['item_id', 'item_valid', 'item_name',

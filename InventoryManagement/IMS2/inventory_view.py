@@ -148,9 +148,9 @@ class InventoryWindow(QMainWindow):
             # Components connected to this signal use it to adapt to changes in the model’s layout.
             self.item_model.layoutAboutToBeChanged.emit()
             self.item_model.layoutChanged.emit()
-            # results = await self.lab.di_db.insert_items_df(
-            #     self.item_model.get_changes())
-            # logger.info(results)
+            results = await self.lab.di_db.insert_items_df(
+                self.item_model.get_new_row())
+            logger.info(results)
         elif action == "mod_item":
             logger.debug('Modifying item ...')
             selected_indexes = self.item_view.selectedIndexes()
