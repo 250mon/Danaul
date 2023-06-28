@@ -1,4 +1,4 @@
-import sys
+import sys, os
 from typing import List
 from PySide6.QtWidgets import (
     QApplication, QWidget, QComboBox,
@@ -9,7 +9,11 @@ from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QCloseEvent
 from di_lab import Lab
 from item_model import ItemModel
+from di_logger import Logs, logging
 
+
+logger = Logs().get_logger(os.path.basename(__file__))
+logger.setLevel(logging.DEBUG)
 
 class SingleItemWindow(QWidget):
     def __init__(self, model: ItemModel,
@@ -46,8 +50,6 @@ class SingleItemWindow(QWidget):
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
         self.addMapper()
 
-        self.save_flag = False
-
         self.initializeUI()
 
     def addMapper(self):
@@ -65,6 +67,8 @@ class SingleItemWindow(QWidget):
         self.okButton.clicked.connect(self.ok_clicked)
         self.cancelButton.clicked.connect(self.cancel_clicked)
 
+        # if model_indexes is not given, it means adding a new row
+        # otherwise the rows of model_indexes are being modified
         if self.model_indexes is None:
             self.mapper.toLast()
         else:
@@ -79,19 +83,17 @@ class SingleItemWindow(QWidget):
             self.nextButton.setEnabled(row < self.model_indexes[-1].row())
 
     def ok_clicked(self):
-        self.save_flag = True
+        if self.model_indexes:
+            start_idx = self.model_indexes[0].row()
+            end_idx = self.model_indexes[-1].row()
+            logger.debug(f'first index {start_idx}')
+            logger.debug(f'last index {end_idx}')
+            self.model.prepare_modified_rows_to_update(start_idx, end_idx)
         self.close()
 
     def cancel_clicked(self):
-        self.save_flag = False
+        self.model.del_template_row()
         self.close()
-
-    def closeEvent(self, event: QCloseEvent) -> None:
-        if self.save_flag:
-            pass
-        else:
-            self.model.del_template_row()
-        super().closeEvent(event)
 
     def initializeUI(self):
         vbox1 = QVBoxLayout()

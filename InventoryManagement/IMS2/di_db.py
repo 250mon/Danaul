@@ -1,9 +1,8 @@
+import os
 import asyncio
 import pandas as pd
-from typing import List, Tuple
-import logging
+from typing import List
 from db_utils import DbUtil
-from di_logger import Logs
 from inventory_schema import (
     CREATE_CATEGORY_TABLE,
     CREATE_ITEM_TABLE,
@@ -14,18 +13,16 @@ from inventory_schema import (
     CREATE_TRANSACTION_TYPE_TABLE,
     CREATE_TRANSACTION_TABLE,
 )
-from data_classes import (
-    Item, Sku, Transaction, EtcData, Category, ItemSide,
-    ItemSize, TransactionType, User
-)
+from data_classes import Item, Sku, Transaction, EtcData
+from di_logger import Logs, logging
 
+
+logger = Logs().get_logger(os.path.basename(__file__))
+logger.setLevel(logging.DEBUG)
 
 class InventoryDb:
     def __init__(self, db_config_file):
         self.db_util = DbUtil(db_config_file)
-
-        self.logger = Logs().get_logger('di_db')
-        self.logger.setLevel(logging.DEBUG)
 
     async def create_tables(self):
         statements = [CREATE_CATEGORY_TABLE,
@@ -71,8 +68,8 @@ class InventoryDb:
         args = [(item.item_name, item.category_id, item.description)
                 for item in items_df.itertuples()]
 
-        self.logger.debug("Insert Items ...")
-        self.logger.debug(args)
+        logger.debug("Insert Items ...")
+        logger.debug(args)
         return await self.db_util.pool_execute(stmt, args)
 
     async def insert_items(self, items: List[Item]):
@@ -85,8 +82,8 @@ class InventoryDb:
         stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2, $3)"
         args = [(item.item_name, item.category_id, item.description) for item in items]
 
-        self.logger.debug("Insert Items ...")
-        self.logger.debug(args)
+        logger.debug("Insert Items ...")
+        logger.debug(args)
         return await self.db_util.pool_execute(stmt, args)
 
     async def delete_items(self, items: Item or List[Item]):
@@ -96,11 +93,11 @@ class InventoryDb:
             args = [(items.item_id,)]
         else:
             msg = f"items' type{type(items)} must be either Item or List[Item]"
-            self.logger.error(msg)
+            logger.error(msg)
             return None
 
-        self.logger.debug("Delete Items ...")
-        self.logger.debug(args)
+        logger.debug("Delete Items ...")
+        logger.debug(args)
         return await self.db_util.delete('items', 'item_id', args)
 
     async def delete_items_by_name(self, item_names: str or List[str]):
@@ -110,11 +107,11 @@ class InventoryDb:
             args = [(item_names,)]
         else:
             msg = f"items' type{type(item_names)} must be either str or List[str]"
-            self.logger.error(msg)
+            logger.error(msg)
             return None
 
-        self.logger.debug("Delete Items ...")
-        self.logger.debug(args)
+        logger.debug("Delete Items ...")
+        logger.debug(args)
         return await self.db_util.delete('items', 'item_name', args)
 
     async def insert_skus(self, skus: List[Sku]):
@@ -129,15 +126,15 @@ class InventoryDb:
         args = [(s.bit_code, s.sku_qty, s.min_qty, s.item_id, s.item_size_id,
                  s.item_side_id, s.expiration_date, s.description) for s in skus]
 
-        self.logger.debug("Insert Skus ...")
-        self.logger.debug(args)
+        logger.debug("Insert Skus ...")
+        logger.debug(args)
         return await self.db_util.pool_execute(stmt, args)
 
     async def delete_skus(self, skus: List[Sku]):
         args = [(s.sku_id,) for s in skus]
 
-        self.logger.debug("Delete Skus ...")
-        self.logger.debug(args)
+        logger.debug("Delete Skus ...")
+        logger.debug(args)
         return await self.db_util.delete('skus', 'sku_id', args)
 
     async def insert_transactions(self, trs: List[Transaction]):
@@ -153,15 +150,15 @@ class InventoryDb:
                  t.tr_qty, t.before_qty, t.after_qty,
                  t.tr_timestamp, t.description) for t in trs]
 
-        self.logger.debug("Insert Transactions ...")
-        self.logger.debug(args)
+        logger.debug("Insert Transactions ...")
+        logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
     async def delete_transactions(self, trs: List[Transaction]):
         args = [(t.tr_id,) for t in trs]
 
-        self.logger.debug("Delete Transactions ...")
-        self.logger.debug(args)
+        logger.debug("Delete Transactions ...")
+        logger.debug(args)
         return await self.db_util.delete('transactions', 'tr_id', args)
 
 

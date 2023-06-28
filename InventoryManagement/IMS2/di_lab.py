@@ -1,12 +1,16 @@
+import os
 import asyncio
 from asyncpg import Record
 from typing import List, Tuple, Dict
 from datetime import date
 from data_classes import Item, Sku, Transaction
 from di_db import InventoryDb
-from di_logger import Logs, logging
 import pandas as pd
+from di_logger import Logs, logging
 
+
+logger = Logs().get_logger(os.path.basename(__file__))
+logger.setLevel(logging.DEBUG)
 
 class Singleton(type):
     _instances = {}
@@ -49,9 +53,6 @@ class Lab(metaclass=Singleton):
         self.items = {}
         self.skus = {}
         self.transactions = {}
-
-        self.logger = Logs().get_logger('lab')
-        self.logger.setLevel(logging.DEBUG)
 
         self.bool_initialized = False
         if not self.bool_initialized:
@@ -118,7 +119,7 @@ class Lab(metaclass=Singleton):
         if item.item_id not in self.items.keys():
             self.items[item.item_id] = item
         else:
-            self.logger.warning(f'Lab: add_item cannot update the \
+            logger.warning(f'Lab: add_item cannot update the \
              dict because of the duplicate id {item.item_id}')
 
     def init_items(self):
@@ -131,7 +132,7 @@ class Lab(metaclass=Singleton):
         if sku.sku_id not in self.skus.keys():
             self.skus[sku.sku_id] = sku
         else:
-            self.logger.warning(f'Lab: add_sku cannot update the \
+            logger.warning(f'Lab: add_sku cannot update the \
              dict because of the duplicate id {sku.sku_id}')
 
     def init_skus(self):
@@ -144,7 +145,7 @@ class Lab(metaclass=Singleton):
         if transaction.tr_id not in self.transactions.keys():
             self.transactions[transaction.tr_id] = transaction
         else:
-            self.logger.warning(f'Lab: add_tr cannot update the \
+            logger.warning(f'Lab: add_tr cannot update the \
              dict because of the duplicate id {transaction.tr_id}')
 
     def init_transactions(self):

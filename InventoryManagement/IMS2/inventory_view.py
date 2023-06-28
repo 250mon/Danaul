@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import asyncio
 import pandas as pd
 from PySide6.QtWidgets import (
@@ -16,7 +16,7 @@ from combobox_delegate import ComboBoxDelegate
 from single_item_window import SingleItemWindow
 
 
-logger = Logs().get_logger('inventory_view')
+logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 class InventoryWindow(QMainWindow):
@@ -32,11 +32,7 @@ class InventoryWindow(QMainWindow):
         self.setMinimumSize(1400, 800)
         self.setWindowTitle("다나을 재고관리")
         self.item_model = ItemModel()
-        # loop = asyncio.new_event_loop()
-        # try:
-        #     loop.run_until_complete(self.createModel())
-        # finally:
-        #     loop.close()
+
         self.setUpMainWindow()
         self.show()
 
@@ -151,18 +147,20 @@ class InventoryWindow(QMainWindow):
             # Components connected to this signal use it to adapt to changes in the model’s layout.
             self.item_model.layoutAboutToBeChanged.emit()
             self.item_model.layoutChanged.emit()
-            results = await self.lab.di_db.insert_items_df(
-                self.item_model.get_new_row())
-            logger.info(results)
+            self.item_model.get_added_new_row()
+            # results = await self.lab.di_db.insert_items_df(
+            #     self.item_model.get_added_new_row())
+            # logger.info(results)
         elif action == "mod_item":
             logger.debug('Modifying item ...')
             selected_indexes = self.item_view.selectedIndexes()
-            print(selected_indexes)
             check_indexes = [idx.isValid() for idx in selected_indexes]
-            print(check_indexes)
             if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
                 self.item_window = SingleItemWindow(self.item_model,
                                                     selected_indexes)
+                self.item_model.layoutAboutToBeChanged.emit()
+                self.item_model.layoutChanged.emit()
+                self.item_model.get_modified_rows()
 
     def setupSkuView(self):
         # skus view
