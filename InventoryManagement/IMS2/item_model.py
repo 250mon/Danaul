@@ -37,13 +37,13 @@ class ItemModel(PandasModel):
         model_df = self.db_df.fillna("")
         self._dataframe = model_df[self.col_names]
 
-    def add_new_row(self):
+    def add_template_row(self):
         new_df = pd.DataFrame([(-1, True, "", self.categories[0], "")],
                               columns=self.col_names)
         self.tmp_df = self._dataframe
         self._dataframe = pd.concat([self._dataframe, new_df])
 
-    def cancel_add_new_row(self):
+    def del_template_row(self):
         if self.tmp_df is not None:
             self._dataframe = self.tmp_df
             self.tmp_df = None

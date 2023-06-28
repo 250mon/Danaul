@@ -90,7 +90,7 @@ class SingleItemWindow(QWidget):
         if self.save_flag:
             pass
         else:
-            self.model.cancel_add_new_row()
+            self.model.del_template_row()
         super().closeEvent(event)
 
     def initializeUI(self):

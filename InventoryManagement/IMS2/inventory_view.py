@@ -135,13 +135,16 @@ class InventoryWindow(QMainWindow):
 
     @Slot(str, pd.DataFrame)
     def async_start(self, action: str, df: pd.DataFrame = None):
+        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
+        # inside the host(Qt) event loop
+        # AsyncHelper will eventually call self.update_df(action, df)
         self.start_signal.emit(action, df)
 
     async def update_df(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')
         if action == "add_item":
             logger.debug('Adding item ...')
-            self.item_model.add_new_row()
+            self.item_model.add_template_row()
             self.item_window = SingleItemWindow(self.item_model)
             # trigger refresh
             # This signal is emitted just before the layout of a model is changed.
