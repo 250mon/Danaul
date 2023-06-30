@@ -104,10 +104,13 @@ class InventoryWindow(QMainWindow):
         self.item_search_bar.textChanged.connect(
             self.item_proxy_model.setFilterFixedString)
         add_item_btn = QPushButton('추가')
-        add_item_btn.clicked.connect(lambda: self.async_start("add_item"))
+        add_item_btn.clicked.connect(lambda: self.do_actions("add_item"))
         mod_item_btn = QPushButton('수정')
-        mod_item_btn.clicked.connect(lambda: self.async_start("mod_item"))
+        mod_item_btn.clicked.connect(lambda: self.do_actions("mod_item"))
         del_item_btn = QPushButton('삭제')
+        del_item_btn.clicked.connect(lambda: self.do_actions("del_item"))
+        save_item_btn = QPushButton('저장')
+        save_item_btn.clicked.connect(lambda: self.async_start("save"))
 
         item_hbox = QHBoxLayout()
         item_hbox.addWidget(self.item_search_bar)
@@ -115,6 +118,7 @@ class InventoryWindow(QMainWindow):
         item_hbox.addWidget(add_item_btn)
         item_hbox.addWidget(mod_item_btn)
         item_hbox.addWidget(del_item_btn)
+        item_hbox.addWidget(save_item_btn)
 
         item_vbox = QVBoxLayout()
         item_vbox.addLayout(item_hbox)
@@ -130,13 +134,7 @@ class InventoryWindow(QMainWindow):
         self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
 
     @Slot(str, pd.DataFrame)
-    def async_start(self, action: str, df: pd.DataFrame = None):
-        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
-        # inside the host(Qt) event loop
-        # AsyncHelper will eventually call self.update_df(action, df)
-        self.start_signal.emit(action, df)
-
-    async def update_df(self, action: str, df: pd.DataFrame = None):
+    def do_actions(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')
         if action == "add_item":
             logger.debug('Adding item ...')
@@ -147,10 +145,6 @@ class InventoryWindow(QMainWindow):
             # Components connected to this signal use it to adapt to changes in the model’s layout.
             self.item_model.layoutAboutToBeChanged.emit()
             self.item_model.layoutChanged.emit()
-            self.item_model.get_added_new_row()
-            # results = await self.lab.di_db.insert_items_df(
-            #     self.item_model.get_added_new_row())
-            # logger.info(results)
         elif action == "mod_item":
             logger.debug('Modifying item ...')
             selected_indexes = self.item_view.selectedIndexes()
@@ -158,9 +152,45 @@ class InventoryWindow(QMainWindow):
             if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
                 self.item_window = SingleItemWindow(self.item_model,
                                                     selected_indexes)
-                self.item_model.layoutAboutToBeChanged.emit()
-                self.item_model.layoutChanged.emit()
                 self.item_model.get_modified_rows()
+
+
+    @Slot(str, pd.DataFrame)
+    def async_start(self, action: str, df: pd.DataFrame = None):
+        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
+        # inside the host(Qt) event loop
+        # AsyncHelper will eventually call self.update_df(action, df)
+        self.start_signal.emit(action, df)
+
+
+    async def update_df(self, action: str, df: pd.DataFrame = None):
+        logger.debug(f'{action}')
+        if action == "save":
+            logger.debug('Saving ...')
+            await self.item_model.update_db()
+            # logger.info(results)
+
+        # if action == "add_item":
+        #     logger.debug('Adding item ...')
+        #     self.item_model.add_template_row()
+        #     self.item_window = SingleItemWindow(self.item_model)
+        #     # trigger refresh
+        #     # This signal is emitted just before the layout of a model is changed.
+        #     # Components connected to this signal use it to adapt to changes in the model’s layout.
+        #     self.item_model.layoutAboutToBeChanged.emit()
+        #     self.item_model.layoutChanged.emit()
+        #     self.item_model.get_added_new_row()
+        #     # results = await self.lab.di_db.insert_items_df(
+        #     #     self.item_model.get_added_new_row())
+        #     # logger.info(results)
+        # elif action == "mod_item":
+        #     logger.debug('Modifying item ...')
+        #     selected_indexes = self.item_view.selectedIndexes()
+        #     check_indexes = [idx.isValid() for idx in selected_indexes]
+        #     if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
+        #         self.item_window = SingleItemWindow(self.item_model,
+        #                                             selected_indexes)
+        #         self.item_model.get_modified_rows()
 
     def setupSkuView(self):
         # skus view

@@ -41,27 +41,33 @@ class ItemModel(PandasModel):
         self.categories = cat_s.to_list()
         self.db_df['category'] = self.db_df['category_id'].map(cat_s)
 
-        # the model data for PandasModel is _dataframe
-        model_df = self.db_df.fillna("")
-        self._dataframe = model_df[self.col_names]
+        # the model data for PandasModel is view_df
+        self.model_df = self.db_df.fillna("")
+        self.view_df = self.model_df[self.col_names]
 
     def add_template_row(self):
         new_df = pd.DataFrame([(-1, True, "", self.categories[0], "")],
                               columns=self.col_names)
-        self.tmp_df = self._dataframe
-        self._dataframe = pd.concat([self._dataframe, new_df])
+        self.tmp_df = self.view_df
+        self.view_df = pd.concat([self.view_df, new_df])
 
     def del_template_row(self):
         if self.tmp_df is not None:
-            self._dataframe = self.tmp_df
+            self.view_df = self.tmp_df
             self.tmp_df = None
+
+    async def update_db(self):
+        diff = self.view_df.compare(self.model_df[self.col_names], keep_shape=True)
+        # print(diff.loc[:, slice(""self"], keep_shape=True)
+        print(diff)
+        # await self.lab.upsert_items_df(self.model_df)
 
     def prepare_modified_rows_to_update(self, start_idx, end_idx):
         self.mod_start_idx = start_idx
         self.mod_end_idx = end_idx
 
     def get_added_new_row(self):
-        new_items_df = self._dataframe.iloc[-1, :]
+        new_items_df = self.view_df.iloc[-1, :]
 
         # ['item_id', 'item_valid', 'item_name', 'category', 'description']
         # ['item_id', 'item_valid', 'item_name', 'category_id', 'description']
@@ -75,7 +81,7 @@ class ItemModel(PandasModel):
         return new_items_df
 
     def get_modified_rows(self):
-        modified_items_df = self._dataframe.iloc[self.mod_start_idx: self.mod_end_idx, :]
+        modified_items_df = self.view_df.iloc[self.mod_start_idx: self.mod_end_idx, :]
         logger.debug('Modifying items ...')
         logger.debug(modified_items_df)
 

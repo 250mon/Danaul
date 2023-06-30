@@ -72,6 +72,27 @@ class InventoryDb:
         logger.debug(args)
         return await self.db_util.pool_execute(stmt, args)
 
+    async def upsert_items_df(self, items_df: pd.DataFrame):
+        """
+        Initial insertion of items
+        item_id and item_valid are set to default values
+        :param items:
+        :return:
+        """
+        stmt = """INSERT INTO items VALUES(DEFAULT, DEFAULT, $2, $3, $4)
+                    ON CONFLICT (item_name)
+                    DO
+                     UPDATE SET item_valid = $1,
+                                item_name = $2,
+                                category_id = $3,
+                                description = $4"""
+        args = [(item.item_valid, item.item_name, item.category_id, item.description)
+                for item in items_df.itertuples()]
+
+        logger.debug("Insert Items ...")
+        logger.debug(args)
+        return await self.db_util.pool_execute(stmt, args)
+
     async def insert_items(self, items: List[Item]):
         """
         Initial insertion of items

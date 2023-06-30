@@ -217,14 +217,15 @@ class Lab(metaclass=Singleton):
     async def insert_items_df(self, items_df: pd.DataFrame):
         return await self.di_db.insert_items_df(items_df)
 
-    async def update_items_df(self):
+    async def upsert_items_df(self, items_df: pd.DataFrame):
+        return await self.di_db.upsert_items_df(items_df)
+
+
+    async def get_items_df_from_db(self):
         self.items_df = await self.get_df_from_db('items')
 
 
-async def main():
-    danaul_db = InventoryDb('db_settings')
-    lab = await Lab(danaul_db)
-
+async def main(lab):
     cat_s = lab.categories_df.set_index('category_id')['category_name']
     isz_s = lab.item_sizes_df.set_index('item_size_id')['item_size']
     isd_s = lab.item_sides_df.set_index('item_side_id')['item_side']
@@ -232,11 +233,12 @@ async def main():
 
     # Convert a dataframe into classes and insert them into DB
     new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
-                                 [None, True, 'n6', 3, 'lolo']],
+                                 [None, True, 'n6', 3, 'change']],
                                 columns=['item_id', 'item_valid', 'item_name',
                                          'category_id', 'description'])
-    await lab.di_db.insert_items_df(new_items_df)
-    await lab.update_items_df()
+    # await lab.di_db.insert_items_df(new_items_df)
+    await lab.di_db.upsert_items_df(new_items_df)
+    await lab.get_items_df_from_db()
 
     # Get data from db
     lab.items_df['category'] = lab.items_df['category_id'].map(cat_s)
@@ -282,4 +284,6 @@ async def main():
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    danaul_db = InventoryDb('db_settings')
+    lab = Lab(danaul_db)
+    asyncio.run(main(lab))
