@@ -21,11 +21,12 @@ class ItemModel(PandasModel):
         self.db_df = self.lab.items_df
 
         # column names that will be appearing in the view
-        self.col_names = ['item_id', 'item_valid', 'item_name', 'category', 'description']
+        self.col_names = ['item_id', 'item_valid', 'item_name',
+                          'category_name', 'description']
 
         # need category_id to category_name mapping table
         self.categories = None
-        self.cat_df: pd.DataFrame = self.lab.categories_df.set_index('category_id')
+        self.category_df: pd.DataFrame = self.lab.categories_df
 
         # set data to model
         self.set_model_data()
@@ -37,9 +38,10 @@ class ItemModel(PandasModel):
 
     def set_model_data(self):
         # for category name mapping
-        cat_s: pd.Series = self.cat_df['category_name']
+        cat_df = self.category_df.set_index('category_id')
+        cat_s: pd.Series = cat_df['category_name']
         self.categories = cat_s.to_list()
-        self.db_df['category'] = self.db_df['category_id'].map(cat_s)
+        self.db_df['category_name'] = self.db_df['category_id'].map(cat_s)
 
         # the model data for PandasModel is view_df
         self.model_df = self.db_df.fillna("")
@@ -57,10 +59,18 @@ class ItemModel(PandasModel):
             self.tmp_df = None
 
     async def update_db(self):
-        diff = self.view_df.compare(self.model_df[self.col_names], keep_shape=True)
-        # print(diff.loc[:, slice(""self"], keep_shape=True)
-        print(diff)
-        # await self.lab.upsert_items_df(self.model_df)
+        diff = self.view_df.compare(self.model_df[self.col_names])
+        df_to_update = self.view_df.loc[diff.index, :]
+
+        # for category name mapping
+        cat_df = self.category_df.set_index('category_name')
+        cat_s: pd.Series = cat_df['category_id']
+        df_to_update['category_id'] = df_to_update['category_name'].map(cat_s)
+        logger.debug('df_to_update ...')
+        logger.debug(df_to_update)
+        result = await self.lab.upsert_items_df(df_to_update)
+        logger.debug(result)
+        return result
 
     def prepare_modified_rows_to_update(self, start_idx, end_idx):
         self.mod_start_idx = start_idx
