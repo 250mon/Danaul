@@ -152,7 +152,8 @@ class InventoryWindow(QMainWindow):
             if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
                 self.item_window = SingleItemWindow(self.item_model,
                                                     selected_indexes)
-                self.item_model.get_modified_rows()
+                self.item_model.layoutAboutToBeChanged.emit()
+                self.item_model.layoutChanged.emit()
 
 
     @Slot(str, pd.DataFrame)

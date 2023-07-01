@@ -59,7 +59,11 @@ class ItemModel(PandasModel):
             self.tmp_df = None
 
     async def update_db(self):
+        print(self.view_df)
+        print(self.model_df[self.col_names])
         diff = self.view_df.compare(self.model_df[self.col_names])
+        print(diff)
+        logger.debug(f'diff.index: {diff.index}')
         df_to_update = self.view_df.loc[diff.index, :]
 
         # for category name mapping

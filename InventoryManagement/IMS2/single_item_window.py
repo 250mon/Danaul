@@ -2,7 +2,7 @@ import sys, os
 from typing import List
 from PySide6.QtWidgets import (
     QApplication, QWidget, QComboBox,
-    QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
+    QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
     QPushButton, QDataWidgetMapper, QGridLayout
 )
 from PySide6.QtCore import Qt, QModelIndex
@@ -25,6 +25,7 @@ class SingleItemWindow(QWidget):
 
         self.nameLabel = QLabel("제품명:")
         self.nameLineEdit = QLineEdit()
+        self.nameLineEdit.setReadOnly(True)
 
         self.validLabel = QLabel("유효:")
         self.validComboBox = QComboBox()
@@ -36,7 +37,7 @@ class SingleItemWindow(QWidget):
         self.categoryComboBox.addItems(category_items)
 
         self.descriptionLabel = QLabel("비고:")
-        self.descriptionTextEdit = QTextEdit()
+        self.descriptionTextEdit = QPlainTextEdit()
 
         self.nextButton = QPushButton("&Next")
         self.previousButton = QPushButton("&Previous")
