@@ -56,6 +56,7 @@ class SingleItemWindow(QWidget):
 
     def addMapper(self):
         self.mapper = QDataWidgetMapper(self)
+        self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
         self.mapper.setModel(self.model)
         self.mapper.addMapping(self.validComboBox, 1)
         self.mapper.addMapping(self.nameLineEdit, 2)
@@ -91,6 +92,7 @@ class SingleItemWindow(QWidget):
             logger.debug(f'first index {start_idx}')
             logger.debug(f'last index {end_idx}')
             self.model.prepare_modified_rows_to_update(start_idx, end_idx)
+        self.mapper.submit()
         self.close()
 
     def cancel_clicked(self):
