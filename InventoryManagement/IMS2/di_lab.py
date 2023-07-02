@@ -62,6 +62,17 @@ class Lab(metaclass=Singleton):
             finally:
                 loop.close()
 
+        self.tables = {
+            'category': self.categories_df,
+            'item_size': self.item_sizes_df,
+            'item_side': self.item_sides_df,
+            'users': self.users_df,
+            'transaction_type': self.tr_types_df,
+            'items': self.items_df,
+            'skus': self.skus_df,
+            'transactions': self.trs_df
+        }
+
     async def async_init(self):
         if self.bool_initialized is False:
             tables = ['category', 'item_size', 'item_side',
@@ -69,10 +80,10 @@ class Lab(metaclass=Singleton):
                       'skus', 'transactions']
 
             # get etc dicts
-            get_data = [self.get_etc_datas(table) for table in tables[:-3]]
-            data = await asyncio.gather(*get_data)
-            (self.categories, self.item_sizes, self.item_sides,
-             self.users, self.tr_types) = data
+            # get_data = [self.get_etc_datas(table) for table in tables[:-3]]
+            # data = await asyncio.gather(*get_data)
+            # (self.categories, self.item_sizes, self.item_sides,
+            #  self.users, self.tr_types) = data
 
             # get etc dfs
             get_data = [self.get_df_from_db(table) for table in tables]
@@ -81,11 +92,11 @@ class Lab(metaclass=Singleton):
              self.users_df, self.tr_types_df, self.items_df, self.skus_df,
              self.trs_df) = data
 
-            self.categories_df.set_index('category_id')
-            self.item_sizes_df.set_index('item_size_id')
-            self.item_sides_df.set_index('item_side_id')
-            self.users_df.set_index('user_id')
-            self.tr_types_df.set_index('tr_type_id')
+            # self.categories_df.set_index('category_id')
+            # self.item_sizes_df.set_index('item_size_id')
+            # self.item_sides_df.set_index('item_side_id')
+            # self.users_df.set_index('user_id')
+            # self.tr_types_df.set_index('tr_type_id')
 
         self.bool_initialized = True
         return self
@@ -102,15 +113,18 @@ class Lab(metaclass=Singleton):
         df.fillna("", inplace=True)
         return df
 
-    async def get_etc_datas(self, table: str):
-        query = f"SELECT * FROM {table}"
-        results = await self.di_db_util.select_query(query)
-        dict_result = {}
-        if results:
-            r_tuples = map(tuple, results)
-            dict_data = {r[0]: r[1] for r in r_tuples}
-            dict_result.update(dict_data)
-        return dict_result
+    async def update_lab_df_from_db(self, table: str):
+        self.tables[table] = self.get_df_from_db(table)
+
+    # async def get_etc_datas(self, table: str) -> Dict[str, object]:
+    #     query = f"SELECT * FROM {table}"
+    #     results = await self.di_db_util.select_query(query)
+    #     dict_result = {}
+    #     if results:
+    #         r_tuples = map(tuple, results)
+    #         dict_data = {r[0]: r[1] for r in r_tuples}
+    #         dict_result.update(dict_data)
+    #     return dict_result
 
     def get_item(self, id: int):
         return self.items.get(id, None)

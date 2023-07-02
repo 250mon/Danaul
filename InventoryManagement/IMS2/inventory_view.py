@@ -36,39 +36,39 @@ class InventoryWindow(QMainWindow):
         self.setUpMainWindow()
         self.show()
 
-    async def createModel(self):
-        self.lab = Lab(InventoryDb('db_settings'))
-        # get raw data from db
-        tables = ['skus', 'transactions']
-        get_dfs = [self.lab.get_df_from_db(table) for table in tables]
-        dfs_from_db = await asyncio.gather(*get_dfs)
-        skus_df, trs_df = dfs_from_db
-
-        # make model data
-
-        i_s = self.lab.items_df.set_index('item_id')['item_name']
-        skus_df['item_name'] = skus_df['item_id'].map(i_s)
-        skus_df['item_size'] = skus_df['item_size_id'].map(self.lab.item_sizes)
-        skus_df['item_side'] = skus_df['item_side_id'].map(self.lab.item_sides)
-        skus_df.fillna("", inplace=True)
-        # skus_model_data_df = skus_df.drop(['item_id', 'item_size_id', 'item_side_id'], axis=1)
-        skus_model_data_df = skus_df[['sku_id', 'item_name', 'item_size', 'item_side',
-                                     'sku_qty', 'min_qty', 'expiration_date', 'bit_code',
-                                     'description']]
-        self.sku_model = PandasModel(skus_model_data_df)
-
-        s_df = skus_df.set_index('sku_id')
-        trs_df['item_name'] = trs_df['sku_id'].map(s_df['item_name'])
-        trs_df['item_size'] = trs_df['sku_id'].map(s_df['item_size'])
-        trs_df['item_side'] = trs_df['sku_id'].map(s_df['item_side'])
-        trs_df['tr_type'] = trs_df['tr_type_id'].map(self.lab.tr_types)
-        trs_df['user_name'] = trs_df['user_id'].map(self.lab.users)
-        trs_df.fillna("", inplace=True)
-        # trs_model_data_df = trs_df.drop(['sku_id', 'tr_type_id', 'user_id'], axis=1)
-        trs_model_data_df = trs_df[['tr_id', 'tr_type', 'item_name', 'item_size',
-                                    'item_side', 'tr_qty', 'before_qty', 'after_qty',
-                                    'tr_timestamp', 'description']]
-        self.tr_model = PandasModel(trs_model_data_df)
+    # async def createModel(self):
+    #     self.lab = Lab(InventoryDb('db_settings'))
+    #     # get raw data from db
+    #     tables = ['skus', 'transactions']
+    #     get_dfs = [self.lab.get_df_from_db(table) for table in tables]
+    #     dfs_from_db = await asyncio.gather(*get_dfs)
+    #     skus_df, trs_df = dfs_from_db
+    #
+    #     # make model data
+    #
+    #     i_s = self.lab.items_df.set_index('item_id')['item_name']
+    #     skus_df['item_name'] = skus_df['item_id'].map(i_s)
+    #     skus_df['item_size'] = skus_df['item_size_id'].map(self.lab.item_sizes)
+    #     skus_df['item_side'] = skus_df['item_side_id'].map(self.lab.item_sides)
+    #     skus_df.fillna("", inplace=True)
+    #     # skus_model_data_df = skus_df.drop(['item_id', 'item_size_id', 'item_side_id'], axis=1)
+    #     skus_model_data_df = skus_df[['sku_id', 'item_name', 'item_size', 'item_side',
+    #                                  'sku_qty', 'min_qty', 'expiration_date', 'bit_code',
+    #                                  'description']]
+    #     self.sku_model = PandasModel(skus_model_data_df)
+    #
+    #     s_df = skus_df.set_index('sku_id')
+    #     trs_df['item_name'] = trs_df['sku_id'].map(s_df['item_name'])
+    #     trs_df['item_size'] = trs_df['sku_id'].map(s_df['item_size'])
+    #     trs_df['item_side'] = trs_df['sku_id'].map(s_df['item_side'])
+    #     trs_df['tr_type'] = trs_df['tr_type_id'].map(self.lab.tr_types)
+    #     trs_df['user_name'] = trs_df['user_id'].map(self.lab.users)
+    #     trs_df.fillna("", inplace=True)
+    #     # trs_model_data_df = trs_df.drop(['sku_id', 'tr_type_id', 'user_id'], axis=1)
+    #     trs_model_data_df = trs_df[['tr_id', 'tr_type', 'item_name', 'item_size',
+    #                                 'item_side', 'tr_qty', 'before_qty', 'after_qty',
+    #                                 'tr_timestamp', 'description']]
+    #     self.tr_model = PandasModel(trs_model_data_df)
 
     def setupItemView(self):
         # items view
@@ -95,7 +95,8 @@ class InventoryWindow(QMainWindow):
                             for val in ['category_name', 'description']]
         self.item_model.set_editable_cols(editable_col_idx)
         # for category col, combobox delegate is used
-        delegate = ComboBoxDelegate(list(Lab().categories.values()), self)
+        category_name_list = Lab().categories_df['category_name'].values.tolist()
+        delegate = ComboBoxDelegate(category_name_list, self)
         self.item_view.setItemDelegateForColumn(editable_col_idx[0], delegate)
 
         item_widget = QWidget(self)

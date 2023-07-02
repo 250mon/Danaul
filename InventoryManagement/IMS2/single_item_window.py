@@ -33,8 +33,9 @@ class SingleItemWindow(QWidget):
 
         self.categoryLabel = QLabel("제품군:")
         self.categoryComboBox = QComboBox()
-        category_items = list(Lab().categories.values())
-        self.categoryComboBox.addItems(category_items)
+        category_name_list = Lab().categories_df['category_name'].values.tolist()
+        print(category_name_list)
+        self.categoryComboBox.addItems(category_name_list)
 
         self.descriptionLabel = QLabel("비고:")
         self.descriptionTextEdit = QPlainTextEdit()

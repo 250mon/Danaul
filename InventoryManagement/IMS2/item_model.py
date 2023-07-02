@@ -18,17 +18,18 @@ class ItemModel(PandasModel):
         super().__init__()
         # getting item data from db
         self.lab = Lab(InventoryDb('db_settings'))
-        self.db_df = self.lab.items_df
-
-        # column names that will be appearing in the view
-        self.col_names = ['item_id', 'item_valid', 'item_name',
-                          'category_name', 'description']
 
         # need category_id to category_name mapping table
         self.categories = None
         self.category_df: pd.DataFrame = self.lab.categories_df
 
         # set data to model
+        # column names that will be appearing in the view
+        self.col_names = ['item_id', 'item_valid', 'item_name',
+                          'category_name', 'description']
+
+        self.model_df = None
+        self.view_df = None
         self.set_model_data()
 
         # for later use
@@ -40,11 +41,12 @@ class ItemModel(PandasModel):
         # for category name mapping
         cat_df = self.category_df.set_index('category_id')
         cat_s: pd.Series = cat_df['category_name']
-        self.categories = cat_s.to_list()
-        self.db_df['category_name'] = self.db_df['category_id'].map(cat_s)
+
+        db_df = self.lab.items_df
+        db_df['category_name'] = db_df['category_id'].map(cat_s)
 
         # the model data for PandasModel is view_df
-        self.model_df = self.db_df.fillna("")
+        self.model_df = db_df.fillna("")
         self.view_df = self.model_df[self.col_names]
 
     def add_template_row(self):
@@ -74,6 +76,10 @@ class ItemModel(PandasModel):
         logger.debug(df_to_update)
         result = await self.lab.upsert_items_df(df_to_update)
         logger.debug(result)
+
+        # update model_df
+        await Lab().update_lab_df_from_db('items')
+        self.set_model_data()
         return result
 
     def prepare_modified_rows_to_update(self, start_idx, end_idx):
