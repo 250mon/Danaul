@@ -6,7 +6,6 @@ from PySide6.QtWidgets import (
     QPushButton, QDataWidgetMapper, QGridLayout
 )
 from PySide6.QtCore import Qt, QModelIndex
-from PySide6.QtGui import QCloseEvent
 from di_lab import Lab
 from item_model import ItemModel
 from di_logger import Logs, logging
@@ -25,7 +24,8 @@ class SingleItemWindow(QWidget):
 
         self.nameLabel = QLabel("제품명:")
         self.nameLineEdit = QLineEdit()
-        self.nameLineEdit.setReadOnly(True)
+        if indexes is not None:
+            self.nameLineEdit.setReadOnly(True)
 
         self.validLabel = QLabel("유효:")
         self.validComboBox = QComboBox()

@@ -1,15 +1,12 @@
 import sys, os
-import asyncio
 import pandas as pd
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDockWidget,
     QPushButton, QLineEdit, QTableView, QHBoxLayout, QVBoxLayout
 )
 from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel
-from pandas_model import PandasModel
 from async_helper import AsyncHelper
 from item_model import ItemModel
-from di_db import InventoryDb
 from di_lab import Lab
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate

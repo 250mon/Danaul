@@ -91,7 +91,6 @@ class Lab(metaclass=Singleton):
             (self.categories_df, self.item_sizes_df, self.item_sides_df,
              self.users_df, self.tr_types_df, self.items_df, self.skus_df,
              self.trs_df) = data
-            print(self.item_sides_df.data)
 
             # self.categories_df.set_index('category_id')
             # self.item_sizes_df.set_index('item_size_id')

@@ -66,7 +66,7 @@ class PandasModel(QAbstractTableModel):
 
     def setData(self,
                 index: QModelIndex,
-                value: str,
+                value: object,
                 role=Qt.EditRole):
         if index.isValid() and role == Qt.EditRole:
             self.view_df.iloc[index.row(), index.column()] = value

@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from PySide6.QtCore import Qt, QModelIndex
 from pandas_model import PandasModel
 from di_db import InventoryDb
 from di_lab import Lab
@@ -20,7 +21,6 @@ class ItemModel(PandasModel):
         self.lab = Lab(InventoryDb('db_settings'))
 
         # need category_id to category_name mapping table
-        self.categories = None
         self.category_df: pd.DataFrame = self.lab.categories_df
 
         # set data to model
@@ -37,6 +37,23 @@ class ItemModel(PandasModel):
         self.mod_start_idx = -1
         self.mod_end_idx = -1
 
+    def setData(self,
+                index: QModelIndex,
+                value: str,
+                role=Qt.EditRole):
+        if index.isValid() and role == Qt.EditRole:
+            # taking care of converting str type input to bool type
+            item_valid_column = self.col_names.index('item_valid')
+            if index.column() == item_valid_column:
+                val: bool = False
+                if value == 'True':
+                    val = True
+            else:
+                val: object = value
+            return super().setData(index, val, role)
+        return False
+
+
     def set_model_data(self):
         # for category name mapping
         cat_df = self.category_df.set_index('category_id')
@@ -50,7 +67,7 @@ class ItemModel(PandasModel):
         self.view_df = self.model_df[self.col_names]
 
     def add_template_row(self):
-        new_df = pd.DataFrame([(-1, True, "", self.categories[0], "")],
+        new_df = pd.DataFrame([(-1, True, "", self.category_df.iat[0, 1], "")],
                               columns=self.col_names)
         self.tmp_df = self.view_df
         self.view_df = pd.concat([self.view_df, new_df])
@@ -61,8 +78,8 @@ class ItemModel(PandasModel):
             self.tmp_df = None
 
     async def update_db(self):
-        print(self.view_df)
-        print(self.model_df[self.col_names])
+        print(f'view_df indexes{self.view_df.index}')
+        print(f'model_df indexes{self.model_df.index}')
         diff = self.view_df.compare(self.model_df[self.col_names])
         print(diff)
         logger.debug(f'diff.index: {diff.index}')
