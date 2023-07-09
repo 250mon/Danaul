@@ -10,7 +10,7 @@ class PandasModel(QAbstractTableModel):
 
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
-        self.view_df = dataframe
+        self.model_df = dataframe
         self.editable_cols = []
 
     def rowCount(self, parent=QModelIndex()) -> int:
@@ -19,7 +19,7 @@ class PandasModel(QAbstractTableModel):
         Return row count of the pandas DataFrame
         """
         if parent == QModelIndex():
-            return len(self.view_df)
+            return len(self.model_df)
 
         return 0
 
@@ -29,7 +29,7 @@ class PandasModel(QAbstractTableModel):
         Return column count of the pandas DataFrame
         """
         if parent == QModelIndex():
-            return len(self.view_df.columns)
+            return len(self.model_df.columns)
         return 0
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> str or None:
@@ -41,9 +41,9 @@ class PandasModel(QAbstractTableModel):
             return None
 
         if role == Qt.DisplayRole:
-            return str(self.view_df.iloc[index.row(), index.column()])
+            return str(self.model_df.iloc[index.row(), index.column()])
         elif role == Qt.EditRole:
-            return str(self.view_df.iloc[index.row(), index.column()])
+            return str(self.model_df.iloc[index.row(), index.column()])
 
         return None
 
@@ -57,10 +57,10 @@ class PandasModel(QAbstractTableModel):
         """
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                return str(self.view_df.columns[section])
+                return str(self.model_df.columns[section])
 
             if orientation == Qt.Vertical:
-                return str(self.view_df.index[section])
+                return str(self.model_df.index[section])
 
         return None
 
@@ -69,7 +69,7 @@ class PandasModel(QAbstractTableModel):
                 value: object,
                 role=Qt.EditRole):
         if index.isValid() and role == Qt.EditRole:
-            self.view_df.iloc[index.row(), index.column()] = value
+            self.model_df.iloc[index.row(), index.column()] = value
             self.dataChanged.emit(index, index)
             return True
         return False

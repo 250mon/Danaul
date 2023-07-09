@@ -24,18 +24,54 @@ class ItemModel(PandasModel):
         self.category_df: pd.DataFrame = self.lab.categories_df
 
         # set data to model
-        # column names that will be appearing in the view
-        self.col_names = ['item_id', 'item_valid', 'item_name',
-                          'category_name', 'description']
+        # mapping table where the actual column is located in the table
+        self.column_headers = ['item_id', 'item_valid', 'item_name',
+                               'category_name', 'description', 'modification']
 
         self.model_df = None
-        self.view_df = None
-        self.set_model_data()
+        self.set_model_df()
 
         # for later use
         self.tmp_df = None
         self.mod_start_idx = -1
         self.mod_end_idx = -1
+
+    def set_model_df(self):
+        # for category name mapping
+        cat_df = self.category_df.set_index('category_id')
+        cat_s: pd.Series = cat_df['category_name']
+
+        self.model_df = self.lab.items_df
+        self.model_df['category_name'] = self.model_df['category_id'].map(cat_s)
+        self.model_df['modification_category'] = None
+
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> str or None:
+        """Override method from QAbstractTableModel
+
+        Return data cell from the pandas DataFrame
+        """
+        if not index.isValid():
+            return None
+
+        def get_data(r_idx, c_idx):
+            col_series = self.model_df[self.column_headers[c_idx]]
+            data = col_series.iat[r_idx]
+            return data
+
+        is_deleted = get_data(index.row(), self.column_headers.index('modification')) == 'deleted'
+        if is_deleted:
+            return None
+
+        data_to_display = get_data(index.row(), index.column())
+        if data_to_display is None:
+            return None
+
+        if role == Qt.DisplayRole:
+            return str(data_to_display)
+        elif role == Qt.EditRole:
+            return str(data_to_display)
+
+        return None
 
     def setData(self,
                 index: QModelIndex,
@@ -43,8 +79,7 @@ class ItemModel(PandasModel):
                 role=Qt.EditRole):
         if index.isValid() and role == Qt.EditRole:
             # taking care of converting str type input to bool type
-            item_valid_column = self.col_names.index('item_valid')
-            if index.column() == item_valid_column:
+            if index.column() == self.column_headers.index('item_valid'):
                 val: bool = False
                 if value == 'True':
                     val = True
@@ -54,76 +89,22 @@ class ItemModel(PandasModel):
         return False
 
 
-    def set_model_data(self):
-        # for category name mapping
-        cat_df = self.category_df.set_index('category_id')
-        cat_s: pd.Series = cat_df['category_name']
-
-        db_df = self.lab.items_df
-        db_df['category_name'] = db_df['category_id'].map(cat_s)
-
-        # the model data for PandasModel is view_df
-        self.model_df = db_df.fillna("")
-        self.view_df = self.model_df[self.col_names]
-
     def add_template_row(self):
-        new_df = pd.DataFrame([(-1, True, "", self.category_df.iat[0, 1], "")],
-                              columns=self.col_names)
-        self.tmp_df = self.view_df
-        self.view_df = pd.concat([self.view_df, new_df])
+        new_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
+                              columns=self.model_df.columns)
+        self.model_df = pd.concat([self.model_df, new_df])
 
     def del_template_row(self):
-        if self.tmp_df is not None:
-            self.view_df = self.tmp_df
-            self.tmp_df = None
+        self.model_df.drop([-1])
 
     async def update_db(self):
-        print(f'view_df indexes{self.view_df.index}')
-        print(f'model_df indexes{self.model_df.index}')
-        diff = self.view_df.compare(self.model_df[self.col_names])
-        print(diff)
-        logger.debug(f'diff.index: {diff.index}')
-        df_to_update = self.view_df.loc[diff.index, :]
-
-        # for category name mapping
-        cat_df = self.category_df.set_index('category_name')
-        cat_s: pd.Series = cat_df['category_id']
-        df_to_update['category_id'] = df_to_update['category_name'].map(cat_s)
-        logger.debug('df_to_update ...')
-        logger.debug(df_to_update)
-        result = await self.lab.upsert_items_df(df_to_update)
-        logger.debug(result)
+        pass
 
         # update model_df
         await Lab().update_lab_df_from_db('items')
-        self.set_model_data()
+        self.set_model_df()
         return result
 
     def prepare_modified_rows_to_update(self, start_idx, end_idx):
         self.mod_start_idx = start_idx
         self.mod_end_idx = end_idx
-
-    def get_added_new_row(self):
-        new_items_df = self.view_df.iloc[-1, :]
-
-        # ['item_id', 'item_valid', 'item_name', 'category', 'description']
-        # ['item_id', 'item_valid', 'item_name', 'category_id', 'description']
-
-        # new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
-        #                              [None, True, 'n6', 3, 'lolo']],
-        #                             columns=['item_id', 'item_valid', 'item_name',
-        #                                      'category_id', 'description'])
-        logger.debug('Adding a new item ...')
-        logger.debug(new_items_df)
-        return new_items_df
-
-    def get_modified_rows(self):
-        modified_items_df = self.view_df.iloc[self.mod_start_idx: self.mod_end_idx, :]
-        logger.debug('Modifying items ...')
-        logger.debug(modified_items_df)
-
-        # reset idxes
-        self.mod_start_idx = -1
-        self.mod_end_idx = -1
-
-        return modified_items_df

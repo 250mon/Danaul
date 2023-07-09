@@ -88,7 +88,7 @@ class InventoryWindow(QMainWindow):
 
         # editable columns: category and description
         # a line edit is used as a default delegate
-        editable_col_idx = [self.item_model.col_names.index(val)
+        editable_col_idx = [self.item_model.column_headers.index(val)
                             for val in ['category_name', 'description']]
         self.item_model.set_editable_cols(editable_col_idx)
         # for category col, combobox delegate is used
