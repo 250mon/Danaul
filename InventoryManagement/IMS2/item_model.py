@@ -58,6 +58,8 @@ class ItemModel(PandasModel):
     def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> str or None:
         """Override method from QAbstractTableModel
 
+        QTableView accepts only QString as input
+
         Return data cell from the pandas DataFrame
         """
         if not index.isValid():
@@ -74,8 +76,8 @@ class ItemModel(PandasModel):
 
         if role == Qt.DisplayRole or role == Qt.EditRole:
             return str(data_to_display)
-
-        return None
+        else:
+            return None
 
     def setData(self,
                 index: QModelIndex,
@@ -101,8 +103,19 @@ class ItemModel(PandasModel):
 
         return super().setData(index, val, role)
 
-    def add_new_df(self, new_df: pd.DataFrame):
-        self.model_df = pd.concat([self.model_df, new_df])
+    def add_new_df(self, new_df: pd.DataFrame) -> str:
+        new_item_name = new_df.at[0, 'item_name']
+        if self.model_df[self.model_df.item_name == new_item_name].empty:
+            new_df['item_id'] = self.model_df['item_id'].max() + 1
+            self.model_df = pd.concat([self.model_df, new_df])
+            result_msg = f'Successfully add Item [{new_item_name}]'
+            logger.debug(result_msg)
+            return result_msg
+        else:
+            result_msg = f'Failed to add Item [{new_item_name}]: Duplicate item name'
+            logger.warn(result_msg)
+            return result_msg
+
 
     async def update_db(self):
         pass

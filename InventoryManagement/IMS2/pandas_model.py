@@ -50,7 +50,7 @@ class PandasModel(QAbstractTableModel):
     def headerData(self,
                    section: int,
                    orientation: Qt.Orientation,
-                   role: Qt.ItemDataRole) -> str or None:
+                   role=Qt.ItemDataRole) -> str or None:
         """Override method from QAbstractTableModel
 
         Return dataframe index as vertical header data and columns as horizontal header data.
@@ -68,11 +68,15 @@ class PandasModel(QAbstractTableModel):
                 index: QModelIndex,
                 value: object,
                 role=Qt.EditRole):
-        if index.isValid() and role == Qt.EditRole:
+        if not index.isValid():
+            return False
+
+        if role == Qt.EditRole:
             self.model_df.iloc[index.row(), index.column()] = value
             self.dataChanged.emit(index, index)
             return True
-        return False
+        else:
+            return False
 
     def flags(self, index: QModelIndex):
         if index.column() in self.editable_cols:

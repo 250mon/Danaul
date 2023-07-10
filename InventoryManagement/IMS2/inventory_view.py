@@ -81,9 +81,15 @@ class InventoryWindow(QMainWindow):
         self.item_view.resizeColumnsToContents()
         self.item_view.setSortingEnabled(True)
 
+        # QSortFilterProxyModel enables filtering columns and sorting rows
         self.item_proxy_model = QSortFilterProxyModel()
         self.item_proxy_model.setSourceModel(self.item_model)
+        # Filtering
         self.item_proxy_model.setFilterKeyColumn(1)
+        # Sorting
+        # self.item_proxy_model.sort(0, Qt.AscendingOrder)
+        # self.item_proxy_model.setSortRole(Qt.UserRole)
+
         self.item_view.setModel(self.item_proxy_model)
 
         # editable columns: category and description
@@ -158,7 +164,8 @@ class InventoryWindow(QMainWindow):
 
     @Slot(pd.DataFrame)
     def add_new_item(self, new_df: pd.DataFrame):
-        self.item_model.add_new_df(new_df)
+        result_msg = self.item_model.add_new_df(new_df)
+        self.statusBar().showMessage(result_msg)
         self.item_model.layoutAboutToBeChanged.emit()
         self.item_model.layoutChanged.emit()
 
