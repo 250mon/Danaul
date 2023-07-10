@@ -136,13 +136,9 @@ class InventoryWindow(QMainWindow):
         logger.debug(f'{action}')
         if action == "add_item":
             logger.debug('Adding item ...')
-            self.item_model.add_template_row()
-            self.item_window = SingleItemWindow(self.item_model)
-            # trigger refresh
-            # This signal is emitted just before the layout of a model is changed.
-            # Components connected to this signal use it to adapt to changes in the model’s layout.
-            self.item_model.layoutAboutToBeChanged.emit()
-            self.item_model.layoutChanged.emit()
+            self.new_item_model = ItemModel(template_flag=True)
+            self.item_window = SingleItemWindow(self.new_item_model)
+            self.item_window.add_item_signal.connect(self.add_new_item)
         elif action == "mod_item":
             logger.debug('Modifying item ...')
             selected_indexes = self.item_view.selectedIndexes()
@@ -153,7 +149,6 @@ class InventoryWindow(QMainWindow):
                 self.item_model.layoutAboutToBeChanged.emit()
                 self.item_model.layoutChanged.emit()
 
-
     @Slot(str, pd.DataFrame)
     def async_start(self, action: str, df: pd.DataFrame = None):
         # send signal to AsyncHelper to schedule the guest (asyncio) event loop
@@ -161,6 +156,11 @@ class InventoryWindow(QMainWindow):
         # AsyncHelper will eventually call self.update_df(action, df)
         self.start_signal.emit(action, df)
 
+    @Slot(pd.DataFrame)
+    def add_new_item(self, new_df: pd.DataFrame):
+        self.item_model.add_new_df(new_df)
+        self.item_model.layoutAboutToBeChanged.emit()
+        self.item_model.layoutChanged.emit()
 
     async def update_df(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')

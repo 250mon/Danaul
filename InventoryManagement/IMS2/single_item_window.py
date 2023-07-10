@@ -1,11 +1,12 @@
 import sys, os
+import pandas as pd
 from typing import List
 from PySide6.QtWidgets import (
     QApplication, QWidget, QComboBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
     QPushButton, QDataWidgetMapper, QGridLayout
 )
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex, Signal
 from di_lab import Lab
 from item_model import ItemModel
 from di_logger import Logs, logging
@@ -15,6 +16,8 @@ logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 class SingleItemWindow(QWidget):
+    add_item_signal = Signal(pd.DataFrame)
+
     def __init__(self, model: ItemModel,
                  indexes: List[QModelIndex] = None,
                  parent=None):
@@ -86,13 +89,18 @@ class SingleItemWindow(QWidget):
             self.nextButton.setEnabled(row < self.model_indexes[-1].row())
 
     def ok_clicked(self):
+        # modifying items
         if self.model_indexes:
             start_idx = self.model_indexes[0].row()
             end_idx = self.model_indexes[-1].row()
             logger.debug(f'first index {start_idx}')
             logger.debug(f'last index {end_idx}')
-            self.model.prepare_modified_rows_to_update(start_idx, end_idx)
-        self.mapper.submit()
+            self.mapper.submit()
+        # adding a new item
+        else:
+            self.mapper.submit()
+            self.add_item_signal.emit(self.model.model_df)
+
         self.close()
 
     def cancel_clicked(self):

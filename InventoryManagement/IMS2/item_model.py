@@ -15,7 +15,7 @@ Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
 class ItemModel(PandasModel):
-    def __init__(self):
+    def __init__(self, template_flag=False):
         super().__init__()
         # getting item data from db
         self.lab = Lab(InventoryDb('db_settings'))
@@ -29,7 +29,10 @@ class ItemModel(PandasModel):
                              'category_name', 'description', 'category_id',
                              'modification']
 
-        self.set_model_df()
+        if not template_flag:
+            self.set_model_df()
+        else:
+            self.set_template_model_df()
 
         # for later use
         self.tmp_df = None
@@ -47,6 +50,10 @@ class ItemModel(PandasModel):
 
         # reindexing in the order of table view
         self.model_df = self.model_df.reindex(self.column_names, axis=1)
+
+    def set_template_model_df(self):
+        self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
+                              columns=self.column_names)
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> str or None:
         """Override method from QAbstractTableModel
@@ -88,22 +95,14 @@ class ItemModel(PandasModel):
             cat_s: pd.Series = cat_df['category_id']
             self.model_df.iloc[index.row(),
                     self.model_df.columns.get_loc('category_id')] = cat_s.loc[value]
+            val: object = value
         else:
             val: object = value
+
         return super().setData(index, val, role)
 
-
-    def add_template_row(self):
-        new_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
-                              columns=self.model_df.columns)
+    def add_new_df(self, new_df: pd.DataFrame):
         self.model_df = pd.concat([self.model_df, new_df])
-
-    def del_template_row(self):
-        self.model_df.drop([-1])
 
     async def update_db(self):
         pass
-
-    def prepare_modified_rows_to_update(self, start_idx, end_idx):
-        self.mod_start_idx = start_idx
-        self.mod_end_idx = end_idx
