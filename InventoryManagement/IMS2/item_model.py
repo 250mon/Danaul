@@ -24,11 +24,11 @@ class ItemModel(PandasModel):
         self.category_df: pd.DataFrame = self.lab.categories_df
 
         # set data to model
-        # mapping table where the actual column is located in the table
-        self.column_headers = ['item_id', 'item_valid', 'item_name',
-                               'category_name', 'description', 'modification']
+        # mapping-table indicating where the actual column is located in the table
+        self.column_names = ['item_id', 'item_valid', 'item_name',
+                             'category_name', 'description', 'category_id',
+                             'modification']
 
-        self.model_df = None
         self.set_model_df()
 
         # for later use
@@ -43,7 +43,10 @@ class ItemModel(PandasModel):
 
         self.model_df = self.lab.items_df
         self.model_df['category_name'] = self.model_df['category_id'].map(cat_s)
-        self.model_df['modification_category'] = None
+        self.model_df['modification'] = None
+
+        # reindexing in the order of table view
+        self.model_df = self.model_df.reindex(self.column_names, axis=1)
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> str or None:
         """Override method from QAbstractTableModel
@@ -53,22 +56,16 @@ class ItemModel(PandasModel):
         if not index.isValid():
             return None
 
-        def get_data(r_idx, c_idx):
-            col_series = self.model_df[self.column_headers[c_idx]]
-            data = col_series.iat[r_idx]
-            return data
-
-        is_deleted = get_data(index.row(), self.column_headers.index('modification')) == 'deleted'
+        mod_col_index = self.model_df.columns.get_loc('modification')
+        is_deleted = self.model_df.iloc[index.row(), mod_col_index] == 'deleted'
         if is_deleted:
             return None
 
-        data_to_display = get_data(index.row(), index.column())
+        data_to_display = self.model_df.iloc[index.row(), index.column()]
         if data_to_display is None:
             return None
 
-        if role == Qt.DisplayRole:
-            return str(data_to_display)
-        elif role == Qt.EditRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole:
             return str(data_to_display)
 
         return None
@@ -77,16 +74,23 @@ class ItemModel(PandasModel):
                 index: QModelIndex,
                 value: str,
                 role=Qt.EditRole):
-        if index.isValid() and role == Qt.EditRole:
-            # taking care of converting str type input to bool type
-            if index.column() == self.column_headers.index('item_valid'):
-                val: bool = False
-                if value == 'True':
-                    val = True
-            else:
-                val: object = value
-            return super().setData(index, val, role)
-        return False
+        if not index.isValid() or role != Qt.EditRole:
+            return False
+
+        # taking care of converting str type input to bool type
+        if index.column() == self.model_df.columns.get_loc('item_valid'):
+            val: bool = False
+            if value == 'True':
+                val = True
+        elif index.column() == self.model_df.columns.get_loc('category_name'):
+            # for category name mapping
+            cat_df = self.category_df.set_index('category_name')
+            cat_s: pd.Series = cat_df['category_id']
+            self.model_df.iloc[index.row(),
+                    self.model_df.columns.get_loc('category_id')] = cat_s.loc[value]
+        else:
+            val: object = value
+        return super().setData(index, val, role)
 
 
     def add_template_row(self):
@@ -99,11 +103,6 @@ class ItemModel(PandasModel):
 
     async def update_db(self):
         pass
-
-        # update model_df
-        await Lab().update_lab_df_from_db('items')
-        self.set_model_df()
-        return result
 
     def prepare_modified_rows_to_update(self, start_idx, end_idx):
         self.mod_start_idx = start_idx
