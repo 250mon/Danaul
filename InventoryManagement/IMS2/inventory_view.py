@@ -79,7 +79,7 @@ class InventoryWindow(QMainWindow):
         add_item_btn.clicked.connect(lambda: self.do_actions("add_item"))
         mod_item_btn = QPushButton('수정')
         mod_item_btn.clicked.connect(lambda: self.do_actions("mod_item"))
-        del_item_btn = QPushButton('삭제')
+        del_item_btn = QPushButton('삭제/해제')
         del_item_btn.clicked.connect(lambda: self.do_actions("del_item"))
         save_item_btn = QPushButton('저장')
         save_item_btn.clicked.connect(lambda: self.async_start("save"))
@@ -115,7 +115,7 @@ class InventoryWindow(QMainWindow):
                 logger.debug(f'Indexes selected: {selected_indexes}')
                 return selected_indexes
             else:
-                logger.warn(f'Indexes not selected or invalid: {selected_indexes}')
+                logger.debug(f'Indexes not selected or invalid: {selected_indexes}')
                 return None
 
         logger.debug(f'{action}')
@@ -129,8 +129,8 @@ class InventoryWindow(QMainWindow):
             if selected_indexes := get_selected_indexes():
                 self.item_window = SingleItemWindow(self.item_proxy_model,
                                                     selected_indexes)
-                self.item_model.layoutAboutToBeChanged.emit()
-                self.item_model.layoutChanged.emit()
+                # self.item_model.layoutAboutToBeChanged.emit()
+                # self.item_model.layoutChanged.emit()
         elif action == "del_item":
             logger.debug('Deleting item ...')
             if selected_indexes := get_selected_indexes():
@@ -156,10 +156,15 @@ class InventoryWindow(QMainWindow):
         self.item_model.layoutChanged.emit()
 
     def delete_item(self, indexes: List[QModelIndex]):
-        # just tagging as 'deleted' in modification column
+        # just tagging as 'deleted' in flag column
+        flag_col = self.item_model.model_df.columns.get_loc('flag')
         for idx in indexes:
-            if idx.column() == self.item_model.model_df.columns.get_loc('modification'):
-                self.item_proxy_model.setData(idx, 'deleted')
+            if idx.column() == flag_col:
+                if self.item_proxy_model.data(idx) == 'deleted':
+                    self.item_proxy_model.setData(idx, '')
+                else:
+                    self.item_proxy_model.setData(idx, 'deleted')
+
 
     async def update_df(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')

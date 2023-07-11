@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from typing import List
 from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtGui import QBrush, QFont
 from pandas_model import PandasModel
 from di_db import InventoryDb
 from di_lab import Lab
@@ -28,7 +29,7 @@ class ItemModel(PandasModel):
         # mapping-table indicating where the actual column is located in the table
         self.column_names = ['item_id', 'item_valid', 'item_name',
                              'category_name', 'description', 'category_id',
-                             'modification']
+                             'flag']
 
         if not template_flag:
             self.set_model_df()
@@ -47,7 +48,7 @@ class ItemModel(PandasModel):
 
         self.model_df = self.lab.items_df
         self.model_df['category_name'] = self.model_df['category_id'].map(cat_s)
-        self.model_df['modification'] = None
+        self.model_df['flag'] = None
 
         # reindexing in the order of table view
         self.model_df = self.model_df.reindex(self.column_names, axis=1)
@@ -56,7 +57,7 @@ class ItemModel(PandasModel):
         self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
                               columns=self.column_names)
 
-    def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> object:
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """Override method from QAbstractTableModel
 
         QTableView accepts only QString as input for display
@@ -66,17 +67,16 @@ class ItemModel(PandasModel):
         if not index.isValid():
             return None
 
-        mod_col_index = self.model_df.columns.get_loc('modification')
-        # is_deleted = self.model_df.iloc[index.row(), mod_col_index] == 'deleted'
-        # if is_deleted:
-        #     return None
-
         data_to_display = self.model_df.iloc[index.row(), index.column()]
         if data_to_display is None:
             return None
 
+        flag_col_index = self.model_df.columns.get_loc('flag')
+        is_deleted = self.model_df.iloc[index.row(), flag_col_index] == 'deleted'
+
         if role == Qt.DisplayRole or role == Qt.EditRole:
             return str(data_to_display)
+
         # for sorting, use Qt.UserRole
         elif role == Qt.UserRole:
             int_type_columns = [self.model_df.columns.get_loc(c) for c in
@@ -87,6 +87,10 @@ class ItemModel(PandasModel):
             # otherwise, string type
             else:
                 return data_to_display
+
+        elif role == Qt.BackgroundRole and is_deleted:
+            return QBrush(Qt.gray)
+
         else:
             return None
 
@@ -125,7 +129,7 @@ class ItemModel(PandasModel):
             return result_msg
         else:
             result_msg = f'Failed to add Item [{new_item_name}]: Duplicate item name'
-            logger.warn(result_msg)
+            logger.warning(result_msg)
             return result_msg
 
     async def update_db(self):
