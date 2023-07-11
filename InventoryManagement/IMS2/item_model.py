@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from typing import List
 from PySide6.QtCore import Qt, QModelIndex
 from pandas_model import PandasModel
 from di_db import InventoryDb
@@ -55,10 +56,10 @@ class ItemModel(PandasModel):
         self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
                               columns=self.column_names)
 
-    def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> str or None:
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole) -> object:
         """Override method from QAbstractTableModel
 
-        QTableView accepts only QString as input
+        QTableView accepts only QString as input for display
 
         Return data cell from the pandas DataFrame
         """
@@ -66,9 +67,9 @@ class ItemModel(PandasModel):
             return None
 
         mod_col_index = self.model_df.columns.get_loc('modification')
-        is_deleted = self.model_df.iloc[index.row(), mod_col_index] == 'deleted'
-        if is_deleted:
-            return None
+        # is_deleted = self.model_df.iloc[index.row(), mod_col_index] == 'deleted'
+        # if is_deleted:
+        #     return None
 
         data_to_display = self.model_df.iloc[index.row(), index.column()]
         if data_to_display is None:
@@ -76,6 +77,16 @@ class ItemModel(PandasModel):
 
         if role == Qt.DisplayRole or role == Qt.EditRole:
             return str(data_to_display)
+        # for sorting, use Qt.UserRole
+        elif role == Qt.UserRole:
+            int_type_columns = [self.model_df.columns.get_loc(c) for c in
+                                ['item_id', 'item_valid', 'category_id']]
+            # if column data is int, return int type
+            if index.column() in int_type_columns:
+                return int(data_to_display)
+            # otherwise, string type
+            else:
+                return data_to_display
         else:
             return None
 
@@ -86,6 +97,7 @@ class ItemModel(PandasModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
+        logger.debug(f'setData({index}, {value})')
         # taking care of converting str type input to bool type
         if index.column() == self.model_df.columns.get_loc('item_valid'):
             val: bool = False
@@ -103,7 +115,7 @@ class ItemModel(PandasModel):
 
         return super().setData(index, val, role)
 
-    def add_new_df(self, new_df: pd.DataFrame) -> str:
+    def add_new_row(self, new_df: pd.DataFrame) -> str:
         new_item_name = new_df.at[0, 'item_name']
         if self.model_df[self.model_df.item_name == new_item_name].empty:
             new_df['item_id'] = self.model_df['item_id'].max() + 1
@@ -115,7 +127,6 @@ class ItemModel(PandasModel):
             result_msg = f'Failed to add Item [{new_item_name}]: Duplicate item name'
             logger.warn(result_msg)
             return result_msg
-
 
     async def update_db(self):
         pass

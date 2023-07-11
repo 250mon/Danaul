@@ -47,7 +47,7 @@ class SingleItemWindow(QWidget):
         self.previousButton = QPushButton("&Previous")
 
         self.okButton = QPushButton("&Ok")
-        self.cancelButton = QPushButton("&Cancel")
+        self.exitButton = QPushButton("&Exit")
 
         self.nameLabel.setBuddy(self.nameLineEdit)
         self.validLabel.setBuddy(self.validComboBox)
@@ -71,7 +71,7 @@ class SingleItemWindow(QWidget):
         self.mapper.currentIndexChanged.connect(self.updateButtons)
 
         self.okButton.clicked.connect(self.ok_clicked)
-        self.cancelButton.clicked.connect(self.cancel_clicked)
+        self.exitButton.clicked.connect(self.exit_clicked)
 
         # if model_indexes is not given, it means adding a new row
         # otherwise the rows of model_indexes are being modified
@@ -91,26 +91,20 @@ class SingleItemWindow(QWidget):
     def ok_clicked(self):
         # modifying items
         if self.model_indexes:
-            start_idx = self.model_indexes[0].row()
-            end_idx = self.model_indexes[-1].row()
-            logger.debug(f'first index {start_idx}')
-            logger.debug(f'last index {end_idx}')
+            logger.debug(f'Modified Items Indexes: {self.model_indexes}')
             self.mapper.submit()
         # adding a new item
         else:
             self.mapper.submit()
             self.add_item_signal.emit(self.model.model_df)
 
-        self.close()
-
-    def cancel_clicked(self):
-        self.model.del_template_row()
+    def exit_clicked(self):
         self.close()
 
     def initializeUI(self):
         vbox1 = QVBoxLayout()
         vbox1.addWidget(self.okButton, Qt.AlignTop)
-        vbox1.addWidget(self.cancelButton)
+        vbox1.addWidget(self.exitButton)
         vbox1.addStretch()
 
         hbox1 = QHBoxLayout()

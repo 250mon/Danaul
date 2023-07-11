@@ -1,10 +1,11 @@
 import sys, os
 import pandas as pd
+from typing import List
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDockWidget,
     QPushButton, QLineEdit, QTableView, QHBoxLayout, QVBoxLayout
 )
-from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel
+from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
 from async_helper import AsyncHelper
 from item_model import ItemModel
 from di_lab import Lab
@@ -33,40 +34,6 @@ class InventoryWindow(QMainWindow):
         self.setUpMainWindow()
         self.show()
 
-    # async def createModel(self):
-    #     self.lab = Lab(InventoryDb('db_settings'))
-    #     # get raw data from db
-    #     tables = ['skus', 'transactions']
-    #     get_dfs = [self.lab.get_df_from_db(table) for table in tables]
-    #     dfs_from_db = await asyncio.gather(*get_dfs)
-    #     skus_df, trs_df = dfs_from_db
-    #
-    #     # make model data
-    #
-    #     i_s = self.lab.items_df.set_index('item_id')['item_name']
-    #     skus_df['item_name'] = skus_df['item_id'].map(i_s)
-    #     skus_df['item_size'] = skus_df['item_size_id'].map(self.lab.item_sizes)
-    #     skus_df['item_side'] = skus_df['item_side_id'].map(self.lab.item_sides)
-    #     skus_df.fillna("", inplace=True)
-    #     # skus_model_data_df = skus_df.drop(['item_id', 'item_size_id', 'item_side_id'], axis=1)
-    #     skus_model_data_df = skus_df[['sku_id', 'item_name', 'item_size', 'item_side',
-    #                                  'sku_qty', 'min_qty', 'expiration_date', 'bit_code',
-    #                                  'description']]
-    #     self.sku_model = PandasModel(skus_model_data_df)
-    #
-    #     s_df = skus_df.set_index('sku_id')
-    #     trs_df['item_name'] = trs_df['sku_id'].map(s_df['item_name'])
-    #     trs_df['item_size'] = trs_df['sku_id'].map(s_df['item_size'])
-    #     trs_df['item_side'] = trs_df['sku_id'].map(s_df['item_side'])
-    #     trs_df['tr_type'] = trs_df['tr_type_id'].map(self.lab.tr_types)
-    #     trs_df['user_name'] = trs_df['user_id'].map(self.lab.users)
-    #     trs_df.fillna("", inplace=True)
-    #     # trs_model_data_df = trs_df.drop(['sku_id', 'tr_type_id', 'user_id'], axis=1)
-    #     trs_model_data_df = trs_df[['tr_id', 'tr_type', 'item_name', 'item_size',
-    #                                 'item_side', 'tr_qty', 'before_qty', 'after_qty',
-    #                                 'tr_timestamp', 'description']]
-    #     self.tr_model = PandasModel(trs_model_data_df)
-
     def setupItemView(self):
         # items view
 
@@ -86,9 +53,10 @@ class InventoryWindow(QMainWindow):
         self.item_proxy_model.setSourceModel(self.item_model)
         # Filtering
         self.item_proxy_model.setFilterKeyColumn(1)
-        # Sorting
-        # self.item_proxy_model.sort(0, Qt.AscendingOrder)
-        # self.item_proxy_model.setSortRole(Qt.UserRole)
+        # Sorting; use UserRole for sorting
+        self.item_proxy_model.sort(self.item_model.model_df.columns.get_loc('item_id'),
+                                   Qt.AscendingOrder)
+        self.item_proxy_model.setSortRole(Qt.UserRole)
 
         self.item_view.setModel(self.item_proxy_model)
 
@@ -139,6 +107,17 @@ class InventoryWindow(QMainWindow):
 
     @Slot(str, pd.DataFrame)
     def do_actions(self, action: str, df: pd.DataFrame = None):
+        def get_selected_indexes():
+            # the indexes of proxy model
+            selected_indexes = self.item_view.selectedIndexes()
+            check_indexes = [idx.isValid() for idx in selected_indexes]
+            if len(selected_indexes) > 0 and False not in check_indexes:
+                logger.debug(f'Indexes selected: {selected_indexes}')
+                return selected_indexes
+            else:
+                logger.warn(f'Indexes not selected or invalid: {selected_indexes}')
+                return None
+
         logger.debug(f'{action}')
         if action == "add_item":
             logger.debug('Adding item ...')
@@ -147,13 +126,15 @@ class InventoryWindow(QMainWindow):
             self.item_window.add_item_signal.connect(self.add_new_item)
         elif action == "mod_item":
             logger.debug('Modifying item ...')
-            selected_indexes = self.item_view.selectedIndexes()
-            check_indexes = [idx.isValid() for idx in selected_indexes]
-            if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
-                self.item_window = SingleItemWindow(self.item_model,
+            if selected_indexes := get_selected_indexes():
+                self.item_window = SingleItemWindow(self.item_proxy_model,
                                                     selected_indexes)
                 self.item_model.layoutAboutToBeChanged.emit()
                 self.item_model.layoutChanged.emit()
+        elif action == "del_item":
+            logger.debug('Deleting item ...')
+            if selected_indexes := get_selected_indexes():
+                self.delete_item(selected_indexes)
 
     @Slot(str, pd.DataFrame)
     def async_start(self, action: str, df: pd.DataFrame = None):
@@ -164,10 +145,21 @@ class InventoryWindow(QMainWindow):
 
     @Slot(pd.DataFrame)
     def add_new_item(self, new_df: pd.DataFrame):
-        result_msg = self.item_model.add_new_df(new_df)
+        """
+        This is called from SingleItemWindow
+        :param new_df:
+        :return:
+        """
+        result_msg = self.item_model.add_new_row(new_df)
         self.statusBar().showMessage(result_msg)
         self.item_model.layoutAboutToBeChanged.emit()
         self.item_model.layoutChanged.emit()
+
+    def delete_item(self, indexes: List[QModelIndex]):
+        # just tagging as 'deleted' in modification column
+        for idx in indexes:
+            if idx.column() == self.item_model.model_df.columns.get_loc('modification'):
+                self.item_proxy_model.setData(idx, 'deleted')
 
     async def update_df(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')
@@ -175,28 +167,6 @@ class InventoryWindow(QMainWindow):
             logger.debug('Saving ...')
             await self.item_model.update_db()
             # logger.info(results)
-
-        # if action == "add_item":
-        #     logger.debug('Adding item ...')
-        #     self.item_model.add_template_row()
-        #     self.item_window = SingleItemWindow(self.item_model)
-        #     # trigger refresh
-        #     # This signal is emitted just before the layout of a model is changed.
-        #     # Components connected to this signal use it to adapt to changes in the model’s layout.
-        #     self.item_model.layoutAboutToBeChanged.emit()
-        #     self.item_model.layoutChanged.emit()
-        #     self.item_model.get_added_new_row()
-        #     # results = await self.lab.di_db.insert_items_df(
-        #     #     self.item_model.get_added_new_row())
-        #     # logger.info(results)
-        # elif action == "mod_item":
-        #     logger.debug('Modifying item ...')
-        #     selected_indexes = self.item_view.selectedIndexes()
-        #     check_indexes = [idx.isValid() for idx in selected_indexes]
-        #     if len(selected_indexes) > 0 and check_indexes[0] and check_indexes[-1]:
-        #         self.item_window = SingleItemWindow(self.item_model,
-        #                                             selected_indexes)
-        #         self.item_model.get_modified_rows()
 
     def setupSkuView(self):
         # skus view

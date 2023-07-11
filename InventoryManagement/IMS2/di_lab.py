@@ -79,24 +79,12 @@ class Lab(metaclass=Singleton):
                       'users', 'transaction_type', 'items',
                       'skus', 'transactions']
 
-            # get etc dicts
-            # get_data = [self.get_etc_datas(table) for table in tables[:-3]]
-            # data = await asyncio.gather(*get_data)
-            # (self.categories, self.item_sizes, self.item_sides,
-            #  self.users, self.tr_types) = data
-
             # get etc dfs
             get_data = [self.get_df_from_db(table) for table in tables]
             data = await asyncio.gather(*get_data)
             (self.categories_df, self.item_sizes_df, self.item_sides_df,
              self.users_df, self.tr_types_df, self.items_df, self.skus_df,
              self.trs_df) = data
-
-            # self.categories_df.set_index('category_id')
-            # self.item_sizes_df.set_index('item_size_id')
-            # self.item_sides_df.set_index('item_side_id')
-            # self.users_df.set_index('user_id')
-            # self.tr_types_df.set_index('tr_type_id')
 
         self.bool_initialized = True
         return self
@@ -115,16 +103,6 @@ class Lab(metaclass=Singleton):
 
     async def update_lab_df_from_db(self, table: str):
         self.tables[table] = self.get_df_from_db(table)
-
-    # async def get_etc_datas(self, table: str) -> Dict[str, object]:
-    #     query = f"SELECT * FROM {table}"
-    #     results = await self.di_db_util.select_query(query)
-    #     dict_result = {}
-    #     if results:
-    #         r_tuples = map(tuple, results)
-    #         dict_data = {r[0]: r[1] for r in r_tuples}
-    #         dict_result.update(dict_data)
-    #     return dict_result
 
     def get_item(self, id: int):
         return self.items.get(id, None)
