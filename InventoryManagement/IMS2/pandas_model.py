@@ -1,9 +1,14 @@
+import os
 import sys
 import pandas as pd
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
 from typing import List
+from di_logger import Logs, logging
 
+
+logger = Logs().get_logger(os.path.basename(__file__))
+logger.setLevel(logging.DEBUG)
 
 class PandasModel(QAbstractTableModel):
     """A model to interface a Qt view with pandas dataframe """
@@ -11,8 +16,8 @@ class PandasModel(QAbstractTableModel):
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
-        self.uneditable_rows_set = []
-        self.editable_cols_list = ()
+        self.editable_cols_set = set()
+        self.uneditable_rows_set = set()
 
     def rowCount(self, parent=QModelIndex()) -> int:
         """ Override method from QAbstractTableModel
@@ -82,20 +87,26 @@ class PandasModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if index.row() in self.uneditable_rows_set:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        elif index.column() in self.editable_cols_list:
+        elif index.column() in self.editable_cols_set:
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         # return Qt.NoItemFlags
 
     def set_editable_cols(self, cols: List):
-        self.editable_cols_list = cols
+        self.editable_cols_set.update(cols)
 
     def set_uneditable_row(self, row: int):
-        self.uneditable_rows_set.append(row)
+        self.uneditable_rows_set.add(row)
+        logger.debug(f'set_uneditable_row: row {row}')
 
     def unset_uneditable_row(self, row: int):
-        self.uneditable_rows_set.pop(row)
+        logger.debug(f'unset_uneditable_row: '
+                     f'remove row {row} from {self.uneditable_rows_set}')
+        if row in self.uneditable_rows_set:
+            self.uneditable_rows_set.remove(row)
+        else:
+            logger.warn(f'unset_uneditable_row: cannot find row {row} int the set')
 
 
 if __name__ == "__main__":

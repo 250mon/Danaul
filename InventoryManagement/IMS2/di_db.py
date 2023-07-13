@@ -64,9 +64,13 @@ class InventoryDb:
         :param items:
         :return:
         """
-        stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2, $3)"
-        args = [(item.item_name, item.category_id, item.description)
-                for item in items_df.itertuples()]
+        # stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2, $3)"
+        # args = [(item.item_name, item.category_id, item.description)
+        #         for item in items_df.itertuples()]
+
+        stmt = "INSERT INTO items VALUES($1, $2, $3, $4, $5)"
+        args = [(item.item_id, item.item_valid, item.item_name, item.category_id,
+                 item.description) for item in items_df.itertuples()]
 
         logger.debug("Insert Items ...")
         logger.debug(args)
@@ -92,6 +96,11 @@ class InventoryDb:
         logger.debug("Insert Items ...")
         logger.debug(args)
         return await self.db_util.pool_execute(stmt, args)
+
+    async def delete_items_df(self, items_df: pd.DataFrame):
+        args = [(item.item_id,) for item in items_df.itertuples()]
+        logger.debug(f"delete_record: Delete ids {args} from items table ...")
+        return await self.db_util.delete('items', 'item_id', args)
 
     async def insert_items(self, items: List[Item]):
         """

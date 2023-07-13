@@ -54,6 +54,17 @@ class Lab(metaclass=Singleton):
         self.skus = {}
         self.transactions = {}
 
+        self.table_df = {
+            'category': None,
+            'item_size': None,
+            'item_side': None,
+            'users': None,
+            'transaction_type': None,
+            'items': None,
+            'skus': None,
+            'transactions': None
+        }
+
         self.bool_initialized = False
         if not self.bool_initialized:
             loop = asyncio.new_event_loop()
@@ -62,29 +73,14 @@ class Lab(metaclass=Singleton):
             finally:
                 loop.close()
 
-        self.tables = {
-            'category': self.categories_df,
-            'item_size': self.item_sizes_df,
-            'item_side': self.item_sides_df,
-            'users': self.users_df,
-            'transaction_type': self.tr_types_df,
-            'items': self.items_df,
-            'skus': self.skus_df,
-            'transactions': self.trs_df
-        }
-
     async def async_init(self):
         if self.bool_initialized is False:
-            tables = ['category', 'item_size', 'item_side',
-                      'users', 'transaction_type', 'items',
-                      'skus', 'transactions']
-
             # get etc dfs
-            get_data = [self.get_df_from_db(table) for table in tables]
+            get_data = [self._get_df_from_db(table) for table
+                        in self.table_df.keys()]
             data = await asyncio.gather(*get_data)
-            (self.categories_df, self.item_sizes_df, self.item_sides_df,
-             self.users_df, self.tr_types_df, self.items_df, self.skus_df,
-             self.trs_df) = data
+            for table in reversed(self.table_df.keys()):
+                self.table_df[table] = data.pop()
 
         self.bool_initialized = True
         return self
@@ -92,17 +88,29 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
-    async def get_df_from_db(self, table: str) -> pd.DataFrame:
+    async def _get_df_from_db(self, table: str) -> pd.DataFrame:
+        logger.debug(f'_get_df_from_db: {table}')
         query = f"SELECT * FROM {table}"
         results = await self.di_db_util.select_query(query)
         # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
         list_of_dict = [dict(result) for result in results]
         df = pd.DataFrame(list_of_dict)
         df.fillna("", inplace=True)
+        logger.debug(f'\n{df}')
         return df
 
     async def update_lab_df_from_db(self, table: str):
-        self.tables[table] = self.get_df_from_db(table)
+        logger.debug(f'update_lab_df_from_db: table {table}')
+        self.table_df[table] = await self._get_df_from_db(table)
+
+    async def insert_items_df(self, items_df: pd.DataFrame):
+        return await self.di_db.insert_items_df(items_df)
+
+    async def upsert_items_df(self, items_df: pd.DataFrame):
+        return await self.di_db.upsert_items_df(items_df)
+
+    async def delete_items_df(self, items_df: pd.DataFrame):
+        return await self.di_db.delete_items_df(items_df)
 
     def get_item(self, id: int):
         return self.items.get(id, None)
@@ -206,17 +214,6 @@ class Lab(metaclass=Singleton):
         trs = [Transaction(*(tuple(result))) for result in results]
         return {tr.tr_id: tr for tr in trs}
 
-    async def insert_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.insert_items_df(items_df)
-
-    async def upsert_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.upsert_items_df(items_df)
-
-
-    async def get_items_df_from_db(self):
-        self.items_df = await self.get_df_from_db('items')
-
-
 async def main(lab):
     cat_s = lab.categories_df.set_index('category_id')['category_name']
     isz_s = lab.item_sizes_df.set_index('item_size_id')['item_size']
@@ -230,7 +227,7 @@ async def main(lab):
                                          'category_id', 'description'])
     # await lab.di_db.insert_items_df(new_items_df)
     await lab.di_db.upsert_items_df(new_items_df)
-    await lab.get_items_df_from_db()
+    await lab.update_lab_df_from_db('items')
 
     # Get data from db
     lab.items_df['category'] = lab.items_df['category_id'].map(cat_s)

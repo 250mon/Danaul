@@ -9,6 +9,7 @@ from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
 from async_helper import AsyncHelper
 from item_model import ItemModel
 from di_lab import Lab
+from di_db import InventoryDb
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
 from single_item_window import SingleItemWindow
@@ -16,6 +17,8 @@ from single_item_window import SingleItemWindow
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
+
+Lab(InventoryDb('db_settings'))
 
 class InventoryWindow(QMainWindow):
     start_signal = Signal(str, pd.DataFrame)
@@ -60,18 +63,14 @@ class InventoryWindow(QMainWindow):
 
         self.item_view.setModel(self.item_proxy_model)
 
-        # editable columns: category and description
-        # a line edit is used as a default delegate
-        self.item_model.set_editable_cols(self.item_model.editable_col_idx.values())
-
+        # set delegates
         combo_delegate2 = ComboBoxDelegate(['True', 'False'], self)
         self.item_view.setItemDelegateForColumn(
-            self.item_model.editable_col_idx['item_valid'], combo_delegate2)
-        category_name_list = Lab().categories_df['category_name'].values.tolist()
+            self.item_model.editable_col_iloc['item_valid'], combo_delegate2)
+        category_name_list = Lab().table_df['category']['category_name'].values.tolist()
         combo_delegate1 = ComboBoxDelegate(category_name_list, self)
         self.item_view.setItemDelegateForColumn(
-            self.item_model.editable_col_idx['category_name'], combo_delegate1)
-
+            self.item_model.editable_col_iloc['category_name'], combo_delegate1)
 
         item_widget = QWidget(self)
         self.item_search_bar = QLineEdit(self)
@@ -161,6 +160,7 @@ class InventoryWindow(QMainWindow):
         :return:
         """
         result_msg = self.item_model.add_new_row(new_df)
+        logger.debug(f'add_new_item: new item {result_msg} created')
         self.statusBar().showMessage(result_msg)
         self.item_model.layoutAboutToBeChanged.emit()
         self.item_model.layoutChanged.emit()
@@ -176,6 +176,7 @@ class InventoryWindow(QMainWindow):
         for idx in indexes:
             if idx.column() == flag_col:
                 self.item_model.set_chg_flag(idx)
+                logger.debug(f'chg_items: item {idx.row()} changed')
 
     def delete_item(self, indexes: List[QModelIndex]):
         '''
@@ -187,25 +188,21 @@ class InventoryWindow(QMainWindow):
         '''
         flag_col = self.item_model.model_df.columns.get_loc('flag')
         for idx in indexes:
-            org_idx = self.item_proxy_model.mapToSource(idx)
+            src_idx = self.item_proxy_model.mapToSource(idx)
             if idx.column() == flag_col:
-                self.item_model.set_del_flag()
-                # current_msg = self.item_proxy_model.data(idx)
-                # if 'deleted' in current_msg:
-                #     new_msg = current_msg.replace(' deleted', '')
-                #     self.item_proxy_model.setData(idx, new_msg)
-                #     self.item_model.unset_uneditable_row(org_idx.row())
-                # else:
-                #     new_msg = current_msg + ' deleted'
-                #     self.item_proxy_model.setData(idx, new_msg)
-                #     self.item_model.set_uneditable_row(org_idx.row())
+                self.item_model.set_del_flag(src_idx)
+                logger.debug(f'delete_item: items{src_idx.row()} deleted')
 
-    async def update_df(self, action: str, df: pd.DataFrame = None):
+    async def save_to_db(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')
         if action == "save":
             logger.debug('Saving ...')
             await self.item_model.update_db()
-            # logger.info(results)
+            # update model
+            logger.debug('Updating model ...')
+            await self.item_model.update_model_df_from_db()
+            self.item_model.layoutAboutToBeChanged.emit()
+            self.item_model.layoutChanged.emit()
 
     def setupSkuView(self):
         # skus view
@@ -292,7 +289,7 @@ class InventoryWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_window = InventoryWindow()
-    async_helper = AsyncHelper(main_window, main_window.update_df)
+    async_helper = AsyncHelper(main_window, main_window.save_to_db)
 
     # signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.exec()
