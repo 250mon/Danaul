@@ -62,13 +62,16 @@ class InventoryWindow(QMainWindow):
 
         # editable columns: category and description
         # a line edit is used as a default delegate
-        editable_col_idx = [self.item_model.model_df.columns.get_loc(val)
-                            for val in ['category_name', 'description']]
-        self.item_model.set_editable_cols(editable_col_idx)
-        # for category col, combobox delegate is used
+        self.item_model.set_editable_cols(self.item_model.editable_col_idx.values())
+
+        combo_delegate2 = ComboBoxDelegate(['True', 'False'], self)
+        self.item_view.setItemDelegateForColumn(
+            self.item_model.editable_col_idx['item_valid'], combo_delegate2)
         category_name_list = Lab().categories_df['category_name'].values.tolist()
-        delegate = ComboBoxDelegate(category_name_list, self)
-        self.item_view.setItemDelegateForColumn(editable_col_idx[0], delegate)
+        combo_delegate1 = ComboBoxDelegate(category_name_list, self)
+        self.item_view.setItemDelegateForColumn(
+            self.item_model.editable_col_idx['category_name'], combo_delegate1)
+
 
         item_widget = QWidget(self)
         self.item_search_bar = QLineEdit(self)
@@ -77,8 +80,8 @@ class InventoryWindow(QMainWindow):
             self.item_proxy_model.setFilterFixedString)
         add_item_btn = QPushButton('추가')
         add_item_btn.clicked.connect(lambda: self.do_actions("add_item"))
-        mod_item_btn = QPushButton('수정')
-        mod_item_btn.clicked.connect(lambda: self.do_actions("mod_item"))
+        chg_item_btn = QPushButton('수정')
+        chg_item_btn.clicked.connect(lambda: self.do_actions("chg_item"))
         del_item_btn = QPushButton('삭제/해제')
         del_item_btn.clicked.connect(lambda: self.do_actions("del_item"))
         save_item_btn = QPushButton('저장')
@@ -88,7 +91,7 @@ class InventoryWindow(QMainWindow):
         item_hbox.addWidget(self.item_search_bar)
         item_hbox.addStretch(1)
         item_hbox.addWidget(add_item_btn)
-        item_hbox.addWidget(mod_item_btn)
+        item_hbox.addWidget(chg_item_btn)
         item_hbox.addWidget(del_item_btn)
         item_hbox.addWidget(save_item_btn)
 
@@ -123,12 +126,19 @@ class InventoryWindow(QMainWindow):
             logger.debug('Adding item ...')
             self.new_item_model = ItemModel(template_flag=True)
             self.item_window = SingleItemWindow(self.new_item_model)
+            # add_item_signal is emitted from the ok button of SingleItemWindow
+            # when adding is done
             self.item_window.add_item_signal.connect(self.add_new_item)
-        elif action == "mod_item":
-            logger.debug('Modifying item ...')
+            # self.item_model.layoutAboutToBeChanged.emit()
+            # self.item_model.layoutChanged.emit()
+        elif action == "chg_item":
+            logger.debug('Changing item ...')
             if selected_indexes := get_selected_indexes():
                 self.item_window = SingleItemWindow(self.item_proxy_model,
                                                     selected_indexes)
+                self.item_window.chg_item_signal.connect(self.chg_items)
+                # chg_item_signal is emitted from the ok button of SingleItemWindow
+                # when changing is done
                 # self.item_model.layoutAboutToBeChanged.emit()
                 # self.item_model.layoutChanged.emit()
         elif action == "del_item":
@@ -155,16 +165,40 @@ class InventoryWindow(QMainWindow):
         self.item_model.layoutAboutToBeChanged.emit()
         self.item_model.layoutChanged.emit()
 
-    def delete_item(self, indexes: List[QModelIndex]):
-        # just tagging as 'deleted' in flag column
+    @Slot(object)
+    def chg_items(self, indexes: List[QModelIndex]):
+        """
+        This is called from SingleItemWindow
+        :param indexes:
+        :return:
+        """
         flag_col = self.item_model.model_df.columns.get_loc('flag')
         for idx in indexes:
             if idx.column() == flag_col:
-                if self.item_proxy_model.data(idx) == 'deleted':
-                    self.item_proxy_model.setData(idx, '')
-                else:
-                    self.item_proxy_model.setData(idx, 'deleted')
+                self.item_model.set_chg_flag(idx)
 
+    def delete_item(self, indexes: List[QModelIndex]):
+        '''
+        This is called from a Button
+        Just tagging as 'deleted' in flag column instead of dropping
+        Actual dropping is done during saving into DB
+        :param indexes:
+        :return:
+        '''
+        flag_col = self.item_model.model_df.columns.get_loc('flag')
+        for idx in indexes:
+            org_idx = self.item_proxy_model.mapToSource(idx)
+            if idx.column() == flag_col:
+                self.item_model.set_del_flag()
+                # current_msg = self.item_proxy_model.data(idx)
+                # if 'deleted' in current_msg:
+                #     new_msg = current_msg.replace(' deleted', '')
+                #     self.item_proxy_model.setData(idx, new_msg)
+                #     self.item_model.unset_uneditable_row(org_idx.row())
+                # else:
+                #     new_msg = current_msg + ' deleted'
+                #     self.item_proxy_model.setData(idx, new_msg)
+                #     self.item_model.set_uneditable_row(org_idx.row())
 
     async def update_df(self, action: str, df: pd.DataFrame = None):
         logger.debug(f'{action}')

@@ -11,7 +11,8 @@ class PandasModel(QAbstractTableModel):
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
-        self.editable_cols = []
+        self.uneditable_rows_set = []
+        self.editable_cols_list = ()
 
     def rowCount(self, parent=QModelIndex()) -> int:
         """ Override method from QAbstractTableModel
@@ -79,14 +80,22 @@ class PandasModel(QAbstractTableModel):
             return False
 
     def flags(self, index: QModelIndex):
-        if index.column() in self.editable_cols:
+        if index.row() in self.uneditable_rows_set:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        elif index.column() in self.editable_cols_list:
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         # return Qt.NoItemFlags
 
     def set_editable_cols(self, cols: List):
-        self.editable_cols = cols
+        self.editable_cols_list = cols
+
+    def set_uneditable_row(self, row: int):
+        self.uneditable_rows_set.append(row)
+
+    def unset_uneditable_row(self, row: int):
+        self.uneditable_rows_set.pop(row)
 
 
 if __name__ == "__main__":

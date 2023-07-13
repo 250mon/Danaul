@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from typing import List
+from typing import List, Dict
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
 from pandas_model import PandasModel
@@ -36,10 +36,8 @@ class ItemModel(PandasModel):
         else:
             self.set_template_model_df()
 
-        # for later use
-        self.tmp_df = None
-        self.mod_start_idx = -1
-        self.mod_end_idx = -1
+        self.editable_col_idx = {col_name: self.model_df.columns.get_loc(col_name)
+                                 for col_name in ['item_valid', 'category_name', 'description']}
 
     def set_model_df(self):
         # for category name mapping
@@ -48,7 +46,7 @@ class ItemModel(PandasModel):
 
         self.model_df = self.lab.items_df
         self.model_df['category_name'] = self.model_df['category_id'].map(cat_s)
-        self.model_df['flag'] = None
+        self.model_df['flag'] = ''
 
         # reindexing in the order of table view
         self.model_df = self.model_df.reindex(self.column_names, axis=1)
@@ -72,7 +70,9 @@ class ItemModel(PandasModel):
             return None
 
         flag_col_index = self.model_df.columns.get_loc('flag')
-        is_deleted = self.model_df.iloc[index.row(), flag_col_index] == 'deleted'
+        is_deleted = 'deleted' in self.model_df.iloc[index.row(), flag_col_index]
+        valid_col_index = self.model_df.columns.get_loc('item_valid')
+        is_valid = self.model_df.iloc[index.row(), valid_col_index]
 
         if role == Qt.DisplayRole or role == Qt.EditRole:
             return str(data_to_display)
@@ -89,7 +89,10 @@ class ItemModel(PandasModel):
                 return data_to_display
 
         elif role == Qt.BackgroundRole and is_deleted:
-            return QBrush(Qt.gray)
+            return QBrush(Qt.darkGray)
+
+        elif role == Qt.BackgroundRole and not is_valid:
+            return QBrush(Qt.lightGray)
 
         else:
             return None
@@ -117,7 +120,38 @@ class ItemModel(PandasModel):
         else:
             val: object = value
 
+        # setting new data is followed by setting change flag
+        self.set_chg_flag(index)
+
         return super().setData(index, val, role)
+
+    def set_chg_flag(self, index: QModelIndex):
+        '''
+        set the flag of the row to which the index belongs
+        :param index:
+        :return:
+        '''
+        flag_col_index = index.siblingAtColumn(self.model_df.columns.get_loc('flag'))
+        current_msg = self.data(flag_col_index)
+        if 'changed' not in current_msg:
+            new_msg = current_msg + ' changed'
+            super().setData(flag_col_index, new_msg)
+
+    def set_del_flag(self, index: QModelIndex):
+        '''
+
+        :param index:
+        :return:
+        '''
+        current_msg: str = self.data(index)
+        if 'deleted' in current_msg:
+            new_msg = current_msg.replace(' deleted', '')
+            self.setData(index, new_msg)
+            return False
+        else:
+            new_msg = current_msg + ' deleted'
+            self.setData(index, new_msg)
+            return True
 
     def add_new_row(self, new_df: pd.DataFrame) -> str:
         new_item_name = new_df.at[0, 'item_name']

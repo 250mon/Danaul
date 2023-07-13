@@ -17,6 +17,7 @@ logger.setLevel(logging.DEBUG)
 
 class SingleItemWindow(QWidget):
     add_item_signal = Signal(pd.DataFrame)
+    chg_item_signal = Signal(object)
 
     def __init__(self, model: ItemModel,
                  indexes: List[QModelIndex] = None,
@@ -93,6 +94,7 @@ class SingleItemWindow(QWidget):
         if self.model_indexes:
             logger.debug(f'Modified Items Indexes: {self.model_indexes}')
             self.mapper.submit()
+            self.chg_item_signal.emit(self.model_indexes)
         # adding a new item
         else:
             self.mapper.submit()
