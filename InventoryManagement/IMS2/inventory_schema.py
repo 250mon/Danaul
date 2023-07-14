@@ -58,6 +58,7 @@ CREATE_USER_TABLE = \
     CREATE TABLE IF NOT EXISTS users(
         user_id SERIAL PRIMARY KEY,
         user_name VARCHAR(20) NOT NULL,
+        user_password TEXT NOT NULL DEFAULT 'danaul',
         UNIQUE(user_name)
     );"""
 

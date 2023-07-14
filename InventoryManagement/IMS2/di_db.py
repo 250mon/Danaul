@@ -13,7 +13,7 @@ from inventory_schema import (
     CREATE_TRANSACTION_TYPE_TABLE,
     CREATE_TRANSACTION_TABLE,
 )
-from IMS2.unused.data_classes import Item, Sku, Transaction, EtcData
+from IMS2.unused.data_classes import Item, Sku, Transaction
 from di_logger import Logs, logging
 
 
@@ -44,18 +44,22 @@ class InventoryDb:
         await self.drop_tables()
         await self.create_tables()
 
-    async def initial_insert(self, data: List[EtcData]):
+    async def insert_extras_df(self, table: str, extras_df: pd.DataFrame):
         """
-        Inserting initial data
-        :return: None
+        Initial insertion of extras_df
+        :param extras_df:
+        :return:
         """
-        stmt = f'INSERT INTO {data[0].table} VALUES($1, $2)'
-        args = [(d.id, d.name) for d in data]
-        return await self.db_util.executemany(stmt, args)
+        if table != 'users':
+            stmt = f"INSERT INTO {table} VALUES(DEFAULT, $1)"
+        else:
+            stmt = f"INSERT INTO {table} VALUES(DEFAULT, $1, DEFAULT)"
+        args = [(extra.name,) for extra in extras_df.itertuples()]
 
-    async def insert_category(self, cat_name):
-        stmt = "INSERT INTO category VALUES(DEFAULT, $1)"
-        return await self.db_util.pool_execute(stmt, [(cat_name), ])
+        logger.debug(f"Insert {table}...")
+        logger.debug(args)
+        # use executemany for sequential indexing of ids
+        return await self.db_util.executemany(stmt, args)
 
     async def insert_items_df(self, items_df: pd.DataFrame):
         """
@@ -202,20 +206,18 @@ async def main():
         await danaul_db.initialize_db()
 
         # initial insert
-        etc_data = {
-            'Category': ['외용제', '수액제', '보조기', '기타'],
-            'ItemSide': ['None', 'Rt', 'Lt'],
-            'ItemSize': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc'],
-            'TransactionType': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus'],
-            'User': ['admin', 'test']
+        extra_data = {
+            'category': ['외용제', '수액제', '보조기', '기타'],
+            'item_side': ['None', 'Rt', 'Lt'],
+            'item_size': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc'],
+            'transaction_type': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus'],
+            'users': ['admin', 'test']
         }
-        for data_cls, data_list in etc_data.items():
-            data_instances = []
-            for i, _data in enumerate(data_list, start=1):
-                # make a class instance for each element
-                data_instance = globals()[data_cls](i, _data)
-                data_instances.append(data_instance)
-            await danaul_db.initial_insert(data_instances)
+        for table, data_list in extra_data.items():
+            # make dataframe for each table
+            df = pd.DataFrame({'name': data_list})
+            await danaul_db.insert_extras_df(table, df)
+
 
     async def insert_items():
         item_names = ['써지겔', '아토베리어', 'test1']
@@ -226,10 +228,6 @@ async def main():
 
     async def delete_items():
         item_names = ['써지겔', '아토베리어', 'test1']
-
-        # Deleting from the table
-        # args = [('test1',),]
-        # print(await danaul_db.db_util.delete('items', 'item_name', args))
 
         # Deleting items
         print(await danaul_db.delete_items_by_name(item_names))

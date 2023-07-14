@@ -50,9 +50,18 @@ class TransactionType(EtcData):
 
 
 class User(EtcData):
-    def __init__(self, user_id: int, user_name: str):
+    def __init__(self, user_id: int, user_name: str, user_password: str = 'danaul'):
         super().__init__(user_id, user_name)
         self.table = 'users'
+        self.password = user_password
+
+    @property
+    def password(self):
+        return self._password
+
+    @password.setter
+    def password(self, val):
+        self._password = val
 
 
 class Item:

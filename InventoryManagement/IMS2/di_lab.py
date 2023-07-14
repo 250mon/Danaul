@@ -2,7 +2,7 @@ import os
 import asyncio
 from typing import Dict, List
 from datetime import date
-from IMS2.unused.data_classes import Item, Sku, Transaction
+from IMS2.unused.data_classes import Sku, Transaction
 from di_db import InventoryDb
 import pandas as pd
 from di_logger import Logs, logging

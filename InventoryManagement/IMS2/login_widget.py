@@ -1,4 +1,5 @@
 import sys, time
+import bcrypt
 from PySide6.QtWidgets import (
     QWidget, QDialog, QLabel, QPushButton, QLineEdit,
     QMessageBox, QFormLayout, QVBoxLayout, QApplication
@@ -80,7 +81,7 @@ class InputGUI(QWidget):
         login_form.addRow("Password:", self.password_entry)
 
         connect_button = QPushButton("Connect")
-        connect_button.clicked.connect(self.query_user_info)
+        connect_button.clicked.connect(self.connectToDatabase)
 
         # new_user_button = QPushButton("No Account?")
         # new_user_button.clicked.connect(self.createNewUser)
@@ -96,38 +97,56 @@ class InputGUI(QWidget):
 
         self.setLayout(main_v_box)
 
-    def query_user_info(self):
+    def query_user_password(self, user_name):
         query = QSqlQuery()
+        query.prepare("SELECT user_password FROM users WHERE user_name = ?")
+        query.addBindValue(user_name)
+        query.exec()
 
-        query.exec("SELECT * FROM users")
-        while(query.next()):
-            print(query.value(0))
-            print(query.value(1))
+        result = None
+        if query.next():
+            result = query.value(0)
+            print("Got a password!")
+        else:
+            print("no password")
+
+        return result
+
+    def encrypt_password(self, password):
+        # Generate a salt and hash the password
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(password.encode('utf-8', salt))
+        return hashed_password
+
+    def verify_password(self, input_password, stored_password):
+        # Hash the input password with the same salt used to hash the stored password
+        hashed_input_password = bcrypt.hashpw(input_password.encode('utf-8'),
+                                              stored_password.encode('utf-8'))
+
+        # Compare the hashed input password with the stored password
+        return hashed_input_password == stored_password
 
     def connectToDatabase(self):
-        """Check the user's information. Close the login window if a match
-        is found, and open the SQL manager window."""
-        users = {}  # Create an empty dictionary to store user information
-        with open('files/login.json') as json_f:
-            login_data = json.load(json_f)
+        """
+        Check the user's information. Close the login window if a match
+        is found, and open the inventory manager window.
 
-        # Load information from json file into a dictionary
-        for login in login_data['loginList']:
-            user, pswd = login['username'], login['password']
-            users[user] = pswd  # Set the dict's key and value pair
-
+        :return:
+        """
         # Collect information that the user entered
         user_name = self.user_entry.text()
         password = self.password_entry.text()
-        if (user_name, password) in users.items():
-            self.close()
-            # Open the SQL management application
-            time.sleep(0.5)  # Pause slightly before showing the parent window
-            self.parent.show()
-        else:
-            QMessageBox.warning(self, "Information Incorrect",
-                                "The user name or password is incorrect.", QMessageBox.Close)
 
+        self.query_user_password(user_name)
+
+        # if (user_name, password) in users.items():
+        #     self.close()
+        #     # Open the SQL management application
+        #     time.sleep(0.5)  # Pause slightly before showing the parent window
+        #     self.parent.show()
+        # else:
+        #     QMessageBox.warning(self, "Information Incorrect",
+        #                         "The user name or password is incorrect.", QMessageBox.Close)
 
     def createNewUser(self):
         """Set up the dialog box for the user to create a new user account."""
