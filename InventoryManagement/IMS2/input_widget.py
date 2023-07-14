@@ -1,66 +1,108 @@
 import sys, time
 from PySide6.QtWidgets import (
-    QWidget, QDialog, QLabel, QPushButton, QLineEdit, QComboBox,
+    QWidget, QDialog, QLabel, QPushButton, QLineEdit,
     QMessageBox, QFormLayout, QVBoxLayout, QApplication
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
+from PySide6.QtSql import QSqlDatabase, QSqlQuery, QSqlRelation
+from db_utils import DbConfig
 
 
 class InputGUI(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, config_file, parent=None):
         super().__init__()
         self.parent = parent
+        self.db_config_file = config_file
         self.initializeUI()
 
     def initializeUI(self):
         """Initialize the Login GUI window."""
-        self.setFixedSize(400, 400)
-        self.setWindowTitle("Input")
+        self.createConnection()
+        self.setFixedSize(300, 200)
+        self.setWindowTitle("로그인")
         self.setupWindow()
+
+    def createConnection(self):
+        """Set up the connection to the database.
+        Check for the tables needed."""
+        config_options = DbConfig(self.db_config_file)
+        host = config_options.host
+        port = int(config_options.port)
+        user = config_options.user
+        db_name = config_options.database
+        passwd = config_options.passwd
+
+        database = QSqlDatabase.addDatabase("QPSQL")
+        database.setHostName(host)
+        database.setPort(port)
+        database.setUserName(user)
+        database.setPassword(passwd)
+        database.setDatabaseName(db_name)
+        if not database.open():
+            print(database.lastError())
+            print("Unable to Connect.")
+            sys.exit(1)  # Error code 1 - signifies error
+        else:
+            print("Connected")
+
+        # Check if the tables we need exist in the database
+        # tables_needed = {"users"}
+        # tables_not_found = tables_needed - set(database.tables())
+        # if tables_not_found:
+        tables = database.tables()
+        if "users" not in tables:
+            QMessageBox.critical(None, "Error",
+                                 f"""<p>The following tables are missing
+                                  from the database: {tables}</p>""")
+            sys.exit(1)  # Error code 1 - signifies error
+
+    def createModel(self):
+        pass
 
     def setupWindow(self):
         """Set up the widgets for the login GUI."""
-        header_label = QLabel("Danaul Inventory Input")
+        header_label = QLabel("다나을 재고 관리")
         header_label.setFont(QFont('Arial', 20))
-        # header_label.setAlignment(Qt.AlignCenter)
-
-        category_entry = QComboBox()
-
-        name_entry = QLineEdit()
-        name_entry.setMinimumWidth(250)
-        name_entry.setPlaceholderText("품목명")
+        header_label.setAlignment(Qt.AlignCenter)
 
         self.user_entry = QLineEdit()
-        self.user_entry.setMinimumWidth(250)
+        self.user_entry.setMinimumWidth(150)
 
         self.password_entry = QLineEdit()
-        self.password_entry.setMinimumWidth(250)
+        self.password_entry.setMinimumWidth(150)
         self.password_entry.setEchoMode(QLineEdit.Password)
 
         # Arrange the QLineEdit widgets into a QFormLayout
         login_form = QFormLayout()
         login_form.setLabelAlignment(Qt.AlignLeft)
-        login_form.addRow("Server Name:", name_entry)
-        login_form.addRow("User Login:", self.user_entry)
+        login_form.addRow("Login Id:", self.user_entry)
         login_form.addRow("Password:", self.password_entry)
 
         connect_button = QPushButton("Connect")
-        connect_button.clicked.connect(self.connectToDatabase)
+        connect_button.clicked.connect(self.query_user_info)
 
-        new_user_button = QPushButton("No Account?")
-        new_user_button.clicked.connect(self.createNewUser)
+        # new_user_button = QPushButton("No Account?")
+        # new_user_button.clicked.connect(self.createNewUser)
 
         main_v_box = QVBoxLayout()
         main_v_box.setAlignment(Qt.AlignTop)
         main_v_box.addWidget(header_label)
-        main_v_box.addSpacing(10)
+        main_v_box.addSpacing(20)
         main_v_box.addLayout(login_form)
+        main_v_box.addSpacing(20)
         main_v_box.addWidget(connect_button)
-        main_v_box.addWidget(new_user_button)
+        # main_v_box.addWidget(new_user_button)
 
         self.setLayout(main_v_box)
 
+    def query_user_info(self):
+        query = QSqlQuery()
+
+        query.exec("SELECT * FROM users")
+        while(query.next()):
+            print(query.value(0))
+            print(query.value(1))
 
     def connectToDatabase(self):
         """Check the user's information. Close the login window if a match
@@ -150,6 +192,6 @@ class InputGUI(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    login_window = LoginGUI()
+    login_window = InputGUI('db_settings')
     login_window.show()
     sys.exit(app.exec())

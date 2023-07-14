@@ -13,7 +13,7 @@ from inventory_schema import (
     CREATE_TRANSACTION_TYPE_TABLE,
     CREATE_TRANSACTION_TABLE,
 )
-from data_classes import Item, Sku, Transaction, EtcData
+from IMS2.unused.data_classes import Item, Sku, Transaction, EtcData
 from di_logger import Logs, logging
 
 

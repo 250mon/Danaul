@@ -1,6 +1,6 @@
 import os
 import asyncio
-from typing import Dict, List
+from typing import Dict
 from datetime import date
 from IMS2.unused.data_classes import Item, Sku, Transaction
 from di_db import InventoryDb
@@ -77,7 +77,7 @@ class Lab(metaclass=Singleton):
             # get etc dfs
             get_data = [self._get_df_from_db(table) for table
                         in self.table_df.keys()]
-            data: List = await asyncio.gather(*get_data)
+            data = await asyncio.gather(*get_data)
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data.pop()
 
@@ -111,6 +111,19 @@ class Lab(metaclass=Singleton):
     async def delete_items_df(self, items_df: pd.DataFrame):
         return await self.di_db.delete_items_df(items_df)
 
+    def get_item(self, id: int):
+        return self.items.get(id, None)
+
+    def add_item(self, item: Item):
+        if item.item_id not in self.items.keys():
+            self.items[item.item_id] = item
+        else:
+            logger.warning(f'Lab: add_item cannot update the \
+             dict because of the duplicate id {item.item_id}')
+
+    def init_items(self):
+        self.items = self.get_items_from_db()
+
     def get_sku(self, id: int):
         return self.skus.get(id, None)
 
@@ -136,6 +149,22 @@ class Lab(metaclass=Singleton):
 
     def init_transactions(self):
         self.transactions = self.get_transactions_from_db()
+
+    async def get_items_from_db(self) -> Dict[int, Item]:
+        query = "SELECT * FROM items"
+        results = await self.di_db_util.select_query(query)
+        items = [Item(*(tuple(result))) for result in results]
+        return {item.item_id: item for item in items}
+
+    async def get_item_from_db_by_id(self, id: int) -> Item:
+        query = "SELECT * FROM items WHERE items.item_id=$1"
+        results = await self.di_db_util.select_query(query, [id, ])
+        return Item(*(tuple(results[0])))
+
+    async def get_item_from_db_by_name(self, name: str) -> Item:
+        query = "SELECT * FROM items WHERE items.item_name=$1"
+        results = await self.di_db_util.select_query(query, [name, ])
+        return Item(*(tuple(results[0])))
 
     async def get_skus_from_db(self) -> Dict[int, Sku]:
         query = "SELECT * FROM skus"

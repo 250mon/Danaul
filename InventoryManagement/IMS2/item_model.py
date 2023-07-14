@@ -83,8 +83,8 @@ class ItemModel(PandasModel):
         if role == Qt.DisplayRole or role == Qt.EditRole:
             return str(data_to_display)
 
-        # for sorting, use Qt.UserRole
-        elif role == Qt.UserRole:
+        # for sorting, use SortRole
+        elif role == self.SortRole:
             int_type_columns = [self.model_df.columns.get_loc(c) for c in
                                 ['item_id', 'item_valid', 'category_id']]
             # if column data is int, return int type

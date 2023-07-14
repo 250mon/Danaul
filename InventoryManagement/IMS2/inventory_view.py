@@ -39,7 +39,6 @@ class InventoryWindow(QMainWindow):
 
     def setupItemView(self):
         # items view
-
         self.item_view = QTableView(self)
         self.item_view.horizontalHeader().setStretchLastSection(True)
         self.item_view.setAlternatingRowColors(True)
@@ -54,16 +53,20 @@ class InventoryWindow(QMainWindow):
         # QSortFilterProxyModel enables filtering columns and sorting rows
         self.item_proxy_model = QSortFilterProxyModel()
         self.item_proxy_model.setSourceModel(self.item_model)
-        # Filtering
-        self.item_proxy_model.setFilterKeyColumn(1)
-        # Sorting; use UserRole for sorting
-        self.item_proxy_model.sort(self.item_model.model_df.columns.get_loc('item_id'),
-                                   Qt.AscendingOrder)
-        self.item_proxy_model.setSortRole(Qt.UserRole)
+        # Filtering is performed on item_name column
+        search_col_num = self.item_model.model_df.columns.get_loc('item_name')
+        self.item_proxy_model.setFilterKeyColumn(search_col_num)
+        # Sorting
+        initial_sort_col_num = self.item_model.model_df.columns.get_loc('item_id')
+        self.item_proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
+        # For sorting, model data needs to be read in certain deterministic order
+        # we use SortRole to read in model.data() for sorting purpose
+        self.item_proxy_model.setSortRole(self.item_model.SortRole)
 
+        # Set the model to the view
         self.item_view.setModel(self.item_proxy_model)
 
-        # set delegates
+        # Set delegates for category input
         combo_delegate2 = ComboBoxDelegate(['True', 'False'], self)
         self.item_view.setItemDelegateForColumn(
             self.item_model.editable_col_iloc['item_valid'], combo_delegate2)
@@ -72,6 +75,7 @@ class InventoryWindow(QMainWindow):
         self.item_view.setItemDelegateForColumn(
             self.item_model.editable_col_iloc['category_name'], combo_delegate1)
 
+        # Create widgets in the view
         item_widget = QWidget(self)
         self.item_search_bar = QLineEdit(self)
         self.item_search_bar.setPlaceholderText('품목명 입력')

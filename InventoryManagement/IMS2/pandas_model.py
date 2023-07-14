@@ -13,6 +13,8 @@ logger.setLevel(logging.DEBUG)
 class PandasModel(QAbstractTableModel):
     """A model to interface a Qt view with pandas dataframe """
 
+    SortRole = Qt.UserRole + 1
+
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
