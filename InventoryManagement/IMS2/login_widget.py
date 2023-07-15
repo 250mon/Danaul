@@ -1,4 +1,4 @@
-import sys, time
+import sys
 import bcrypt
 from PySide6.QtWidgets import (
     QWidget, QDialog, QLabel, QPushButton, QLineEdit,
@@ -58,9 +58,6 @@ class InputGUI(QWidget):
                                   from the database: {tables}</p>""")
             sys.exit(1)  # Error code 1 - signifies error
 
-    def createModel(self):
-        pass
-
     def setupWindow(self):
         """Set up the widgets for the login GUI."""
         header_label = QLabel("다나을 재고 관리")
@@ -83,8 +80,8 @@ class InputGUI(QWidget):
         connect_button = QPushButton("Connect")
         connect_button.clicked.connect(self.connectToDatabase)
 
-        # new_user_button = QPushButton("No Account?")
-        # new_user_button.clicked.connect(self.createNewUser)
+        new_user_button = QPushButton("No Account?")
+        new_user_button.clicked.connect(self.create_new_user)
 
         main_v_box = QVBoxLayout()
         main_v_box.setAlignment(Qt.AlignTop)
@@ -93,7 +90,7 @@ class InputGUI(QWidget):
         main_v_box.addLayout(login_form)
         main_v_box.addSpacing(20)
         main_v_box.addWidget(connect_button)
-        # main_v_box.addWidget(new_user_button)
+        main_v_box.addWidget(new_user_button)
 
         self.setLayout(main_v_box)
 
@@ -112,6 +109,19 @@ class InputGUI(QWidget):
 
         return result
 
+    def insert_user_info(self, user_name, user_pw):
+        query = QSqlQuery()
+        print(f'inserting {user_name}, {user_pw}')
+        query.prepare("INSERT INTO users (user_name, user_password) VALUES (?, ?)")
+        query.addBindValue(user_name)
+        query.addBindValue(user_pw)
+
+        if query.exec():
+            print("Inserted!")
+        else:
+            print(f"{query.lastError()}")
+
+
     def encrypt_password(self, password):
         # Generate a salt and hash the password
         salt = bcrypt.gensalt()
@@ -119,6 +129,7 @@ class InputGUI(QWidget):
         return hashed_password
 
     def verify_password(self, input_password, stored_password):
+        return input_password == stored_password
         # Hash the input password with the same salt used to hash the stored password
         hashed_input_password = bcrypt.hashpw(input_password.encode('utf-8'),
                                               stored_password.encode('utf-8'))
@@ -137,7 +148,13 @@ class InputGUI(QWidget):
         user_name = self.user_entry.text()
         password = self.password_entry.text()
 
-        self.query_user_password(user_name)
+        print(user_name)
+        stored_password = self.query_user_password(user_name)
+        password_verified = self.verify_password(password, stored_password)
+        if password_verified:
+            print('verified')
+        else:
+            print('not verified')
 
         # if (user_name, password) in users.items():
         #     self.close()
@@ -148,7 +165,7 @@ class InputGUI(QWidget):
         #     QMessageBox.warning(self, "Information Incorrect",
         #                         "The user name or password is incorrect.", QMessageBox.Close)
 
-    def createNewUser(self):
+    def create_new_user(self):
         """Set up the dialog box for the user to create a new user account."""
         self.hide()  # Hide the login window
         self.new_user_dialog = QDialog(self)
@@ -171,7 +188,7 @@ class InputGUI(QWidget):
 
         # Create sign up button
         create_acct_button = QPushButton("Create New Account")
-        create_acct_button.clicked.connect(self.acceptUserInfo)
+        create_acct_button.clicked.connect(self.accept_user_info)
 
         dialog_v_box = QVBoxLayout()
         dialog_v_box.setAlignment(Qt.AlignTop)
@@ -183,7 +200,7 @@ class InputGUI(QWidget):
         self.new_user_dialog.setLayout(dialog_v_box)
         self.new_user_dialog.show()
 
-    def acceptUserInfo(self):
+    def accept_user_info(self):
         """Verify that the user's passwords match. If so, save them user's
         info to the json file and display the login window."""
         user_name_text = self.new_user_entry.text()
@@ -194,17 +211,8 @@ class InputGUI(QWidget):
                                 "The passwords you entered do not match. Please try again.",
                                 QMessageBox.Close)
         else:
-            # If the passwords match, save the passwords to the json file
-            # and return to the login screen.
-            user_info = {}
-            with open('files/login.json', "r+") as json_f:
-                login_data = json.load(json_f)
-                login_data['loginList'].append({
-                    "username": user_name_text,
-                    "password": pswd_text})
-                login_data.update(user_info)
-                json_f.seek(0)  # Reset the file pointer to position 0
-                json.dump(login_data, json_f, indent=2)
+            # If the passwords match
+            self.insert_user_info(user_name_text, pswd_text)
         self.new_user_dialog.close()
         self.show()
 
