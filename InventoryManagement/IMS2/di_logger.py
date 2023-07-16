@@ -16,5 +16,5 @@ class Logs(metaclass=Singleton):
 
     def init_logger(self, logger):
         ch = logging.StreamHandler()
-        ch.setFormatter(logging.Formatter('%(name)s %(levelname)s: %(message)s'))
+        ch.setFormatter(logging.Formatter('%(levelname) s%(name)s: %(message)s'))
         logger.addHandler(ch)

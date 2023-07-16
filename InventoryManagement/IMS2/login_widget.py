@@ -54,7 +54,8 @@ class InputGUI(QWidget):
         # if tables_not_found:
         tables = database.tables()
         if "users" not in tables:
-            QMessageBox.critical(None, "Error",
+            QMessageBox.critical(None,
+                                 "Error",
                                  f"""<p>The following tables are missing
                                   from the database: {tables}</p>""")
             sys.exit(1)  # Error code 1 - signifies error

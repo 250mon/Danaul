@@ -1,6 +1,8 @@
 import os
 import pandas as pd
+import asyncpg.exceptions
 from typing import Dict
+from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
 from pandas_model import PandasModel
@@ -184,6 +186,7 @@ class ItemModel(PandasModel):
 
     async def update_db(self):
         logger.debug('update_db: Saving to DB ...')
+        return_msg = {}
 
         del_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('deleted')]
         if not del_df.empty:
@@ -191,18 +194,23 @@ class ItemModel(PandasModel):
             # if flag contains 'new', just drop it
             del_df.drop(del_df[del_df.flag.str.contains('new')].index)
             result = await Lab().delete_items_df(del_df)
-            logger.debug(f'result = {result}')
+            logger.debug(f'update_db: result = {result}')
+            if isinstance(result[0], asyncpg.exceptions.ForeignKeyViolationError):
+                return_msg['delete'] = 'Item ID is in use, Cannot be deleted'
+
             self.model_df.drop(del_df.index, inplace=True)
 
         new_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('new')]
         if not new_df.empty:
             logger.debug(f'{new_df}')
             result = await Lab().insert_items_df(new_df)
-            logger.debug(f'result = {result}')
+            logger.debug(f'update_db: result = {result}')
             self.model_df.drop(new_df.index, inplace=True)
 
         chg_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('changed')]
         if not chg_df.empty:
             logger.debug(f'{chg_df}')
             result = await Lab().upsert_items_df(chg_df)
-            logger.debug(f'result = {result}')
+            logger.debug(f'update_db: result = {result}')
+
+        return return_msg
