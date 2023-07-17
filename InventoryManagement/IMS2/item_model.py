@@ -26,6 +26,8 @@ class ItemModel(PandasModel):
         self.column_names = ['item_id', 'item_valid', 'item_name',
                              'category_name', 'description', 'category_id',
                              'flag']
+        # a list of column names which is used for db update
+        self.db_column_names = None
 
         if not template_flag:
             self.set_model_df()
@@ -51,6 +53,11 @@ class ItemModel(PandasModel):
 
         logger.debug('set_model_df: setting item_model from lab.items_df')
         self.model_df = Lab().table_df['items']
+
+        # we store the columns list here for later use of db update
+        self.db_column_names = self.model_df.columns.tolist()
+
+        # set more columns for the view
         self.model_df['category_name'] = self.model_df['category_id'].map(cat_s)
         self.model_df['flag'] = ''
 
@@ -190,19 +197,22 @@ class ItemModel(PandasModel):
             logger.debug(f'{del_df}')
             # if flag contains 'new', just drop it
             del_df.drop(del_df[del_df.flag.str.contains('new')].index)
-            result = await Lab().delete_items_df(del_df)
+            df_to_upload = del_df[self.db_column_names]
+            result = await Lab().delete_items_df(df_to_upload)
             logger.debug(f'result = {result}')
             self.model_df.drop(del_df.index, inplace=True)
 
         new_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('new')]
         if not new_df.empty:
             logger.debug(f'{new_df}')
-            result = await Lab().insert_items_df(new_df)
+            df_to_upload = new_df[self.db_column_names]
+            result = await Lab().insert_items_df(df_to_upload)
             logger.debug(f'result = {result}')
             self.model_df.drop(new_df.index, inplace=True)
 
         chg_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('changed')]
         if not chg_df.empty:
             logger.debug(f'{chg_df}')
-            result = await Lab().upsert_items_df(chg_df)
+            df_to_upload = chg_df[self.db_column_names]
+            result = await Lab().upsert_items_df(df_to_upload)
             logger.debug(f'result = {result}')

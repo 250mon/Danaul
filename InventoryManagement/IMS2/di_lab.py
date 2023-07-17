@@ -103,7 +103,7 @@ class Lab(metaclass=Singleton):
         self.table_df[table] = await self._get_df_from_db(table)
 
     async def insert_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.insert_items_df(items_df)
+        return await self.di_db.insert_df('items', items_df)
 
     async def upsert_items_df(self, items_df: pd.DataFrame):
         return await self.di_db.upsert_items_df(items_df)

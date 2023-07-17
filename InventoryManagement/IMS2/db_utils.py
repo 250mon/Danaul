@@ -105,10 +105,10 @@ class DbUtil:
         results = []
         async with ConnectPg(self.db_config_file) as conn:
             if conn is None:
-                logger.debug('Error while connecting to DB during creating tables')
+                logger.debug('create_tables: Error while connecting to DB during creating tables')
                 return
 
-            logger.info('Creating the tables')
+            logger.info('create_tables: Creating the tables')
             for statement in statements:
                 try:
                     logger.info(f'{statement}')
@@ -116,8 +116,8 @@ class DbUtil:
                     results.append(status)
                     logger.debug(status)
                 except Exception as e:
-                    logger.exception(f'Error while creating table: {statement}', e)
-            logger.info('Finished creating the tables')
+                    logger.exception(f'create_tables: Error while creating table: {statement}', e)
+            logger.info('create_tables: Finished creating the tables')
         return results
 
     async def drop_tables(self, table_names: List[str]):
@@ -130,20 +130,20 @@ class DbUtil:
         results = []
         async with ConnectPg(self.db_config_file) as conn:
             if conn is None:
-                logger.debug('Error while connecting to DB during removing tables')
+                logger.debug('drop_table: Error while connecting to DB during removing tables')
                 return None
 
-            logger.info('Removing the tables')
+            logger.info('drop_table: Removing the tables')
             for table in table_names:
                 try:
                     sql_stmt = f'DROP TABLE {table} CASCADE;'
                     result = await conn.execute(sql_stmt)
                     results.append(result)
                 except UndefinedTableError as ute:
-                    logger.exception('Trying to drop an undefined table', ute)
+                    logger.exception('drop_table: Trying to drop an undefined table', ute)
                 except Exception as e:
-                    logger.exception('Error while dropping tables', e)
-        logger.info('Finished removing the tables')
+                    logger.exception('drop_table: Error while dropping tables', e)
+        logger.info('drop_table: Finished removing the tables')
         return results
 
     async def select_query(self, query: str, args: List = None):
@@ -154,7 +154,7 @@ class DbUtil:
         """
         async with ConnectPg(self.db_config_file) as conn:
             if conn is None:
-                logger.debug('Error while connecting to DB during querying tables')
+                logger.debug('select_query: Error while connecting to DB during querying tables')
                 return None
 
             try:
@@ -165,7 +165,7 @@ class DbUtil:
                     results: List[Record] = await query.fetch()
                 return results
             except Exception as e:
-                logger.exception(f'Error while executing {query}', e)
+                logger.exception(f'select_query: Error while executing {query}', e)
                 return None
 
 
@@ -180,16 +180,16 @@ class DbUtil:
         """
         async with ConnectPg(self.db_config_file) as conn:
             if conn is None:
-                logger.debug('Error while connecting to DB during sync_executing')
+                logger.debug('executemany: Error while connecting to DB during sync_executing')
                 return "Connection failed"
 
-            logger.info('Synchronous executing')
+            logger.info('executemany: Synchronous executing')
             try:
                 results = await conn.executemany(statement, args)
-                logger.info('Finished synchronous executing')
+                logger.info(f'executemany: results::\n{results}')
                 return results
             except Exception as e:
-                logger.exception('Error during synchronous executing', e)
+                logger.exception('executemany: Error during synchronous executing', e)
                 return e
 
 
@@ -208,7 +208,7 @@ class DbUtil:
                 logger.debug(arg)
                 return await conn.execute(stmt, *arg)
 
-        logger.info('Asynchronous executing')
+        logger.info('execute: Asynchronous executing')
         config_options = DbConfig(self.db_config_file)
         async with asyncpg.create_pool(host=config_options.host,
                                        port=config_options.port,
@@ -217,12 +217,12 @@ class DbUtil:
                                        password=config_options.passwd) as pool:
             queries = [execute(statement, arg, pool) for arg in args]
             results = await asyncio.gather(*queries, return_exceptions=True)
-            logger.info('Finished asynchronous executing')
+            logger.debug(f'execute: results::\n{results}')
             return results
 
     async def delete(self, table, col_name, args: List[Tuple]):
         """
-        Delete a row where col_name = args from table
+        Delete rows where col value is in the args list from table
         :param table: table name
         :param col_name: column name to check
         :param args: argments to search for
@@ -236,5 +236,10 @@ class DbUtil:
             return None
 
         stmt = f"DELETE FROM {table} WHERE {col_name} = $1"
+
+        logger.debug(f'delete: Delete rows ...')
         logger.debug(args)
-        return await self.pool_execute(stmt, args)
+
+        results = await self.pool_execute(stmt, args)
+        logger.debug(f'delete: results::\n{results}')
+        return results

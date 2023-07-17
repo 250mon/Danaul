@@ -61,23 +61,27 @@ class InventoryDb:
         # use executemany for sequential indexing of ids
         return await self.db_util.executemany(stmt, args)
 
-    async def insert_items_df(self, items_df: pd.DataFrame):
-        """
-        Initial insertion of items
-        item_id and item_valid are set to default values
-        :param items:
-        :return:
-        """
-        # stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2, $3)"
-        # args = [(item.item_name, item.category_id, item.description)
-        #         for item in items_df.itertuples()]
+    async def insert_df(self, table: str, df: pd.DataFrame, default_id: bool = False):
+        def make_stmt(table_name: str, nargs: int, default_id: bool):
+            if default_id:
+                id_part = "DEFAULT,"
+                nargs = nargs - 1
+            else:
+                id_part = ""
+            args_part = ",".join(["$" + str(i) for i in range(1, nargs+1)])
+            stmt = f"INSERT INTO {table_name} VALUES({id_part}{args_part})"
+            return stmt
 
-        stmt = "INSERT INTO items VALUES($1, $2, $3, $4, $5)"
-        args = [(item.item_id, item.item_valid, item.item_name, item.category_id,
-                 item.description) for item in items_df.itertuples()]
+        logger.debug(f"insert_df: Insert into {table}...")
+        logger.debug(f"insert_df: \n{df}")
+        stmt = make_stmt(table, len(df.columns), default_id)
+        args = df.values.tolist()
+        if default_id:
+            # id is set DEFAULT
+            # args = [[id1, f11, f21, ...], [id2, f12, f22, ...], ...]
+            args = [l[1:] for l in args]
 
-        logger.debug("Insert Items ...")
-        logger.debug(args)
+        logger.debug(f"insert_df: {stmt} {args}")
         return await self.db_util.pool_execute(stmt, args)
 
     async def upsert_items_df(self, items_df: pd.DataFrame):
@@ -97,7 +101,7 @@ class InventoryDb:
         args = [(item.item_valid, item.item_name, item.category_id, item.description)
                 for item in items_df.itertuples()]
 
-        logger.debug("Insert Items ...")
+        logger.debug("Upsert Items ...")
         logger.debug(args)
         return await self.db_util.pool_execute(stmt, args)
 
@@ -205,19 +209,32 @@ async def main():
     async def initialize():
         await danaul_db.initialize_db()
 
+        extra_data = {}
         # initial insert
-        extra_data = {
-            'category': ['외용제', '수액제', '보조기', '기타'],
-            'item_side': ['None', 'Rt', 'Lt'],
-            'item_size': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc'],
-            'transaction_type': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus'],
-            'users': ['admin', 'test']
-        }
-        for table, data_list in extra_data.items():
+        extra_data['category'] = pd.DataFrame({
+            'id': [1,2,3,4],
+            'name': ['외용제', '수액제', '보조기', '기타']
+        })
+        extra_data['item_side'] = pd.DataFrame({
+            'id': [1,2,3],
+            'name': ['None', 'Rt', 'Lt']
+        })
+        extra_data['item_size'] = pd.DataFrame({
+            'id': [1,2,3,4,5,6],
+            'name': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc']
+        })
+        extra_data['transaction_type'] = pd.DataFrame({
+            'id': [1,2,3,4],
+            'name': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus']
+        })
+        extra_data['users'] = pd.DataFrame({
+            'id': [1, 2],
+            'name': ['admin', 'test'],
+            'pw': ['\x00', '\x00']
+        })
+        for table, data_df in extra_data.items():
             # make dataframe for each table
-            df = pd.DataFrame({'name': data_list})
-            await danaul_db.insert_extras_df(table, df)
-
+            await danaul_db.insert_df(table, data_df, default_id=True)
 
     async def insert_items():
         item_names = ['써지겔', '아토베리어', 'test1']
