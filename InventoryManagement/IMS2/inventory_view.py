@@ -2,7 +2,7 @@ import sys, os
 import pandas as pd
 from typing import List
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QDockWidget,
+    QApplication, QMainWindow, QWidget, QDockWidget, QMessageBox,
     QPushButton, QLineEdit, QTableView, QHBoxLayout, QVBoxLayout
 )
 from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
@@ -201,7 +201,13 @@ class InventoryWindow(QMainWindow):
         logger.debug(f'{action}')
         if action == "save":
             logger.debug('Saving ...')
-            await self.item_model.update_db()
+            result = await self.item_model.update_db()
+            result_string = '\n'.join(result.values())
+            QMessageBox.warning(self,
+                                "Warning",
+                                result_string,
+                                QMessageBox.Close)
+
             # update model
             logger.debug('Updating model ...')
             await self.item_model.update_model_df_from_db()

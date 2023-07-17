@@ -58,7 +58,7 @@ CREATE_USER_TABLE = \
     CREATE TABLE IF NOT EXISTS users(
         user_id SERIAL PRIMARY KEY,
         user_name VARCHAR(20) NOT NULL,
-        user_password TEXT NOT NULL DEFAULT 'danaul',
+        user_password BYTEA NOT NULL DEFAULT '\\000'::bytea,
         UNIQUE(user_name)
     );"""
 
