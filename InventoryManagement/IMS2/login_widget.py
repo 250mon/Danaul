@@ -29,18 +29,12 @@ class InputGUI(QWidget):
         """Set up the connection to the database.
         Check for the tables needed."""
         config_options = DbConfig(self.db_config_file)
-        host = config_options.host
-        port = int(config_options.port)
-        user = config_options.user
-        db_name = config_options.database
-        passwd = config_options.passwd
-
         database = QSqlDatabase.addDatabase("QPSQL")
-        database.setHostName(host)
-        database.setPort(port)
-        database.setUserName(user)
-        database.setPassword(passwd)
-        database.setDatabaseName(db_name)
+        database.setHostName(config_options.host)
+        database.setPort(int(config_options.port))
+        database.setUserName(config_options.user)
+        database.setPassword(config_options.passwd)
+        database.setDatabaseName(config_options.database)
         if not database.open():
             print(database.lastError())
             print("Unable to Connect.")
