@@ -208,7 +208,7 @@ class DbUtil:
                 logger.debug(arg)
                 return await conn.execute(stmt, *arg)
 
-        logger.info('execute: Asynchronous executing')
+        logger.info('pool_execute: Asynchronous executing')
         config_options = DbConfig(self.db_config_file)
         async with asyncpg.create_pool(host=config_options.host,
                                        port=config_options.port,
@@ -217,7 +217,7 @@ class DbUtil:
                                        password=config_options.passwd) as pool:
             queries = [execute(statement, arg, pool) for arg in args]
             results = await asyncio.gather(*queries, return_exceptions=True)
-            logger.debug(f'execute: results::\n{results}')
+            logger.debug(f'pool_execute: results::\n{results}')
             return results
 
     async def delete(self, table, col_name, args: List[Tuple]):
@@ -229,10 +229,10 @@ class DbUtil:
         :return:
         """
         if not isinstance(args, List):
-            logger.error(f"args' type{type(args)} must be List[Tuple]")
+            logger.error(f"delete: args' type{type(args)} must be List[Tuple]")
             return None
         if not isinstance(args[0], Tuple):
-            logger.error(f"args element's type{type(args[0])} must be Tuple")
+            logger.error(f"delete: args element's type{type(args[0])} must be Tuple")
             return None
 
         stmt = f"DELETE FROM {table} WHERE {col_name} = $1"

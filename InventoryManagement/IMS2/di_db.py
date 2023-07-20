@@ -16,9 +16,9 @@ from inventory_schema import (
 from IMS2.unused.data_classes import Item, Sku, Transaction
 from di_logger import Logs, logging
 
-
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
+
 
 class InventoryDb:
     def __init__(self, db_config_file):
@@ -38,7 +38,8 @@ class InventoryDb:
     async def drop_tables(self):
         table_names = ['category', 'items', 'item_size', 'item_side', 'skus', 'users',
                        'transactions', 'transaction_type']
-        return await self.db_util.drop_tables(table_names)
+        # dropping is always in a reverse order from creating
+        return await self.db_util.drop_tables(table_names[::-1])
 
     async def initialize_db(self):
         await self.drop_tables()
@@ -68,7 +69,7 @@ class InventoryDb:
                 nargs = nargs - 1
             else:
                 id_part = ""
-            args_part = ",".join(["$" + str(i) for i in range(1, nargs+1)])
+            args_part = ",".join(["$" + str(i) for i in range(1, nargs + 1)])
             stmt = f"INSERT INTO {table_name} VALUES({id_part}{args_part})"
             return stmt
 
@@ -77,7 +78,7 @@ class InventoryDb:
         stmt = make_stmt(table, len(df.columns), default_id)
         args = df.values.tolist()
         if default_id:
-            # id is set DEFAULT
+            # id is removed and set DEFAULT
             # args = [[id1, f11, f21, ...], [id2, f12, f22, ...], ...]
             args = [l[1:] for l in args]
 
@@ -212,25 +213,25 @@ async def main():
         extra_data = {}
         # initial insert
         extra_data['category'] = pd.DataFrame({
-            'id': [1,2,3,4],
+            'id': [1, 2, 3, 4],
             'name': ['외용제', '수액제', '보조기', '기타']
         })
         extra_data['item_side'] = pd.DataFrame({
-            'id': [1,2,3],
+            'id': [1, 2, 3],
             'name': ['None', 'Rt', 'Lt']
         })
         extra_data['item_size'] = pd.DataFrame({
-            'id': [1,2,3,4,5,6],
+            'id': [1, 2, 3, 4, 5, 6],
             'name': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc']
         })
         extra_data['transaction_type'] = pd.DataFrame({
-            'id': [1,2,3,4],
+            'id': [1, 2, 3, 4],
             'name': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus']
         })
         extra_data['users'] = pd.DataFrame({
             'id': [1, 2],
             'name': ['admin', 'test'],
-            'pw': ['\x00', '\x00']
+            'pw': [b'\x01', b'\x01']
         })
         for table, data_df in extra_data.items():
             # make dataframe for each table
