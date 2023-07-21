@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLineEdit, QTableView, QHBoxLayout, QVBoxLayout
 )
 from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
+from login_widget import LoginWidget
 from async_helper import AsyncHelper
 from item_model import ItemModel
 from di_lab import Lab
@@ -18,7 +19,8 @@ from single_item_window import SingleItemWindow
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
-Lab(InventoryDb('db_settings'))
+DB_SETTINGS_FILE = 'db_settings'
+Lab(InventoryDb(DB_SETTINGS_FILE))
 
 class InventoryWindow(QMainWindow):
     start_signal = Signal(str, pd.DataFrame)
@@ -26,15 +28,24 @@ class InventoryWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.login()
+        # self.initializeUI()
 
-        self.initializeUI()
+    def login(self):
+        self.login_widget = LoginWidget(DB_SETTINGS_FILE, self)
+        self.login_widget.start_main.connect(self.initializeUI)
+        self.login_widget.show()
 
+    @Slot()
     def initializeUI(self):
         self.setMinimumSize(1400, 800)
         self.setWindowTitle("다나을 재고관리")
         self.item_model = ItemModel()
 
         self.setUpMainWindow()
+
+        self. async_helper = AsyncHelper(self, self.save_to_db)
+
         self.show()
 
     def setupItemView(self):
@@ -299,7 +310,7 @@ class InventoryWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_window = InventoryWindow()
-    async_helper = AsyncHelper(main_window, main_window.save_to_db)
+    # async_helper = AsyncHelper(main_window, main_window.save_to_db)
 
     # signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.exec()

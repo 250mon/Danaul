@@ -1,10 +1,11 @@
+import os
 import asyncio
 import pandas as pd
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QObject, Signal, Slot, QEvent
 from di_logger import Logs, logging
 
-logger = Logs().get_logger('async_helper')
+logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 class AsyncHelper(QObject):

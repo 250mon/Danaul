@@ -1,3 +1,4 @@
+import os
 import sys
 from time import sleep
 import bcrypt
@@ -5,13 +6,19 @@ from PySide6.QtWidgets import (
     QWidget, QDialog, QLabel, QPushButton, QLineEdit,
     QMessageBox, QFormLayout, QVBoxLayout, QApplication
 )
-from PySide6.QtCore import Qt, QByteArray
+from PySide6.QtCore import Qt, QByteArray, Signal
 from PySide6.QtGui import QFont
-from PySide6.QtSql import QSqlDatabase, QSqlQuery, QSqlRelation
+from PySide6.QtSql import QSqlDatabase, QSqlQuery
 from db_utils import DbConfig
+from di_logger import Logs, logging
 
 
-class InputGUI(QWidget):
+logger = Logs().get_logger(os.path.basename(__file__))
+logger.setLevel(logging.DEBUG)
+
+class LoginWidget(QWidget):
+    start_main = Signal()
+
     def __init__(self, config_file, parent=None):
         super().__init__()
         self.parent = parent
@@ -36,11 +43,11 @@ class InputGUI(QWidget):
         database.setPassword(config_options.passwd)
         database.setDatabaseName(config_options.database)
         if not database.open():
-            print(database.lastError())
-            print("Unable to Connect.")
+            logger.error("createConnection: Unable to Connect.")
+            logger.error(database.lastError())
             sys.exit(1)  # Error code 1 - signifies error
         else:
-            print("Connected")
+            logger.debug("createConnection: Connected")
 
         # Check if the tables we need exist in the database
         # tables_needed = {"users"}
@@ -99,30 +106,30 @@ class InputGUI(QWidget):
         result = None
         if query.next():
             result = query.value(0)
-            print("Got a password!")
+            logger.debug("query_user_password: Got a password!")
         else:
-            print("no password")
+            logger.debug("query_user_password: No password found")
 
         return result
 
     def insert_user_info(self, user_name, hashed_user_pw):
         query = QSqlQuery()
         pw = QByteArray(hashed_user_pw)
-        print(f'inserting {user_name}, {pw}')
+        logger.debug(f'insert_user_info: username:{user_name}, password:{pw}')
         query.prepare("INSERT INTO users (user_name, user_password) VALUES (?, ?)")
         query.addBindValue(user_name)
         # postgresql only accepts hexadecimal format
         query.addBindValue(pw)
 
         if query.exec():
-            print("Inserted!")
+            logger.debug("insert_user_info: User info inserted!")
         else:
             QMessageBox.warning(self,
                                 "Warning",
                                 "User name or password is improper!!",
                                 QMessageBox.Close)
-            print("User info not inserted!")
-            print(f"{query.lastError()}")
+            logger.debug("insert_user_info: User info not inserted!")
+            logger.debug(f"{query.lastError()}")
 
     def encrypt_password(self, password):
         # Generate a salt and hash the password
@@ -152,15 +159,14 @@ class InputGUI(QWidget):
         stored_pw: QByteArray = self.query_user_password(user_name)
         # convert QByteArray to bytes
         stored_pw_bytes: bytes = stored_pw.data()
-        print(f'stored_pw_bytes: {stored_pw_bytes}')
 
         password_verified = self.verify_password(password, stored_pw_bytes)
         if password_verified:
             self.close()
             # Open the SQL management application
             sleep(0.5)  # Pause slightly before showing the parent window
-            # self.parent.show()
-            print("Success!!!")
+            self.start_main.emit()
+            logger.debug("process_login: Passed!!!")
         else:
             QMessageBox.warning(self, "Information Incorrect",
                                 "The user name or password is incorrect.",
@@ -203,7 +209,64 @@ class InputGUI(QWidget):
 
     def accept_user_info(self):
         """Verify that the user's passwords match. If so, save them user's
-        info to the json file and display the login window."""
+        info to DB and display the login window."""
+        user_name_text = self.new_user_entry.text()
+        pw_text = self.new_password.text()
+        confirm_text = self.confirm_password.text()
+        if pw_text != confirm_text:
+            QMessageBox.warning(self, "Error Message",
+                                "The passwords you entered do not match. Please try again.",
+                                QMessageBox.Close)
+        else:
+            # If the passwords match, encrypt and save it to the db
+            hashed_pw = self.encrypt_password(pw_text)
+            self.insert_user_info(user_name_text, hashed_pw)
+        self.new_user_dialog.close()
+        self.show()
+
+    def change_password(self, user_name):
+        """Set up the dialog box for the user to change password."""
+        self.hide()  # Hide the login window
+        self.chg_pw_diglog = QDialog(self)
+        self.chg_pw_diglog.setWindowTitle("Change Password")
+
+        header_label = QLabel("Change Password")
+        self.old_password= QLineEdit()
+        self.old_password.setEchoMode(QLineEdit.Password)
+
+        self.new_password = QLineEdit()
+        self.new_password.setEchoMode(QLineEdit.Password)
+
+        self.confirm_password = QLineEdit()
+        self.confirm_password.setEchoMode(QLineEdit.Password)
+
+        # Arrange QLineEdit widgets in a QFormLayout
+        dialog_form = QFormLayout()
+        dialog_form.addRow("Old Password:", self.old_password)
+        dialog_form.addRow("New Password", self.new_password)
+        dialog_form.addRow("Confirm Password", self.confirm_password)
+
+        # Create sign up button
+        change_pw_button = QPushButton("Create New Account")
+        change_pw_button.clicked.connect(self.accept_user_info)
+
+        dialog_v_box = QVBoxLayout()
+        dialog_v_box.setAlignment(Qt.AlignTop)
+        dialog_v_box.addWidget(header_label)
+        dialog_v_box.addSpacing(10)
+        dialog_v_box.addLayout(dialog_form, 1)
+        dialog_v_box.addWidget(change_pw_button)
+
+        self.chg_pw_diglog.setLayout(dialog_v_box)
+        self.chg_pw_diglog.show()
+
+    def accept_new_password(self, username):
+        """Verify that the user's passwords match. If so, save them user's
+        info to DB and display the login window."""
+        password_verified = self.verify_password(password, stored_pw_bytes)
+        if not password_verified:
+            self.chg_pw_diglog.close()
+
         user_name_text = self.new_user_entry.text()
         pw_text = self.new_password.text()
         confirm_text = self.confirm_password.text()
@@ -221,6 +284,6 @@ class InputGUI(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    login_window = InputGUI('db_settings')
+    login_window = LoginWidget('db_settings')
     login_window.show()
     sys.exit(app.exec())
