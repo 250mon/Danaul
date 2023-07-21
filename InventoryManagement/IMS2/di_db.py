@@ -231,7 +231,7 @@ async def main():
         extra_data['users'] = pd.DataFrame({
             'id': [1, 2],
             'name': ['admin', 'test'],
-            'pw': [b'\x01', b'\x01']
+            'pw': [b'\x00', b'\x00']
         })
         for table, data_df in extra_data.items():
             # make dataframe for each table

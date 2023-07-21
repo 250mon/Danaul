@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QWidget, QDialog, QLabel, QPushButton, QLineEdit,
     QMessageBox, QFormLayout, QVBoxLayout, QApplication
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QByteArray
 from PySide6.QtGui import QFont
 from PySide6.QtSql import QSqlDatabase, QSqlQuery, QSqlRelation
 from db_utils import DbConfig
@@ -105,13 +105,14 @@ class InputGUI(QWidget):
 
         return result
 
-    def insert_user_info(self, user_name, user_pw):
+    def insert_user_info(self, user_name, hashed_user_pw):
         query = QSqlQuery()
-        print(f'inserting {user_name}, {user_pw}')
+        pw = QByteArray(hashed_user_pw)
+        print(f'inserting {user_name}, {pw}')
         query.prepare("INSERT INTO users (user_name, user_password) VALUES (?, ?)")
         query.addBindValue(user_name)
         # postgresql only accepts hexadecimal format
-        query.addBindValue(user_pw.hex())
+        query.addBindValue(pw)
 
         if query.exec():
             print("Inserted!")
@@ -130,12 +131,8 @@ class InputGUI(QWidget):
         return hashed_password
 
     def verify_password(self, input_password, stored_password):
-        print(f'input_password: {input_password}')
-        print(f'stored_password: {stored_password}')
         # Hash the input password with the same salt used to hash the stored password
         hashed_input_password = bcrypt.hashpw(input_password.encode('utf-8'), stored_password)
-        print(f'hashed_input_password: {hashed_input_password}')
-
         # Compare the hashed input password with the stored password
         return hashed_input_password == stored_password
 
@@ -149,10 +146,15 @@ class InputGUI(QWidget):
         # Collect information that the user entered
         user_name = self.user_entry.text()
         password = self.password_entry.text()
-        pw_from_db = self.query_user_password(user_name)
-        print(pw_from_db)
-        stored_password = bytes.fromhex(str(pw_from_db))
-        password_verified = self.verify_password(password, stored_password)
+
+        # The following code converts QByteArray to PyBtye(bytes) format
+        # stored_pwd: type is QByteArray hex format
+        stored_pw: QByteArray = self.query_user_password(user_name)
+        # convert QByteArray to bytes
+        stored_pw_bytes: bytes = stored_pw.data()
+        print(f'stored_pw_bytes: {stored_pw_bytes}')
+
+        password_verified = self.verify_password(password, stored_pw_bytes)
         if password_verified:
             self.close()
             # Open the SQL management application
