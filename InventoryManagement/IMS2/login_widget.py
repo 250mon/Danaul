@@ -17,7 +17,7 @@ logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 class LoginWidget(QWidget):
-    start_main = Signal()
+    start_main = Signal(str)
 
     def __init__(self, config_file, parent=None):
         super().__init__()
@@ -28,7 +28,7 @@ class LoginWidget(QWidget):
     def initializeUI(self):
         """Initialize the Login GUI window."""
         self.createConnection()
-        self.setFixedSize(300, 200)
+        self.setFixedSize(300, 300)
         self.setWindowTitle("로그인")
         self.setupWindow()
 
@@ -83,11 +83,11 @@ class LoginWidget(QWidget):
         connect_button = QPushButton("Connect")
         connect_button.clicked.connect(self.process_login)
 
-        new_user_button = QPushButton("Sign up")
-        new_user_button.clicked.connect(self.register_password_dialog)
-
         change_password_button = QPushButton("Change password")
-        change_password_button.clicked.connect(self.change_password_dialog)
+        change_password_button.clicked.connect(lambda: self.process_login(change_pw=True))
+
+        new_user_button = QPushButton("Sign up")
+        new_user_button.clicked.connect(lambda: self.register_password_dialog(user_name=None))
 
         main_v_box = QVBoxLayout()
         main_v_box.setAlignment(Qt.AlignTop)
@@ -96,8 +96,10 @@ class LoginWidget(QWidget):
         main_v_box.addLayout(login_form)
         main_v_box.addSpacing(20)
         main_v_box.addWidget(connect_button)
-        main_v_box.addWidget(new_user_button)
         main_v_box.addWidget(change_password_button)
+        main_v_box.addSpacing(10)
+        main_v_box.addWidget(connect_button)
+        main_v_box.addWidget(new_user_button)
 
         self.setLayout(main_v_box)
 
@@ -120,7 +122,10 @@ class LoginWidget(QWidget):
         query = QSqlQuery()
         pw = QByteArray(hashed_user_pw)
         logger.debug(f'insert_user_info: username:{user_name}, password:{pw}')
-        query.prepare("INSERT INTO users (user_name, user_password) VALUES (?, ?)")
+        query.prepare("""INSERT INTO users (user_name, user_password) VALUES ($1, $2)
+                            ON CONFLICT (user_name)
+                            DO
+                                UPDATE SET user_name = $1, user_password = $2""")
         query.addBindValue(user_name)
         # postgresql only accepts hexadecimal format
         query.addBindValue(pw)
@@ -147,7 +152,7 @@ class LoginWidget(QWidget):
         # Compare the hashed input password with the stored password
         return hashed_input_password == stored_password
 
-    def process_login(self):
+    def process_login(self, change_pw=False):
         """
         Check the user's information. Close the login window if a match
         is found, and open the inventory manager window.
@@ -161,10 +166,13 @@ class LoginWidget(QWidget):
         password_verified = self.verify_user(password, user_name)
         if password_verified:
             self.close()
-            # Open the SQL management application
-            sleep(0.5)  # Pause slightly before showing the parent window
-            self.start_main.emit()
-            logger.debug("process_login: Passed!!!")
+            if change_pw:
+                self.register_password_dialog(user_name)
+            else:
+                # Open the SQL management application
+                sleep(0.5)  # Pause slightly before showing the parent window
+                self.start_main.emit(user_name)
+                logger.debug("process_login: Passed!!!")
         else:
             QMessageBox.warning(self, "Information Incorrect",
                                 "The user name or password is incorrect.",
@@ -181,21 +189,19 @@ class LoginWidget(QWidget):
 
     def register_password_dialog(self, user_name=None):
         """Set up the dialog box for the user to create a new user account."""
+        self.hide()  # Hide the login window
+        self.user_input_dialog = QDialog(self)
+        print(user_name)
         # create a new user account
         if user_name is None:
-            self.hide()  # Hide the login window
-            self.user_input_dialog = QDialog(self)
             self.user_input_dialog.setWindowTitle("Create New User")
             header_label = QLabel("Create New User Account")
-            self.new_user_entry = QLineEdit()
+            self.user_name = QLineEdit()
         # change password
         else:
-            self.user_input_dialog = QDialog(self)
             self.user_input_dialog.setWindowTitle("Change Password")
             header_label = QLabel("Change Password")
-            self.new_user_entry = QLineEdit()
-            self.new_user_entry.setText(user_name)
-            self.new_user_entry.setReadOnly()
+            self.user_name = QLabel(user_name)
 
         self.new_password = QLineEdit()
         self.new_password.setEchoMode(QLineEdit.Password)
@@ -206,7 +212,7 @@ class LoginWidget(QWidget):
         # Arrange QLineEdit widgets in a QFormLayout
         dialog_form = QFormLayout()
         if user_name is None:
-            dialog_form.addRow("New User Login:", self.new_user_entry)
+            dialog_form.addRow("User Name:", self.user_name)
         dialog_form.addRow("New Password", self.new_password)
         dialog_form.addRow("Confirm Password", self.confirm_password)
 
@@ -227,7 +233,7 @@ class LoginWidget(QWidget):
     def accept_user_info(self):
         """Verify that the user's passwords match. If so, save them user's
         info to DB and display the login window."""
-        user_name_text = self.new_user_entry.text()
+        user_name_text = self.user_name.text()
         pw_text = self.new_password.text()
         confirm_text = self.confirm_password.text()
         if pw_text != confirm_text:
@@ -240,47 +246,6 @@ class LoginWidget(QWidget):
             self.insert_user_info(user_name_text, hashed_pw)
         self.user_input_dialog.close()
         self.show()
-
-    def change_password_dialog(self, user_name):
-        """Set up the dialog box for the user to change password."""
-        self.hide()  # Hide the login window
-        self.chg_pw_diglog = QDialog(self)
-        self.chg_pw_diglog.setWindowTitle("Change Password")
-
-        header_label = QLabel("Change Password")
-        self.old_password= QLineEdit()
-        self.old_password.setEchoMode(QLineEdit.Password)
-
-        # Arrange QLineEdit widgets in a QFormLayout
-        dialog_form = QFormLayout()
-        dialog_form.addRow("Old Password:", self.old_password)
-
-        # Create sign up button
-        verify_button = QPushButton("Verify")
-        verify_button.clicked.connect(lambda: self.verify_old_password(user_name))
-
-        dialog_v_box = QVBoxLayout()
-        dialog_v_box.setAlignment(Qt.AlignTop)
-        dialog_v_box.addWidget(header_label)
-        dialog_v_box.addSpacing(10)
-        dialog_v_box.addLayout(dialog_form, 1)
-        dialog_v_box.addWidget(verify_button)
-
-        self.chg_pw_diglog.setLayout(dialog_v_box)
-        self.chg_pw_diglog.show()
-
-    def verify_old_password(self, user_name):
-        """Verify that the user's passwords match. If so, save them user's
-        info to DB and display the login window."""
-        old_pw = self.old_password.text()
-        old_pw_verified = self.verify_user(user_name, old_pw)
-        if not old_pw_verified:
-            QMessageBox.warning(self, "Error Message",
-                                "The passwords you entered do not match. Please try again.",
-                                QMessageBox.Close)
-            self.chg_pw_diglog.close()
-        else:
-            self.register_password_dialog(user_name)
 
 
 if __name__ == '__main__':

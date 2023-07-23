@@ -29,6 +29,7 @@ class InventoryWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.login()
+        self.user_name = None
         # self.initializeUI()
 
     def login(self):
@@ -36,8 +37,9 @@ class InventoryWindow(QMainWindow):
         self.login_widget.start_main.connect(self.initializeUI)
         self.login_widget.show()
 
-    @Slot()
-    def initializeUI(self):
+    @Slot(str)
+    def initializeUI(self, user_name: str):
+        self.user_name = user_name
         self.setMinimumSize(1400, 800)
         self.setWindowTitle("다나을 재고관리")
         self.item_model = ItemModel()
