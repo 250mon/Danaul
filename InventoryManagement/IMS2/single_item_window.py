@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
     QPushButton, QDataWidgetMapper, QGridLayout
 )
-from PySide6.QtCore import Qt, QModelIndex, Signal
+from PySide6.QtCore import Qt, QModelIndex, Signal, QSortFilterProxyModel
 from di_lab import Lab
 from item_model import ItemModel
 from di_logger import Logs, logging
@@ -19,11 +19,11 @@ class SingleItemWindow(QWidget):
     add_item_signal = Signal(pd.DataFrame)
     chg_item_signal = Signal(object)
 
-    def __init__(self, model: ItemModel,
+    def __init__(self, proxy_model: QSortFilterProxyModel,
                  indexes: List[QModelIndex] = None,
                  parent=None):
         super().__init__(parent)
-        self.model = model
+        self.proxy_model = proxy_model
         self.model_indexes = indexes
 
         self.nameLabel = QLabel("제품명:")
@@ -34,11 +34,12 @@ class SingleItemWindow(QWidget):
         self.validLabel = QLabel("유효:")
         self.validComboBox = QComboBox()
         self.validComboBox.addItems(['True', 'False'])
+        if 'item_valid' not in self.proxy_model.sourceModel().editable_col_iloc.keys():
+            self.validComboBox.setEnabled(False)
 
         self.categoryLabel = QLabel("제품군:")
         self.categoryComboBox = QComboBox()
         category_name_list = Lab().table_df['category']['category_name'].values.tolist()
-        print(category_name_list)
         self.categoryComboBox.addItems(category_name_list)
 
         self.descriptionLabel = QLabel("비고:")
@@ -61,7 +62,7 @@ class SingleItemWindow(QWidget):
     def addMapper(self):
         self.mapper = QDataWidgetMapper(self)
         self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
-        self.mapper.setModel(self.model)
+        self.mapper.setModel(self.proxy_model)
         self.mapper.addMapping(self.validComboBox, 1)
         self.mapper.addMapping(self.nameLineEdit, 2)
         self.mapper.addMapping(self.categoryComboBox, 3)
@@ -98,7 +99,7 @@ class SingleItemWindow(QWidget):
         # adding a new item
         else:
             self.mapper.submit()
-            self.add_item_signal.emit(self.model.model_df)
+            self.add_item_signal.emit(self.proxy_model.sourceModel().model_df)
 
     def exit_clicked(self):
         self.close()

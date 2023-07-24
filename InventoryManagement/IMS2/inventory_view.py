@@ -42,7 +42,7 @@ class InventoryWindow(QMainWindow):
         self.user_name = user_name
         self.setMinimumSize(1400, 800)
         self.setWindowTitle("다나을 재고관리")
-        self.item_model = ItemModel()
+        self.item_model = ItemModel(self.user_name)
 
         self.setUpMainWindow()
 
@@ -66,6 +66,8 @@ class InventoryWindow(QMainWindow):
         # QSortFilterProxyModel enables filtering columns and sorting rows
         self.item_proxy_model = QSortFilterProxyModel()
         self.item_proxy_model.setSourceModel(self.item_model)
+        # For later use of new item model, we need another proxymodel
+        self.new_item_proxy_model = QSortFilterProxyModel()
         # Filtering is performed on item_name column
         search_col_num = self.item_model.model_df.columns.get_loc('item_name')
         self.item_proxy_model.setFilterKeyColumn(search_col_num)
@@ -79,14 +81,12 @@ class InventoryWindow(QMainWindow):
         # Set the model to the view
         self.item_view.setModel(self.item_proxy_model)
 
-        # Set delegates for category input
-        combo_delegate2 = ComboBoxDelegate(['True', 'False'], self)
-        self.item_view.setItemDelegateForColumn(
-            self.item_model.editable_col_iloc['item_valid'], combo_delegate2)
-        category_name_list = Lab().table_df['category']['category_name'].values.tolist()
-        combo_delegate1 = ComboBoxDelegate(category_name_list, self)
-        self.item_view.setItemDelegateForColumn(
-            self.item_model.editable_col_iloc['category_name'], combo_delegate1)
+        # Set combo delegates for category and valid columns
+        # For other columns, it uses default delegates (LineEdit)
+        for col_name in self.item_model.editable_col_iloc.keys():
+            col_index, val_list = self.item_model.get_editable_cols_combobox_info(col_name)
+            combo_delegate = ComboBoxDelegate(val_list, self)
+            self.item_view.setItemDelegateForColumn(col_index, combo_delegate)
 
         # Create widgets in the view
         item_widget = QWidget(self)
@@ -140,8 +140,9 @@ class InventoryWindow(QMainWindow):
         logger.debug(f'{action}')
         if action == "add_item":
             logger.debug('Adding item ...')
-            self.new_item_model = ItemModel(template_flag=True)
-            self.item_window = SingleItemWindow(self.new_item_model)
+            new_item_model = ItemModel(self.user_name, template_flag=True)
+            self.new_item_proxy_model.setSourceModel(new_item_model)
+            self.item_window = SingleItemWindow(self.new_item_proxy_model)
             # add_item_signal is emitted from the ok button of SingleItemWindow
             # when adding is done
             self.item_window.add_item_signal.connect(self.add_new_item)
@@ -172,7 +173,7 @@ class InventoryWindow(QMainWindow):
     @Slot(pd.DataFrame)
     def add_new_item(self, new_df: pd.DataFrame):
         """
-        This is called from SingleItemWindow
+        This is called when SingleItemWindow emits a signal
         :param new_df:
         :return:
         """
@@ -185,7 +186,7 @@ class InventoryWindow(QMainWindow):
     @Slot(object)
     def chg_items(self, indexes: List[QModelIndex]):
         """
-        This is called from SingleItemWindow
+        This is called when SingleItemWindow emits a signal
         :param indexes:
         :return:
         """
@@ -216,13 +217,9 @@ class InventoryWindow(QMainWindow):
             logger.debug('Saving ...')
             result = await self.item_model.update_db()
             result_string = '\n'.join(result.values())
-            QMessageBox.warning(self,
-                                "Warning",
-                                result_string,
-                                QMessageBox.Close)
 
-            # update model
-            logger.debug('Updating model ...')
+            # update model_df
+            logger.debug('Updating model_df ...')
             await self.item_model.update_model_df_from_db()
             self.item_model.layoutAboutToBeChanged.emit()
             self.item_model.layoutChanged.emit()

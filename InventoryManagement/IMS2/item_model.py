@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import asyncpg.exceptions
-from typing import Dict
+from typing import Dict, Tuple, List
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
@@ -13,13 +13,18 @@ from di_logger import Logs, logging
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
+ADMIN_GROUP = ['admin', 'jye']
+
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
 class ItemModel(PandasModel):
-    def __init__(self, template_flag=False):
+    def __init__(self, user_name, template_flag=False):
         super().__init__()
+        # for access control
+        self.user_name = user_name
+
         # need category_id to category_name mapping table
         self.category_df: pd.DataFrame = Lab().table_df['category']
 
@@ -36,12 +41,34 @@ class ItemModel(PandasModel):
         else:
             self.set_template_model_df()
 
+        self.set_editable_cols()
+
+    def set_editable_cols(self):
         # set editable columns
+        if self.user_name in ADMIN_GROUP:
+            editable_cols = ['item_valid', 'category_name', 'description']
+        else:
+            editable_cols = ['category_name', 'description']
+
         self.editable_col_iloc: Dict[str, int] = {
             col_name: self.model_df.columns.get_loc(col_name)
-            for col_name in ['item_valid', 'category_name', 'description']
+            for col_name in editable_cols
         }
-        self.set_editable_cols(list(self.editable_col_iloc.values()))
+        super().set_editable_cols(list(self.editable_col_iloc.values()))
+
+    def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
+        """
+        Returns values list and column index for creating combobox
+        :return:
+        """
+        col_index = self.model_df.columns.get_loc(col_name)
+        if col_name == 'item_valid':
+            val_list = ['True', 'False']
+        elif col_name == 'category_name':
+            val_list = self.category_df['category_name'].values.tolist()
+        else:
+            val_list = None
+        return col_index, val_list
 
     async def update_model_df_from_db(self):
         logger.debug(f'update_model_df_from_db')
