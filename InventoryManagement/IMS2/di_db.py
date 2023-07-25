@@ -83,7 +83,8 @@ class InventoryDb:
             args = [l[1:] for l in args]
 
         logger.debug(f"insert_df: {stmt} {args}")
-        return await self.db_util.pool_execute(stmt, args)
+        # return await self.db_util.pool_execute(stmt, args)
+        return await self.db_util.executemany(stmt, args)
 
     async def upsert_items_df(self, items_df: pd.DataFrame):
         """
@@ -254,9 +255,9 @@ async def main():
 
     async def insert_skus():
         # Inserting skus
-        skus = [Sku(None, True, 'aa', 9, 2, 3, 3),
-                Sku(None, True, 'bb', 1, 2, 1, 3),
-                Sku(None, True, 'cc', 3, 2, 2, 3)]
+        skus = [Sku(None, True, 'aa', 9, 2, 3, 2),
+                Sku(None, True, 'bb', 1, 2, 2, 3),
+                Sku(None, True, 'cc', 3, 2, 2, 2)]
         print(await danaul_db.insert_skus(skus))
 
     async def insert_trs():

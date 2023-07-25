@@ -14,6 +14,7 @@ from di_db import InventoryDb
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
 from single_item_window import SingleItemWindow
+from item_widget import ItemWidget
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -42,13 +43,28 @@ class InventoryWindow(QMainWindow):
         self.user_name = user_name
         self.setMinimumSize(1400, 800)
         self.setWindowTitle("다나을 재고관리")
-        self.item_model = ItemModel(self.user_name)
+        # self.item_model = ItemModel(self.user_name)
 
         self.setUpMainWindow()
 
+        #
         self. async_helper = AsyncHelper(self, self.save_to_db)
 
         self.show()
+
+    def setUpMainWindow(self):
+        self.item_widget = ItemWidget(self.user_name, self)
+        self.item_widget.setMaximumWidth(500)
+
+        item_dock_widget = QDockWidget('품목', self)
+        item_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
+                                         Qt.LeftDockWidgetArea)
+        item_dock_widget.setWidget(self.item_widget)
+        self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
+
+        # self.setupItemView()
+        # self.setupSkuView()
+        # self.setupTransactionView()
 
     def setupItemView(self):
         # items view
@@ -101,7 +117,7 @@ class InventoryWindow(QMainWindow):
         del_item_btn = QPushButton('삭제/해제')
         del_item_btn.clicked.connect(lambda: self.do_actions("del_item"))
         save_item_btn = QPushButton('저장')
-        save_item_btn.clicked.connect(lambda: self.async_start("save"))
+        save_item_btn.clicked.connect(lambda: self.async_start("item_save"))
 
         item_hbox = QHBoxLayout()
         item_hbox.addWidget(self.item_search_bar)
@@ -163,13 +179,6 @@ class InventoryWindow(QMainWindow):
             if selected_indexes := get_selected_indexes():
                 self.delete_item(selected_indexes)
 
-    @Slot(str, pd.DataFrame)
-    def async_start(self, action: str, df: pd.DataFrame = None):
-        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
-        # inside the host(Qt) event loop
-        # AsyncHelper will eventually call self.update_df(action, df)
-        self.start_signal.emit(action, df)
-
     @Slot(pd.DataFrame)
     def add_new_item(self, new_df: pd.DataFrame):
         """
@@ -211,18 +220,30 @@ class InventoryWindow(QMainWindow):
                 self.item_model.set_del_flag(src_idx)
                 logger.debug(f'delete_item: items{src_idx.row()} deleted')
 
-    async def save_to_db(self, action: str, df: pd.DataFrame = None):
-        logger.debug(f'{action}')
-        if action == "save":
-            logger.debug('Saving ...')
-            result = await self.item_model.update_db()
-            result_string = '\n'.join(result.values())
+    @Slot(str, pd.DataFrame)
+    def async_start(self, action: str, df: pd.DataFrame = None):
+        """
+        Puts async coroutine on the loop through signaling to async_helper
+        :param action:
+        :param df:
+        :return:
+        """
+        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
+        # inside the host(Qt) event loop
+        # AsyncHelper will eventually call self.update_df(action, df)
+        self.start_signal.emit(action, df)
 
-            # update model_df
-            logger.debug('Updating model_df ...')
-            await self.item_model.update_model_df_from_db()
-            self.item_model.layoutAboutToBeChanged.emit()
-            self.item_model.layoutChanged.emit()
+    async def save_to_db(self, action: str, df: pd.DataFrame = None):
+        """
+        This is the function registered to async_helper as a async coroutine
+        :param action:
+        :param df:
+        :return:
+        """
+        logger.debug(f'{action}')
+        if action == "item_save":
+            logger.debug('Saving items ...')
+            result = await self.item_widget.save_to_db()
 
     def setupSkuView(self):
         # skus view
@@ -299,11 +320,6 @@ class InventoryWindow(QMainWindow):
 
         tr_widget.setLayout(tr_vbox)
         self.setCentralWidget(tr_widget)
-
-    def setUpMainWindow(self):
-        self.setupItemView()
-        # self.setupSkuView()
-        # self.setupTransactionView()
 
 
 if __name__ == '__main__':

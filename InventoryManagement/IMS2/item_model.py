@@ -44,6 +44,10 @@ class ItemModel(PandasModel):
         self.set_editable_cols()
 
     def set_editable_cols(self):
+        """
+        Sets up editable columns in the pandas model
+        :return:
+        """
         # set editable columns
         if self.user_name in ADMIN_GROUP:
             editable_cols = ['item_valid', 'category_name', 'description']
@@ -71,11 +75,19 @@ class ItemModel(PandasModel):
         return col_index, val_list
 
     async def update_model_df_from_db(self):
+        """
+        Receives data from DB and converts it to DF
+        :return:
+        """
         logger.debug(f'update_model_df_from_db')
         await Lab().update_lab_df_from_db('items')
         self.set_model_df()
 
     def set_model_df(self):
+        """
+        Makes DataFrame out of data received from DB
+        :return:
+        """
         # for category name mapping
         cat_df = self.category_df.set_index('category_id')
         cat_s: pd.Series = cat_df['category_name']
@@ -94,15 +106,19 @@ class ItemModel(PandasModel):
         self.model_df = self.model_df.reindex(self.column_names, axis=1)
 
     def set_template_model_df(self):
+        """
+        Called when a new item needs to be created.
+        A template model has one row of new item
+        :return:
+        """
         self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
                               columns=self.column_names)
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
-        """Override method from QAbstractTableModel
-
+        """
+        Override method from QAbstractTableModel
         QTableView accepts only QString as input for display
-
-        Return data cell from the pandas DataFrame
+        Returns data cell from the pandas DataFrame
         """
         if not index.isValid():
             return None
@@ -143,6 +159,13 @@ class ItemModel(PandasModel):
                 index: QModelIndex,
                 value: str,
                 role=Qt.EditRole):
+        """
+        Override method from QAbstractTableModel
+        :param index:
+        :param value:
+        :param role:
+        :return:
+        """
         if not index.isValid() or role != Qt.EditRole:
             return False
 
@@ -171,6 +194,11 @@ class ItemModel(PandasModel):
         return super().setData(index, val, role)
 
     def add_new_row(self, new_df: pd.DataFrame) -> str:
+        """
+        Appends a new row of data to the model_df
+        :param new_df:
+        :return:
+        """
         new_item_name = new_df.at[0, 'item_name']
         if self.model_df[self.model_df.item_name == new_item_name].empty:
             new_df['item_id'] = self.model_df['item_id'].max() + 1
@@ -184,11 +212,11 @@ class ItemModel(PandasModel):
             return result_msg
 
     def set_chg_flag(self, index: QModelIndex):
-        '''
-        set the flag of the row to which the index belongs
+        """
+        Sets a 'changed' flag for the row of index
         :param index:
         :return:
-        '''
+        """
         flag_col_iloc = self.model_df.columns.get_loc('flag')
         if index.column() != flag_col_iloc:
             index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
@@ -199,11 +227,11 @@ class ItemModel(PandasModel):
             super().setData(index, new_msg)
 
     def set_del_flag(self, index: QModelIndex):
-        '''
-
+        """
+        Sets a 'deleted' flag for the row of index
         :param index:
         :return:
-        '''
+        """
         flag_col_iloc = self.model_df.columns.get_loc('flag')
         if index.column() != flag_col_iloc:
             index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
@@ -219,6 +247,10 @@ class ItemModel(PandasModel):
             self.set_uneditable_row(index.row())
 
     async def update_db(self):
+        """
+        Updates DB reflecting the changes made to model_df
+        :return:
+        """
         logger.debug('update_db: Saving to DB ...')
         return_msg = {}
 
@@ -230,7 +262,7 @@ class ItemModel(PandasModel):
             df_to_upload = del_df[self.db_column_names]
             result = await Lab().delete_items_df(df_to_upload)
             logger.debug(f'update_db: result = {result}')
-            if isinstance(result[0], asyncpg.exceptions.ForeignKeyViolationError):
+            if asyncpg.exceptions.ForeignKeyViolationError in result:
                 return_msg['delete'] = 'Item ID is in use, Cannot be deleted'
 
             self.model_df.drop(del_df.index, inplace=True)

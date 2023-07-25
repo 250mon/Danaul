@@ -22,7 +22,8 @@ class SingleItemWindow(QWidget):
     def __init__(self, proxy_model: QSortFilterProxyModel,
                  indexes: List[QModelIndex] = None,
                  parent=None):
-        super().__init__(parent)
+        super().__init__()
+        self.parent = parent
         self.proxy_model = proxy_model
         self.model_indexes = indexes
 
@@ -56,6 +57,12 @@ class SingleItemWindow(QWidget):
         self.categoryLabel.setBuddy(self.categoryComboBox)
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
         self.addMapper()
+
+        # wire the signals into the parent widget
+        if hasattr(self.parent, "add_new_item"):
+            self.add_item_signal.connect(self.parent.add_new_item)
+        if hasattr(self.parent, "chg_items"):
+            self.chg_item_signal.connect(self.parent.chg_items)
 
         self.initializeUI()
 
