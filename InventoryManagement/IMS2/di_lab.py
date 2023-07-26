@@ -90,7 +90,11 @@ class Lab(metaclass=Singleton):
     async def _get_df_from_db(self, table: str) -> pd.DataFrame:
         logger.debug(f'_get_df_from_db: {table}')
         query = f"SELECT * FROM {table}"
-        results = await self.di_db_util.select_query(query)
+        db_results = await self.di_db_util.select_query(query)
+        df = await self._db_to_df(db_results)
+        return df
+
+    async def _db_to_df(self, results):
         # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
         list_of_dict = [dict(result) for result in results]
         df = pd.DataFrame(list_of_dict)
@@ -111,78 +115,26 @@ class Lab(metaclass=Singleton):
     async def delete_items_df(self, items_df: pd.DataFrame):
         return await self.di_db.delete_items_df(items_df)
 
-    def get_sku(self, id: int):
-        return self.skus.get(id, None)
+    async def insert_skus_df(self, skus_df: pd.DataFrame):
+        return await self.di_db.insert_df('skus', skus_df)
 
-    def add_sku(self, sku: Sku):
-        if sku.sku_id not in self.skus.keys():
-            self.skus[sku.sku_id] = sku
-        else:
-            logger.warning(f'Lab: add_sku cannot update the \
-             dict because of the duplicate id {sku.sku_id}')
+    async def delete_skus_df(self, skus_df: pd.DataFrame):
+        return await self.di_db.delete_skus_df(skus_df)
 
-    def init_skus(self):
-        self.skus = self.get_skus_from_db()
+    async def insert_trs_df(self, trs_df: pd.DataFrame):
+        return await self.di_db.insert_df('transactions', trs_df)
 
-    def get_transaction(self, id: int):
-        return self.transactions.get(id, None)
+    async def delete_trs_df(self, trs_df: pd.DataFrame):
+        return await self.di_db.delete_trs_df(trs_df)
 
-    def add_transaction(self, transaction: Transaction):
-        if transaction.tr_id not in self.transactions.keys():
-            self.transactions[transaction.tr_id] = transaction
-        else:
-            logger.warning(f'Lab: add_tr cannot update the \
-             dict because of the duplicate id {transaction.tr_id}')
-
-    def init_transactions(self):
-        self.transactions = self.get_transactions_from_db()
-
-    async def get_skus_from_db(self) -> Dict[int, Sku]:
-        query = "SELECT * FROM skus"
-        results = await self.di_db_util.select_query(query)
-        # skus = [Sku(*(tuple(result))) for result in results]
-        skus = [Sku(*(tuple(result))) for result in results]
-        return {sku.sku_id: sku for sku in skus}
-
-    async def get_sku_from_db_by_id(self, id: int) -> Sku:
-        query = "SELECT * FROM skus WHERE skus.sku_id=$1"
-        results = await self.di_db_util.select_query(query, [id, ])
-        return Sku(*(tuple(results[0])))
-
-    async def get_sku_from_db_by_item_id(self, id: int) -> Dict[int, Sku]:
-        query = "SELECT * FROM skus WHERE skus.item_id=$1"
-        results = await self.di_db_util.select_query(query, [id, ])
-        skus = [Sku(*(tuple(result))) for result in results]
-        return {sku.sku_id: sku for sku in skus}
-
-    async def get_transactions_from_db(self, id: int) -> Dict[int, Transaction]:
-        query = "SELECT * FROM transactions"
-        results = await self.di_db_util.select_query(query)
-        trs = [Transaction(*(tuple(result))) for result in results]
-        return {tr.tr_id: tr for tr in trs}
-
-    async def get_transaction_from_db_by_id(self, id: int) -> Transaction:
-        query = "SELECT * FROM transactions as t WHERE t.tr_id=$1"
-        results = await self.di_db_util.select_query(query, [id, ])
-        return Transaction(*(tuple(results[0])))
-
-    async def get_transactions_from_db_by_sku_id(self,
-                                                 id: int) -> Dict[int, Transaction]:
-        query = "SELECT * FROM transactions as t WHERE t.sku_id=$1"
-        results = await self.di_db_util.select_query(query, [id, ])
-        trs = [Transaction(*(tuple(result))) for result in results]
-        return {tr.tr_id: tr for tr in trs}
-
-    async def get_transactions_from_db_by_date(self,
-                                               start_date: date,
-                                               end_date: date) -> Dict[int, Transaction]:
+    async def get_trs_df_by_date(self, start_date: date, end_date: date):
         query = """ SELECT * FROM transactions as t
                         WHERE tr_timestamp::date >= $1
                         AND tr_timestamp::date <= $2 """
         args = (start_date, end_date)
-        results = await self.di_db_util.select_query(query, [args, ])
-        trs = [Transaction(*(tuple(result))) for result in results]
-        return {tr.tr_id: tr for tr in trs}
+        db_results = await self.di_db_util.select_query(query, [args, ])
+        df = self._db_to_df(db_results)
+        return df
 
 async def main(lab):
     cat_s = lab.categories_df.set_index('category_id')['category_name']
@@ -238,9 +190,6 @@ async def main(lab):
     # trs = await lab.get_transactions_from_db_by_date(s_date, e_date)
     # for tr in trs.values():
     #     print(tr.tr_id)
-
-
-
 
 if __name__ == '__main__':
     danaul_db = InventoryDb('db_settings')

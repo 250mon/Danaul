@@ -104,9 +104,13 @@ class ItemWidget(QWidget):
         logger.debug(f'{action}')
         if action == "add_item":
             logger.debug('Adding item ...')
-            new_item_model = ItemModel(self.user_name, template_flag=True)
-            self.new_item_proxy_model.setSourceModel(new_item_model)
-            self.item_window = SingleItemWindow(self.new_item_proxy_model, None, self)
+            # Input window mode using DataMapperWidget
+            # new_item_model = ItemModel(self.user_name, template_flag=True)
+            # self.new_item_proxy_model.setSourceModel(new_item_model)
+            # self.item_window = SingleItemWindow(self.new_item_proxy_model, None, self)
+
+            # Delegate mode
+
             # self.item_model.layoutAboutToBeChanged.emit()
             # self.item_model.layoutChanged.emit()
         elif action == "chg_item":
@@ -114,8 +118,6 @@ class ItemWidget(QWidget):
             if selected_indexes := get_selected_indexes():
                 self.item_window = SingleItemWindow(self.item_proxy_model,
                                                     selected_indexes, self)
-                # self.item_model.layoutAboutToBeChanged.emit()
-                # self.item_model.layoutChanged.emit()
         elif action == "del_item":
             logger.debug('Deleting item ...')
             if selected_indexes := get_selected_indexes():

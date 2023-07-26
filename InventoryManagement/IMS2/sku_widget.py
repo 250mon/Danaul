@@ -11,15 +11,16 @@ from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
 from single_sku_window import SingleSkuWindow
 
-
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
+
 class SkuWidget(QWidget):
-    def __init__(self, user_name, parent: QMainWindow = None):
+    def __init__(self, user_name, item_id, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.user_name = user_name
+        self.item_id = item_id
         self.sku_model = SkuModel(self.user_name)
         self.setup_sku_view()
         self.setup_ui()
@@ -29,10 +30,6 @@ class SkuWidget(QWidget):
         self.sku_view = QTableView(self)
         self.sku_view.horizontalHeader().setStretchLastSection(True)
         self.sku_view.setAlternatingRowColors(True)
-        # sku_view.setSelectionMode(
-        #     QAbstractSkuView.SelectionMode.ExtendedSelection
-        # )
-
         self.sku_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.sku_view.resizeColumnsToContents()
         self.sku_view.setSortingEnabled(True)
@@ -43,7 +40,7 @@ class SkuWidget(QWidget):
         # For later use of new sku model, we need another proxymodel
         self.new_sku_proxy_model = QSortFilterProxyModel()
         # Filtering is performed on sku_name column
-        search_col_num = self.sku_model.model_df.columns.get_loc('sku_name')
+        search_col_num = self.sku_model.model_df.columns.get_loc('item_name')
         self.sku_proxy_model.setFilterKeyColumn(search_col_num)
         # Sorting
         initial_sort_col_num = self.sku_model.model_df.columns.get_loc('sku_id')
@@ -60,12 +57,12 @@ class SkuWidget(QWidget):
         for col_name in self.sku_model.editable_col_iloc.keys():
             col_index, val_list = self.sku_model.get_editable_cols_combobox_info(col_name)
             combo_delegate = ComboBoxDelegate(val_list, self)
-            self.sku_view.setSkuDelegateForColumn(col_index, combo_delegate)
+            self.sku_view.setItemDelegateForColumn(col_index, combo_delegate)
 
     def setup_ui(self):
-        sku_search_bar = QLineEdit(self)
-        sku_search_bar.setPlaceholderText('품목명 입력')
-        sku_search_bar.textChanged.connect(
+        self.sku_search_bar = QLineEdit(self)
+        self.sku_search_bar.setPlaceholderText('품목명 입력')
+        self.sku_search_bar.textChanged.connect(
             self.sku_proxy_model.setFilterFixedString)
         add_sku_btn = QPushButton('추가')
         add_sku_btn.clicked.connect(lambda: self.do_actions("add_sku"))
@@ -77,7 +74,7 @@ class SkuWidget(QWidget):
         if hasattr(self.parent, "async_start"):
             save_sku_btn.clicked.connect(lambda: self.parent.async_start("sku_save"))
         sku_hbox = QHBoxLayout()
-        sku_hbox.addWidget(sku_search_bar)
+        sku_hbox.addWidget(self.sku_search_bar)
         sku_hbox.addStretch(1)
         sku_hbox.addWidget(add_sku_btn)
         sku_hbox.addWidget(chg_sku_btn)
@@ -113,7 +110,7 @@ class SkuWidget(QWidget):
             logger.debug('Changing sku ...')
             if selected_indexes := get_selected_indexes():
                 self.sku_window = SingleSkuWindow(self.sku_proxy_model,
-                                                    selected_indexes, self)
+                                                  selected_indexes, self)
                 # self.sku_model.layoutAboutToBeChanged.emit()
                 # self.sku_model.layoutChanged.emit()
         elif action == "del_sku":
@@ -121,14 +118,12 @@ class SkuWidget(QWidget):
             if selected_indexes := get_selected_indexes():
                 self.delete_sku(selected_indexes)
 
-
     @Slot(str, pd.DataFrame)
     def async_start(self, action: str, df: pd.DataFrame = None):
         # send signal to AsyncHelper to schedule the guest (asyncio) event loop
         # inside the host(Qt) event loop
         # AsyncHelper will eventually call self.update_df(action, df)
         self.start_signal.emit(action, df)
-
 
     @Slot(pd.DataFrame)
     def add_new_sku(self, new_df: pd.DataFrame):
@@ -143,7 +138,6 @@ class SkuWidget(QWidget):
         self.sku_model.layoutAboutToBeChanged.emit()
         self.sku_model.layoutChanged.emit()
 
-
     @Slot(object)
     def chg_skus(self, indexes: List[QModelIndex]):
         """
@@ -156,7 +150,6 @@ class SkuWidget(QWidget):
             if idx.column() == flag_col:
                 self.sku_model.set_chg_flag(idx)
                 logger.debug(f'chg_skus: sku {idx.row()} changed')
-
 
     def delete_sku(self, indexes: List[QModelIndex]):
         '''

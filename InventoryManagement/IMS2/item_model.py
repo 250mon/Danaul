@@ -112,6 +112,8 @@ class ItemModel(PandasModel):
         self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
                               columns=self.column_names)
 
+    def add_new_row(self):
+        self.model_df.loc[self.model_df.]
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
         Override method from QAbstractTableModel

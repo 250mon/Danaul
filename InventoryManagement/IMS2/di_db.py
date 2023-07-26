@@ -14,7 +14,6 @@ from inventory_schema import (
     CREATE_TRANSACTION_TYPE_TABLE,
     CREATE_TRANSACTION_TABLE,
 )
-from IMS2.unused.data_classes import Item, Sku, Transaction
 from di_logger import Logs, logging
 
 
@@ -75,8 +74,7 @@ class InventoryDb:
 
     async def upsert_items_df(self, items_df: pd.DataFrame):
         """
-        Initial insertion of items
-        item_id and item_valid are set to default values
+        Insert items_df into DB, if the item_name pre-exists, update it
         :param items:
         :return:
         """
@@ -92,32 +90,64 @@ class InventoryDb:
 
         logger.debug("Upsert Items ...")
         logger.debug(args)
-        return await self.db_util.pool_execute(stmt, args)
+        return await self.db_util.executemany(stmt, args)
 
     async def delete_items_df(self, items_df: pd.DataFrame):
         args = [(item.item_id,) for item in items_df.itertuples()]
         logger.debug(f"delete_record: Delete ids {args} from items table ...")
         return await self.db_util.delete('items', 'item_id', args)
 
-    async def upsert_skus_df(self, skus_df: pd.DataFrame):
+    async def update_skus_df(self, skus_df: pd.DataFrame):
         """
-        Initial insertion of skus
-        sku_id and sku_valid are set to default values
+        Update skus in DB from skus_df based on sku_id
         :param skus:
         :return:
         """
-        stmt = "INSERT INTO skus VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9)"
-        args = [(sku.sku_valid, sku.sku_name, sku.category_id, sku.description)
+        stmt = """UPDATE skus SET sku_valid = $2,
+                                  bit_code = $3,
+                                  sku_qty = $4,
+                                  min_qty = $5,
+                                  item_id = $6,
+                                  item_size_id = $7,
+                                  item_side_id = $8,
+                                  expiration_date = $9,
+                                  description = $10
+                              WHERE sku_id = $1"""
+        args = [(sku.sku_id, sku.sku_valid, sku.bit_code, sku.sku_qty,
+                 sku.min_qty, sku.item_id, sku.item_size_id, sku.item_side_id,
+                 sku.expiration_date, sku.description)
                 for sku in skus_df.itertuples()]
-
-        logger.debug("Upsert Items ...")
+        logger.debug("Update Skus ...")
         logger.debug(args)
-        return await self.db_util.pool_execute(stmt, args)
+        return await self.db_util.executemany(stmt, args)
 
     async def delete_skus_df(self, skus_df: pd.DataFrame):
         args = [(sku_row.sku_id,) for sku_row in skus_df.itertuples()]
         logger.debug(f"delete_record: Delete ids {args} from skus table ...")
         return await self.db_util.delete('skus', 'sku_id', args)
+
+    async def update_trs_df(self, trs_df: pd.DataFrame):
+        """
+        Update trs in DB from trs_df based on tr_id
+        :param trs:
+        :return:
+        """
+        stmt = """UPDATE transactions SET user_id = $2,
+                                          sku_id = $3,
+                                          tr_type_id = $4,
+                                          tr_qty = $5,
+                                          before_qty = $6,
+                                          after_qty = $7,
+                                          tr_timestamp = $8,
+                                          description = $9
+                                      WHERE tr_id = $1"""
+        args = [(tr.tr_id, tr.user_id, tr.sku_id, tr.tr_type,
+                 tr.tr_qty, tr.before_qty, tr.after_qty, tr.timestamp,
+                 tr.description)
+                for tr in trs_df.itertuples()]
+        logger.debug("Update Transactions ...")
+        logger.debug(args)
+        return await self.db_util.executemany(stmt, args)
 
     async def delete_trs_df(self, trs_df: pd.DataFrame):
         args = [(tr_row.tr_id,) for tr_row in trs_df.itertuples()]

@@ -28,9 +28,12 @@ class SkuModel(PandasModel):
 
         # set data to model
         # mapping-table indicating where the actual column is located in the table
-        self.column_names = ['sku_id', 'sku_valid', 'sku_name',
-                             'category_name', 'description', 'category_id',
+        self.column_names = ['sku_id', 'item_name', 'sku_valid',
+                             'sku_qty', 'min_qty', 'item_size', 'item_side',
+                             'expiration_date', 'description', 'item_id',
+                             'item_size_id', 'item_side_id', 'bit_code',
                              'flag']
+
         # a list of column names which is used for db update
         self.db_column_names = None
 
@@ -47,10 +50,9 @@ class SkuModel(PandasModel):
         :return:
         """
         # set editable columns
+        editable_cols = ['min_qty', 'description']
         if self.user_name in ADMIN_GROUP:
-            editable_cols = ['sku_valid', 'category_name', 'description']
-        else:
-            editable_cols = ['category_name', 'description']
+            editable_cols += ['sku_valid', 'sku_qty', 'expiration_date']
 
         self.editable_col_iloc: Dict[str, int] = {
             col_name: self.model_df.columns.get_loc(col_name)
@@ -111,6 +113,10 @@ class SkuModel(PandasModel):
         """
         self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
                               columns=self.column_names)
+
+    def add_new_row(self):
+        self.model_df.loc[-1, :] = pd.Series([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
+                                                 columns=self.column_names)
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
