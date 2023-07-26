@@ -17,7 +17,7 @@ logger.setLevel(logging.DEBUG)
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
-class ItemModel(PandasModel):
+class SkuModel(PandasModel):
     def __init__(self, user_name, template_flag=False):
         super().__init__()
         # for access control
@@ -28,7 +28,7 @@ class ItemModel(PandasModel):
 
         # set data to model
         # mapping-table indicating where the actual column is located in the table
-        self.column_names = ['item_id', 'item_valid', 'item_name',
+        self.column_names = ['sku_id', 'sku_valid', 'sku_name',
                              'category_name', 'description', 'category_id',
                              'flag']
         # a list of column names which is used for db update
@@ -48,7 +48,7 @@ class ItemModel(PandasModel):
         """
         # set editable columns
         if self.user_name in ADMIN_GROUP:
-            editable_cols = ['item_valid', 'category_name', 'description']
+            editable_cols = ['sku_valid', 'category_name', 'description']
         else:
             editable_cols = ['category_name', 'description']
 
@@ -64,7 +64,7 @@ class ItemModel(PandasModel):
         :return:
         """
         col_index = self.model_df.columns.get_loc(col_name)
-        if col_name == 'item_valid':
+        if col_name == 'sku_valid':
             val_list = ['True', 'False']
         elif col_name == 'category_name':
             val_list = self.category_df['category_name'].values.tolist()
@@ -78,7 +78,7 @@ class ItemModel(PandasModel):
         :return:
         """
         logger.debug(f'update_model_df_from_db')
-        await Lab().update_lab_df_from_db('items')
+        await Lab().update_lab_df_from_db('skus')
         self.set_model_df()
 
     def set_model_df(self):
@@ -90,8 +90,8 @@ class ItemModel(PandasModel):
         cat_df = self.category_df.set_index('category_id')
         cat_s: pd.Series = cat_df['category_name']
 
-        logger.debug('set_model_df: setting item_model from lab.items_df')
-        self.model_df = Lab().table_df['items']
+        logger.debug('set_model_df: setting sku_model from lab.skus_df')
+        self.model_df = Lab().table_df['skus']
 
         # we store the columns list here for later use of db update
         self.db_column_names = self.model_df.columns.tolist()
@@ -105,8 +105,8 @@ class ItemModel(PandasModel):
 
     def set_template_model_df(self):
         """
-        Called when a new item needs to be created.
-        A template model has one row of new item
+        Called when a new sku needs to be created.
+        A template model has one row of new sku
         :return:
         """
         self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
@@ -127,7 +127,7 @@ class ItemModel(PandasModel):
 
         flag_col_iloc: int = self.model_df.columns.get_loc('flag')
         is_deleted = 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
-        valid_col_iloc: int = self.model_df.columns.get_loc('item_valid')
+        valid_col_iloc: int = self.model_df.columns.get_loc('sku_valid')
         is_valid = self.model_df.iloc[index.row(), valid_col_iloc]
 
         if role == Qt.DisplayRole or role == Qt.EditRole:
@@ -136,7 +136,7 @@ class ItemModel(PandasModel):
         # for sorting, use SortRole
         elif role == self.SortRole:
             int_type_columns = [self.model_df.columns.get_loc(c) for c in
-                                ['item_id', 'item_valid', 'category_id']]
+                                ['sku_id', 'sku_valid', 'category_id']]
             # if column data is int, return int type
             if index.column() in int_type_columns:
                 return int(data_to_display)
@@ -169,7 +169,7 @@ class ItemModel(PandasModel):
 
         logger.debug(f'setData({index}, {value})')
         # taking care of converting str type input to bool type
-        if index.column() == self.model_df.columns.get_loc('item_valid'):
+        if index.column() == self.model_df.columns.get_loc('sku_valid'):
             val: bool = False
             if value == 'True':
                 val = True
@@ -183,7 +183,7 @@ class ItemModel(PandasModel):
         else:
             val: object = value
 
-        # Unless it is a new item, setting data is followed by setting change flag
+        # Unless it is a new sku, setting data is followed by setting change flag
 
         flag_col_iloc: int = self.model_df.columns.get_loc('flag')
         if self.model_df.iloc[index.row(), flag_col_iloc] != 'new':
@@ -197,15 +197,15 @@ class ItemModel(PandasModel):
         :param new_df:
         :return:
         """
-        new_item_name = new_df.at[0, 'item_name']
-        if self.model_df[self.model_df.item_name == new_item_name].empty:
-            new_df['item_id'] = self.model_df['item_id'].max() + 1
+        new_sku_name = new_df.at[0, 'sku_name']
+        if self.model_df[self.model_df.sku_name == new_sku_name].empty:
+            new_df['sku_id'] = self.model_df['sku_id'].max() + 1
             self.model_df = pd.concat([self.model_df, new_df])
-            result_msg = f'Successfully add Item [{new_item_name}]'
+            result_msg = f'Successfully add Sku [{new_sku_name}]'
             logger.debug(result_msg)
             return result_msg
         else:
-            result_msg = f'Failed to add Item [{new_item_name}]: Duplicate item name'
+            result_msg = f'Failed to add Sku [{new_sku_name}]: Duplicate sku name'
             logger.warning(result_msg)
             return result_msg
 
@@ -258,12 +258,12 @@ class ItemModel(PandasModel):
             # if flag contains 'new', just drop it
             del_df.drop(del_df[del_df.flag.str.contains('new')].index)
             df_to_upload = del_df[self.db_column_names]
-            results = await Lab().delete_items_df(df_to_upload)
+            results = await Lab().delete_skus_df(df_to_upload)
             logger.debug(f'update_db: results of deleting = {results}')
             msg_list = []
             for i, result in enumerate(results, start=1):
                 if isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
-                    msg_list.append(f'{i}: Item ID is in use, Cannot be deleted')
+                    msg_list.append(f'{i}: Sku ID is in use, Cannot be deleted')
                 else:
                     msg_list.append(f'{i}: {result}')
             return_msg = '\n'.join(msg_list)
@@ -273,7 +273,7 @@ class ItemModel(PandasModel):
         if not new_df.empty:
             logger.debug(f'{new_df}')
             df_to_upload = new_df[self.db_column_names]
-            results = await Lab().insert_items_df(df_to_upload)
+            results = await Lab().insert_skus_df(df_to_upload)
             logger.debug(f'update_db: results of inserting new rows = {results}')
             self.model_df.drop(new_df.index, inplace=True)
 
@@ -281,7 +281,7 @@ class ItemModel(PandasModel):
         if not chg_df.empty:
             logger.debug(f'{chg_df}')
             df_to_upload = chg_df[self.db_column_names]
-            results = await Lab().upsert_items_df(df_to_upload)
+            results = await Lab().upsert_skus_df(df_to_upload)
             logger.debug(f'update_db: results of changing = {results}')
 
         return return_msg

@@ -1,16 +1,12 @@
-import sys, os
+import os
 import pandas as pd
 from typing import List
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QDockWidget, QMessageBox,
-    QPushButton, QLineEdit, QTableView, QHBoxLayout, QVBoxLayout
+    QMainWindow, QWidget, QMessageBox, QPushButton, QLineEdit,
+    QTableView, QHBoxLayout, QVBoxLayout
 )
 from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
-from login_widget import LoginWidget
-from async_helper import AsyncHelper
 from item_model import ItemModel
-from di_lab import Lab
-from di_db import InventoryDb
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
 from single_item_window import SingleItemWindow
@@ -177,18 +173,17 @@ class ItemWidget(QWidget):
                 self.item_model.set_del_flag(src_idx)
                 logger.debug(f'delete_item: items{src_idx.row()} deleted')
 
-
     async def save_to_db(self):
-        result = await self.item_model.update_db()
-        if result:
-            result_string = '\n'.join(result.values())
-            QMessageBox.warning(self, 'Saving results', result_string, QMessageBox.Close)
-
+        result_str = await self.item_model.update_db()
+        if result_str is not None:
+            QMessageBox.information(self,
+                                    'Save Results',
+                                    result_str,
+                                    QMessageBox.Close)
         # update model_df
         logger.debug('Updating model_df ...')
         await self.item_model.update_model_df_from_db()
         self.item_model.layoutAboutToBeChanged.emit()
         self.item_model.layoutChanged.emit()
 
-        return result
-
+        return result_str

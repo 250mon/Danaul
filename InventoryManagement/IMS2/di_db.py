@@ -1,6 +1,7 @@
 import os
 import asyncio
 import pandas as pd
+import bcrypt
 from typing import List
 from db_utils import DbUtil
 from inventory_schema import (
@@ -15,6 +16,7 @@ from inventory_schema import (
 )
 from IMS2.unused.data_classes import Item, Sku, Transaction
 from di_logger import Logs, logging
+
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -45,42 +47,27 @@ class InventoryDb:
         await self.drop_tables()
         await self.create_tables()
 
-    async def insert_extras_df(self, table: str, extras_df: pd.DataFrame):
-        """
-        Initial insertion of extras_df
-        :param extras_df:
-        :return:
-        """
-        if table != 'users':
-            stmt = f"INSERT INTO {table} VALUES(DEFAULT, $1)"
-        else:
-            stmt = f"INSERT INTO {table} VALUES(DEFAULT, $1, DEFAULT)"
-        args = [(extra.name,) for extra in extras_df.itertuples()]
-
-        logger.debug(f"Insert {table}...")
-        logger.debug(args)
-        # use executemany for sequential indexing of ids
-        return await self.db_util.executemany(stmt, args)
-
-    async def insert_df(self, table: str, df: pd.DataFrame, default_id: bool = False):
-        def make_stmt(table_name: str, nargs: int, default_id: bool):
-            if default_id:
-                id_part = "DEFAULT,"
-                nargs = nargs - 1
-            else:
-                id_part = ""
-            args_part = ",".join(["$" + str(i) for i in range(1, nargs + 1)])
-            stmt = f"INSERT INTO {table_name} VALUES({id_part}{args_part})"
+    async def insert_df(self, table: str, df: pd.DataFrame):
+        def make_stmt(table_name: str, row_values: List):
+            place_holders = []
+            i = 1
+            for val in row_values:
+                if val == 'DEFAULT':
+                    place_holders.append('DEFAULT')
+                else:
+                    place_holders.append(f'${i}')
+                    i += 1
+            stmt_value_part = ','.join(place_holders)
+            stmt = f"INSERT INTO {table_name} VALUES({stmt_value_part})"
             return stmt
-
         logger.debug(f"insert_df: Insert into {table}...")
         logger.debug(f"insert_df: \n{df}")
-        stmt = make_stmt(table, len(df.columns), default_id)
         args = df.values.tolist()
-        if default_id:
-            # id is removed and set DEFAULT
-            # args = [[id1, f11, f21, ...], [id2, f12, f22, ...], ...]
-            args = [l[1:] for l in args]
+        stmt = make_stmt(table, args[0])
+
+        # we need to remove 'DEFAULT' from args
+        non_default_df = df.loc[:, df.loc[0, :] != 'DEFAULT']
+        args = non_default_df.values.tolist()
 
         logger.debug(f"insert_df: {stmt} {args}")
         # return await self.db_util.pool_execute(stmt, args)
@@ -93,7 +80,7 @@ class InventoryDb:
         :param items:
         :return:
         """
-        stmt = """INSERT INTO items VALUES(DEFAULT, DEFAULT, $2, $3, $4)
+        stmt = """INSERT INTO items VALUES(DEFAULT, $1, $2, $3, $4)
                     ON CONFLICT (item_name)
                     DO
                      UPDATE SET item_valid = $1,
@@ -112,95 +99,30 @@ class InventoryDb:
         logger.debug(f"delete_record: Delete ids {args} from items table ...")
         return await self.db_util.delete('items', 'item_id', args)
 
-    async def insert_items(self, items: List[Item]):
-        """
-        Initial insertion of items
-        item_id and item_valid are set to default values
-        :param items:
-        :return:
-        """
-        stmt = "INSERT INTO items VALUES(DEFAULT, DEFAULT, $1, $2, $3)"
-        args = [(item.item_name, item.category_id, item.description) for item in items]
-
-        logger.debug("Insert Items ...")
-        logger.debug(args)
-        return await self.db_util.pool_execute(stmt, args)
-
-    async def delete_items(self, items: Item or List[Item]):
-        if isinstance(items, List):
-            args = [(item.item_id,) for item in items]
-        elif isinstance(items, Item):
-            args = [(items.item_id,)]
-        else:
-            msg = f"items' type{type(items)} must be either Item or List[Item]"
-            logger.error(msg)
-            return None
-
-        logger.debug("Delete Items ...")
-        logger.debug(args)
-        return await self.db_util.delete('items', 'item_id', args)
-
-    async def delete_items_by_name(self, item_names: str or List[str]):
-        if isinstance(item_names, List):
-            args = [(iname,) for iname in item_names]
-        elif isinstance(item_names, str):
-            args = [(item_names,)]
-        else:
-            msg = f"items' type{type(item_names)} must be either str or List[str]"
-            logger.error(msg)
-            return None
-
-        logger.debug("Delete Items ...")
-        logger.debug(args)
-        return await self.db_util.delete('items', 'item_name', args)
-
-    async def insert_skus(self, skus: List[Sku]):
+    async def upsert_skus_df(self, skus_df: pd.DataFrame):
         """
         Initial insertion of skus
         sku_id and sku_valid are set to default values
         :param skus:
         :return:
         """
-        stmt = """INSERT INTO skus
-                    VALUES(DEFAULT, DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8)"""
-        args = [(s.bit_code, s.sku_qty, s.min_qty, s.item_id, s.item_size_id,
-                 s.item_side_id, s.expiration_date, s.description) for s in skus]
+        stmt = "INSERT INTO skus VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9)"
+        args = [(sku.sku_valid, sku.sku_name, sku.category_id, sku.description)
+                for sku in skus_df.itertuples()]
 
-        logger.debug("Insert Skus ...")
+        logger.debug("Upsert Items ...")
         logger.debug(args)
         return await self.db_util.pool_execute(stmt, args)
 
-    async def delete_skus(self, skus: List[Sku]):
-        args = [(s.sku_id,) for s in skus]
-
-        logger.debug("Delete Skus ...")
-        logger.debug(args)
+    async def delete_skus_df(self, skus_df: pd.DataFrame):
+        args = [(sku_row.sku_id,) for sku_row in skus_df.itertuples()]
+        logger.debug(f"delete_record: Delete ids {args} from skus table ...")
         return await self.db_util.delete('skus', 'sku_id', args)
 
-    async def insert_transactions(self, trs: List[Transaction]):
-        """
-        Transaction insertion must be done synchronously because of
-        chronological order
-        :param trs: list of transactions
-        :return: results from DB
-        """
-        stmt = """INSERT INTO transactions
-                    VALUES(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8)"""
-        args = [(t.user_id, t.sku_id, t.tr_type_id,
-                 t.tr_qty, t.before_qty, t.after_qty,
-                 t.tr_timestamp, t.description) for t in trs]
-
-        logger.debug("Insert Transactions ...")
-        logger.debug(args)
-        return await self.db_util.executemany(stmt, args)
-
-    async def delete_transactions(self, trs: List[Transaction]):
-        args = [(t.tr_id,) for t in trs]
-
-        logger.debug("Delete Transactions ...")
-        logger.debug(args)
+    async def delete_trs_df(self, trs_df: pd.DataFrame):
+        args = [(tr_row.tr_id,) for tr_row in trs_df.itertuples()]
+        logger.debug(f"delete_record: Delete ids {args} from transactions table ...")
         return await self.db_util.delete('transactions', 'tr_id', args)
-
 
 async def main():
     danaul_db = InventoryDb('db_settings')
@@ -217,60 +139,77 @@ async def main():
             'id': [1, 2, 3, 4],
             'name': ['외용제', '수액제', '보조기', '기타']
         })
+
         extra_data['item_side'] = pd.DataFrame({
             'id': [1, 2, 3],
             'name': ['None', 'Rt', 'Lt']
         })
+
         extra_data['item_size'] = pd.DataFrame({
             'id': [1, 2, 3, 4, 5, 6],
             'name': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc']
         })
+
         extra_data['transaction_type'] = pd.DataFrame({
             'id': [1, 2, 3, 4],
             'name': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus']
         })
+        def encrypt_password(password):
+            # Generate a salt and hash the password
+            salt = bcrypt.gensalt()
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+            return hashed_password
+
+        encrypted_pw = encrypt_password('a')
         extra_data['users'] = pd.DataFrame({
             'id': [1, 2],
             'name': ['admin', 'test'],
-            'pw': [b'\x00', b'\x00']
+            'pw': [encrypted_pw, encrypted_pw]
         })
+
         for table, data_df in extra_data.items():
             # make dataframe for each table
-            await danaul_db.insert_df(table, data_df, default_id=True)
+            await danaul_db.insert_df(table, data_df)
 
     async def insert_items():
-        item_names = ['써지겔', '아토베리어', 'test1']
-        items = [Item(None, True, name, 1) for name in item_names]
-
-        # Inserting items
-        print(await danaul_db.insert_items(items))
-
-    async def delete_items():
-        item_names = ['써지겔', '아토베리어', 'test1']
-
-        # Deleting items
-        print(await danaul_db.delete_items_by_name(item_names))
-        # Deleting item
-        # print(await danaul_db.delete_items_by_name(items[0]))
+        items_df = pd.DataFrame({
+            'item_id':       [1, 2, 3],
+            'item_valid':    [True, True, True],
+            'item_name':     ['써지겔', '아토베리어', 'test1'],
+            'category_id':   [1, 1, 1],
+            'description':   ['', '', '']
+        })
+        print(await danaul_db.insert_df('items', items_df))
 
     async def insert_skus():
-        # Inserting skus
-        skus = [Sku(None, True, 'aa', 9, 2, 3, 2),
-                Sku(None, True, 'bb', 1, 2, 2, 3),
-                Sku(None, True, 'cc', 3, 2, 2, 2)]
-        print(await danaul_db.insert_skus(skus))
+        skus_df = pd.DataFrame({
+            'sku_id':           [1, 2, 3],
+            'sku_valid':        [True, True, True],
+            'bit_code':         ['bb', 'cc', 'aa'],
+            'sku_qty':          [1, 3, 9],
+            'min_qty':          [2, 2, 2],
+            'item_id':          [2, 2, 3],
+            'item_size_id':     [3, 2, 2],
+            'item_side_id':     [1, 1, 1],
+            'expiration_date':  ['DEFAULT', 'DEFAULT', 'DEFAULT'],
+            'description':      ['', '', '']
+        })
+        print(await danaul_db.insert_df('skus', skus_df))
 
     async def insert_trs():
         # Inserting transactions
-        trs = [Transaction(None, 1, 1, 1, 10, 0, 10, description='Initial'),
-               Transaction(None, 2, 3, 1, 10, 0, 10, description='Initial'),
-               Transaction(None, 1, 2, 1, 10, 0, 10),
-               Transaction(None, 1, 1, 2, 10, 10, 0),
-               Transaction(None, 1, 1, 1, 10, 0, 10),
-               Transaction(None, 2, 3, 2, 5, 10, 5),
-               Transaction(None, 1, 2, 2, 10, 10, 0),
-               Transaction(None, 1, 1, 2, 10, 10, 0), ]
-        print(await danaul_db.insert_transactions(trs))
+        trs_df = pd.DataFrame({
+            'tr_id': ['DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT'],
+            'user_id':[1, 2, 1, 1, 1, 2],
+            'sku_id': [1, 3, 2, 1, 1, 3],
+            'tr_type_id': [1, 1, 1, 2, 1, 2],
+            'tr_qty': [10, 10, 10, 10, 10, 5],
+            'before_qty': [0, 0, 0, 10, 0, 10],
+            'after_qty': [10, 10, 10, 0, 10, 5],
+            'tr_timestamp': ['DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT'],
+            'description': ['', '', '', '', '', '']
+        })
+        print(await danaul_db.insert_df('transactions', trs_df))
 
     await initialize()
     await insert_items()

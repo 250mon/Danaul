@@ -11,6 +11,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
 from db_utils import DbConfig
 from di_logger import Logs, logging
+from constants import DB_SETTING_FILE
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -19,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 class LoginWidget(QWidget):
     start_main = Signal(str)
 
-    def __init__(self, config_file, parent=None):
+    def __init__(self, config_file=DB_SETTING_FILE, parent=None):
         super().__init__()
         self.parent = parent
         self.db_config_file = config_file
@@ -174,7 +175,8 @@ class LoginWidget(QWidget):
                 self.start_main.emit(user_name)
                 logger.debug("process_login: Passed!!!")
         else:
-            QMessageBox.warning(self, "Information Incorrect",
+            QMessageBox.warning(self,
+                                "Information Incorrect",
                                 "The user name or password is incorrect.",
                                 QMessageBox.Close)
 
@@ -237,7 +239,8 @@ class LoginWidget(QWidget):
         pw_text = self.new_password.text()
         confirm_text = self.confirm_password.text()
         if pw_text != confirm_text:
-            QMessageBox.warning(self, "Error Message",
+            QMessageBox.warning(self,
+                                "Error Message",
                                 "The passwords you entered do not match. Please try again.",
                                 QMessageBox.Close)
         else:
@@ -250,6 +253,6 @@ class LoginWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    login_window = LoginWidget('db_settings')
+    login_window = LoginWidget()
     login_window.show()
     sys.exit(app.exec())

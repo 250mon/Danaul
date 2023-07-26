@@ -29,9 +29,9 @@ class InventoryWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.login()
+        # self.login()
         self.user_name = None
-        # self.initializeUI()
+        self.initializeUI('admin')
 
     def login(self):
         self.login_widget = LoginWidget(DB_SETTINGS_FILE, self)
@@ -224,13 +224,11 @@ class InventoryWindow(QMainWindow):
     def async_start(self, action: str, df: pd.DataFrame = None):
         """
         Puts async coroutine on the loop through signaling to async_helper
+        AsyncHelper will eventually call self.save_to_db(action, df)
         :param action:
         :param df:
         :return:
         """
-        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
-        # inside the host(Qt) event loop
-        # AsyncHelper will eventually call self.update_df(action, df)
         self.start_signal.emit(action, df)
 
     async def save_to_db(self, action: str, df: pd.DataFrame = None):
@@ -243,7 +241,8 @@ class InventoryWindow(QMainWindow):
         logger.debug(f'{action}')
         if action == "item_save":
             logger.debug('Saving items ...')
-            result = await self.item_widget.save_to_db()
+            result_str = await self.item_widget.save_to_db()
+        self.done_signal.emit()
 
     def setupSkuView(self):
         # skus view
