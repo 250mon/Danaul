@@ -86,10 +86,6 @@ class ItemModel(PandasModel):
         Makes DataFrame out of data received from DB
         :return:
         """
-        # for category name mapping
-        cat_df = self.category_df.set_index('category_id')
-        cat_s: pd.Series = cat_df['category_name']
-
         logger.debug('set_model_df: setting item_model from lab.items_df')
         self.model_df = Lab().table_df['items']
 
@@ -97,7 +93,7 @@ class ItemModel(PandasModel):
         self.db_column_names = self.model_df.columns.tolist()
 
         # set more columns for the view
-        self.model_df['category_name'] = self.model_df['category_id'].map(cat_s)
+        self.model_df['category_name'] = self.model_df['category_id'].map(Lab().category_name_s)
         self.model_df['flag'] = ''
 
         # reindexing in the order of table view
@@ -112,8 +108,37 @@ class ItemModel(PandasModel):
         self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
                               columns=self.column_names)
 
-    def add_new_row(self):
-        self.model_df.loc[self.model_df.]
+    def add_new_row(self, new_df: pd.DataFrame) -> str:
+        """
+        Appends a new row of data to the model_df
+        :param new_df:
+        :return:
+        """
+        new_item_name = new_df.at[0, 'item_name']
+        if self.model_df[self.model_df.item_name == new_item_name].empty:
+            new_df['item_id'] = self.model_df['item_id'].max() + 1
+            self.model_df = pd.concat([self.model_df, new_df])
+            result_msg = f'Successfully add Item [{new_item_name}]'
+            logger.debug(result_msg)
+            return result_msg
+        else:
+            result_msg = f'Failed to add Item [{new_item_name}]: Duplicate item name'
+            logger.warning(result_msg)
+            return result_msg
+
+    def add_new_row_by_delegate(self):
+        print(self.model_df)
+        next_new_id = self.model_df['item_id'].max() + 1
+        print(f'new item id is {next_new_id}')
+
+        default_cat_id = 1
+        cat_name = Lab().category_name_s.loc[default_cat_id]
+
+        new_model_df = pd.DataFrame([(next_new_id, True, "", cat_name, "", default_cat_id, 'new')],
+                                     columns=self.column_names)
+
+        self.model_df = pd.concat([self.model_df, new_model_df])
+
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
         Override method from QAbstractTableModel
@@ -176,40 +201,35 @@ class ItemModel(PandasModel):
             if value == 'True':
                 val = True
         elif index.column() == self.model_df.columns.get_loc('category_name'):
-            # for category name mapping
-            cat_df = self.category_df.set_index('category_name')
-            cat_s: pd.Series = cat_df['category_id']
-            self.model_df.iloc[index.row(),
-                    self.model_df.columns.get_loc('category_id')] = cat_s.loc[value]
+            # if setting category_name, automatically setting category_id accordingly
+            cat_id_col = self.model_df.columns.get_loc('category_id')
+            self.model_df.iloc[index.row(), cat_id_col] = Lab().category_id_s[value]
             val: object = value
+        elif index.column() == self.model_df.columns.get_loc('item_name'):
+            # when a new row is added, item_name needs to be checked if any duplicate
+            if not self.model_df[self.model_df.item_name == value].empty:
+                logger.debug(f'setData: item name({value}) is already in use')
+                return False
+            else:
+                val: str = value
         else:
             val: object = value
 
         # Unless it is a new item, setting data is followed by setting change flag
-
         flag_col_iloc: int = self.model_df.columns.get_loc('flag')
         if self.model_df.iloc[index.row(), flag_col_iloc] != 'new':
             self.set_chg_flag(index)
 
         return super().setData(index, val, role)
 
-    def add_new_row(self, new_df: pd.DataFrame) -> str:
-        """
-        Appends a new row of data to the model_df
-        :param new_df:
-        :return:
-        """
-        new_item_name = new_df.at[0, 'item_name']
-        if self.model_df[self.model_df.item_name == new_item_name].empty:
-            new_df['item_id'] = self.model_df['item_id'].max() + 1
-            self.model_df = pd.concat([self.model_df, new_df])
-            result_msg = f'Successfully add Item [{new_item_name}]'
-            logger.debug(result_msg)
-            return result_msg
-        else:
-            result_msg = f'Failed to add Item [{new_item_name}]: Duplicate item name'
-            logger.warning(result_msg)
-            return result_msg
+    def set_new_flag(self, index: QModelIndex):
+        flag_col_iloc = self.model_df.columns.get_loc('flag')
+        if index.column() != flag_col_iloc:
+            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
+        self.set_all_editable_row(index.row())
+        print('set new flag')
+
+        super().setData(index, 'new')
 
     def set_chg_flag(self, index: QModelIndex):
         """

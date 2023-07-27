@@ -168,7 +168,7 @@ class InventoryWindow(QMainWindow):
         if action == "item_save":
             logger.debug('Saving items ...')
             result_str = await self.item_widget.save_to_db()
-        self.done_signal.emit()
+        self.done_signal.emit(action)
 
     def setupSkuView(self):
         # skus view

@@ -110,9 +110,8 @@ class ItemWidget(QWidget):
             # self.item_window = SingleItemWindow(self.new_item_proxy_model, None, self)
 
             # Delegate mode
+            self.add_new_item_by_delegate()
 
-            # self.item_model.layoutAboutToBeChanged.emit()
-            # self.item_model.layoutChanged.emit()
         elif action == "chg_item":
             logger.debug('Changing item ...')
             if selected_indexes := get_selected_indexes():
@@ -144,6 +143,21 @@ class ItemWidget(QWidget):
         self.parent.statusBar().showMessage(result_msg)
         self.item_model.layoutAboutToBeChanged.emit()
         self.item_model.layoutChanged.emit()
+
+    def add_new_item_by_delegate(self):
+        """
+
+        :return:
+        """
+        self.item_model.add_new_row_by_delegate()
+        logger.debug(f'add_new_item: new item is being created')
+        self.parent.statusBar().showMessage('A new row being created')
+        self.item_model.layoutAboutToBeChanged.emit()
+        self.item_model.layoutChanged.emit()
+
+        row_count = self.item_model.rowCount()
+        new_item_index = self.item_model.index(row_count - 1, 0)
+        self.item_model.set_new_flag(new_item_index)
 
 
     @Slot(object)

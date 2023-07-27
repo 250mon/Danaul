@@ -81,6 +81,9 @@ class Lab(metaclass=Singleton):
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data.pop()
 
+            # make reference series
+            self.make_ref_series()
+
         self.bool_initialized = True
         return self
 
@@ -91,16 +94,38 @@ class Lab(metaclass=Singleton):
         logger.debug(f'_get_df_from_db: {table}')
         query = f"SELECT * FROM {table}"
         db_results = await self.di_db_util.select_query(query)
-        df = await self._db_to_df(db_results)
+        df = self._db_to_df(db_results)
         return df
 
-    async def _db_to_df(self, results):
+    def _db_to_df(self, results):
         # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
         list_of_dict = [dict(result) for result in results]
         df = pd.DataFrame(list_of_dict)
         df.fillna("", inplace=True)
         logger.debug(f'\n{df}')
         return df
+
+    def make_ref_series(self):
+        def make_series(table, is_name=True):
+            ref_df = self.table_df[table]
+            if is_name:
+                # id becomes index
+                index_col = 0
+            else:
+                # name becomes index
+                index_col = 1
+            ref_df = ref_df.set_index(ref_df.columns[index_col])
+            ref_s: pd.Series = ref_df.iloc[:, 0]
+            return ref_s
+
+        self.category_name_s = make_series('category', True)
+        self.category_id_s = make_series('category', False)
+        self.item_size_name_s = make_series('item_size', True)
+        self.item_size_id_s = make_series('item_size', False)
+        self.item_side_name_s = make_series('item_side', True)
+        self.item_side_id_s = make_series('item_side', False)
+        self.tr_type_name_s = make_series('transaction_type', True)
+        self.tr_type_id_s = make_series('transaction_type', False)
 
     async def update_lab_df_from_db(self, table: str):
         logger.debug(f'update_lab_df_from_db: table {table}')

@@ -19,6 +19,7 @@ class PandasModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
         self.editable_cols_set = set()
+        self.all_editable_rows_set = set()
         self.uneditable_rows_set = set()
 
     def rowCount(self, parent=QModelIndex()) -> int:
@@ -89,6 +90,8 @@ class PandasModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if index.row() in self.uneditable_rows_set:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        elif index.row() in self.all_editable_rows_set:
+            return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         elif index.column() in self.editable_cols_set:
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
@@ -98,7 +101,29 @@ class PandasModel(QAbstractTableModel):
     def set_editable_cols(self, cols: List):
         self.editable_cols_set.update(cols)
 
+    def set_all_editable_row(self, row: int):
+        """
+        Makes every column editable for new rows
+        :param row:
+        :return:
+        """
+        self.all_editable_rows_set.add(row)
+        logger.debug(f'set_all_editable_row: row {row}')
+
+    def unset_all_editable_row(self, row: int):
+        logger.debug(f'unset_all_editable_row: '
+                     f'remove row {row} from {self.all_editable_rows_set}')
+        if row in self.all_editable_rows_set:
+            self.all_editable_rows_set.remove(row)
+        else:
+            logger.warn(f'unset_all_editable_row: cannot find row {row} in the set')
+
     def set_uneditable_row(self, row: int):
+        """
+        Makes every column uneditable for deleted rows
+        :param row:
+        :return:
+        """
         self.uneditable_rows_set.add(row)
         logger.debug(f'set_uneditable_row: row {row}')
 
@@ -108,7 +133,7 @@ class PandasModel(QAbstractTableModel):
         if row in self.uneditable_rows_set:
             self.uneditable_rows_set.remove(row)
         else:
-            logger.warn(f'unset_uneditable_row: cannot find row {row} int the set')
+            logger.warn(f'unset_uneditable_row: cannot find row {row} int he set')
 
 
 if __name__ == "__main__":
