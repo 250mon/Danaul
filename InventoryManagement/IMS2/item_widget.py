@@ -58,9 +58,10 @@ class ItemWidget(QWidget):
         # Set combo delegates for category and valid columns
         # For other columns, it uses default delegates (LineEdit)
         for col_name in self.item_model.editable_col_iloc.keys():
-            col_index, val_list = self.item_model.get_editable_cols_combobox_info(col_name)
-            combo_delegate = ComboBoxDelegate(val_list, self)
-            self.item_view.setItemDelegateForColumn(col_index, combo_delegate)
+            if col_name != 'description':
+                col_index, val_list = self.item_model.get_editable_cols_combobox_info(col_name)
+                combo_delegate = ComboBoxDelegate(val_list, self)
+                self.item_view.setItemDelegateForColumn(col_index, combo_delegate)
 
     def setup_ui(self):
         item_search_bar = QLineEdit(self)

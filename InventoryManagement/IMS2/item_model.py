@@ -274,12 +274,12 @@ class ItemModel(PandasModel):
         logger.debug('update_db: Saving to DB ...')
         return_msg = None
 
-        del_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('deleted')]
+        del_df = self.model_df.loc[self.model_df.flag.str.contains('deleted'), :]
         if not del_df.empty:
             logger.debug(f'{del_df}')
             # if flag contains 'new', just drop it
             del_df.drop(del_df[del_df.flag.str.contains('new')].index)
-            df_to_upload = del_df[self.db_column_names]
+            df_to_upload = del_df.loc[:, self.db_column_names]
             results = await Lab().delete_items_df(df_to_upload)
             logger.debug(f'update_db: results of deleting = {results}')
             msg_list = []
@@ -291,18 +291,25 @@ class ItemModel(PandasModel):
             return_msg = '\n'.join(msg_list)
             self.model_df.drop(del_df.index, inplace=True)
 
-        new_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('new')]
+            # reset all_editable_row for new rows
+            self.unset_uneditable_row(-1)
+
+        new_df = self.model_df.loc[self.model_df.flag.str.contains('new'), :]
         if not new_df.empty:
             logger.debug(f'{new_df}')
-            df_to_upload = new_df[self.db_column_names]
+            df_to_upload = new_df.loc[:, self.db_column_names]
+            # set item_id default to let DB assign an id without collision
+            df_to_upload.iloc[:, 0] = 'DEFAULT'
             results = await Lab().insert_items_df(df_to_upload)
             logger.debug(f'update_db: results of inserting new rows = {results}')
-            self.model_df.drop(new_df.index, inplace=True)
 
-        chg_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('changed')]
+            # reset all_editable_row for new rows
+            self.unset_all_editable_row(-1)
+
+        chg_df = self.model_df.loc[self.model_df.flag.str.contains('changed'), :]
         if not chg_df.empty:
             logger.debug(f'{chg_df}')
-            df_to_upload = chg_df[self.db_column_names]
+            df_to_upload = chg_df.loc[:, self.db_column_names]
             results = await Lab().upsert_items_df(df_to_upload)
             logger.debug(f'update_db: results of changing = {results}')
 

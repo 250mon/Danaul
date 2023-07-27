@@ -65,7 +65,7 @@ class InventoryDb:
         stmt = make_stmt(table, args[0])
 
         # we need to remove 'DEFAULT' from args
-        non_default_df = df.loc[:, df.loc[0, :] != 'DEFAULT']
+        non_default_df = df.loc[:, df.iloc[0, :] != 'DEFAULT']
         args = non_default_df.values.tolist()
 
         logger.debug(f"insert_df: {stmt} {args}")

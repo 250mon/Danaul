@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 from typing import Dict, List
 from datetime import date
@@ -77,9 +78,16 @@ class Lab(metaclass=Singleton):
             # get etc dfs
             get_data = [self._get_df_from_db(table) for table
                         in self.table_df.keys()]
-            data: List = await asyncio.gather(*get_data)
+            data_dfs: List = await asyncio.gather(*get_data)
+
+            for df in data_dfs:
+                if df.empty:
+                    logger.error(f'async_init: Failed to retrieve DB data')
+                    logger.error(f'async_init: {data_dfs}')
+                    sys.exit(0)
+
             for table in reversed(self.table_df.keys()):
-                self.table_df[table] = data.pop()
+                self.table_df[table] = data_dfs.pop()
 
             # make reference series
             self.make_ref_series()
@@ -94,6 +102,9 @@ class Lab(metaclass=Singleton):
         logger.debug(f'_get_df_from_db: {table}')
         query = f"SELECT * FROM {table}"
         db_results = await self.di_db_util.select_query(query)
+        logger.debug(f'_get_df_from_db: db_results: {db_results}')
+        if db_results is None:
+            return pd.DataFrame()
         df = self._db_to_df(db_results)
         return df
 
