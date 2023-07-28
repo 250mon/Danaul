@@ -109,7 +109,7 @@ class Lab(metaclass=Singleton):
         return await self.di_db.upsert_items_df(items_df)
 
     async def delete_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.delete_items_df(items_df)
+        return await self.di_db.delete_df(items_df)
 
     def get_item(self, id: int):
         return self.items.get(id, None)

@@ -112,7 +112,7 @@ class InventoryWindow(QMainWindow):
         :param new_df:
         :return:
         """
-        result_msg = self.item_model.add_new_row(new_df)
+        result_msg = self.item_model.add_new_row_by_widget_mapper(new_df)
         logger.debug(f'add_new_item: new item {result_msg} created')
         self.statusBar().showMessage(result_msg)
         self.item_model.layoutAboutToBeChanged.emit()

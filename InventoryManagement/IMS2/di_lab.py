@@ -142,14 +142,16 @@ class Lab(metaclass=Singleton):
         logger.debug(f'update_lab_df_from_db: table {table}')
         self.table_df[table] = await self._get_df_from_db(table)
 
-    async def insert_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.insert_df('items', items_df)
+    async def insert_df(self, table: str, new_df: pd.DataFrame):
+        return await self.di_db.insert_df(table, new_df)
+
+    async def update_df(self, table: str, up_df: pd.DataFrame):
+        return await self.di_db.update_df(up_df)
+    async def delete_df(self, table: str, del_df: pd.DataFrame):
+        return await self.di_db.delete_df(table, del_df)
 
     async def upsert_items_df(self, items_df: pd.DataFrame):
         return await self.di_db.upsert_items_df(items_df)
-
-    async def delete_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.delete_items_df(items_df)
 
     async def insert_skus_df(self, skus_df: pd.DataFrame):
         return await self.di_db.insert_df('skus', skus_df)

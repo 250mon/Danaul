@@ -4,7 +4,7 @@ import asyncpg.exceptions
 from typing import Dict, Tuple, List
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
-from pandas_model import PandasModel
+from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
 from constants import ADMIN_GROUP
@@ -17,46 +17,23 @@ logger.setLevel(logging.DEBUG)
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
-class ItemModel(PandasModel):
-    def __init__(self, user_name, template_flag=False):
-        super().__init__()
-        # for access control
-        self.user_name = user_name
+class ItemModel(DataModel):
+    def __init__(self, user_name):
+        table_name = 'items'
+        column_names = ['item_id', 'item_valid', 'item_name', 'category_name',
+                        'description', 'category_id', 'flag']
 
-        # need category_id to category_name mapping table
-        self.category_df: pd.DataFrame = Lab().table_df['category']
+        super().__init__(table_name, user_name, column_names)
 
-        # set data to model
-        # mapping-table indicating where the actual column is located in the table
-        self.column_names = ['item_id', 'item_valid', 'item_name',
-                             'category_name', 'description', 'category_id',
-                             'flag']
-        # a list of column names which is used for db update
-        self.db_column_names = None
-
-        if not template_flag:
-            self.set_model_df()
-        else:
-            self.set_template_model_df()
-
-        self.set_editable_cols()
-
-    def set_editable_cols(self):
+    def add_on_aux_cols(self):
         """
-        Sets up editable columns in the pandas model
+        Needs to be implemented in the subclasses
+        Adds extra columns of each name mapped to ids of auxiliary data
         :return:
         """
-        # set editable columns
-        if self.user_name in ADMIN_GROUP:
-            editable_cols = ['item_valid', 'category_name', 'description']
-        else:
-            editable_cols = ['category_name', 'description']
-
-        self.editable_col_iloc: Dict[str, int] = {
-            col_name: self.model_df.columns.get_loc(col_name)
-            for col_name in editable_cols
-        }
-        super().set_editable_cols(list(self.editable_col_iloc.values()))
+        # set more columns for the view
+        self.model_df['category_name'] = self.model_df['category_id'].map(Lab().category_name_s)
+        self.model_df['flag'] = ''
 
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
         """
@@ -67,77 +44,10 @@ class ItemModel(PandasModel):
         if col_name == 'item_valid':
             val_list = ['True', 'False']
         elif col_name == 'category_name':
-            val_list = self.category_df['category_name'].values.tolist()
+            val_list = Lab().category_name_s.to_list()
         else:
             val_list = None
         return col_index, val_list
-
-    async def update_model_df_from_db(self):
-        """
-        Receives data from DB and converts it to DF
-        :return:
-        """
-        logger.debug(f'update_model_df_from_db')
-        await Lab().update_lab_df_from_db('items')
-        self.set_model_df()
-
-    def set_model_df(self):
-        """
-        Makes DataFrame out of data received from DB
-        :return:
-        """
-        logger.debug('set_model_df: setting item_model from lab.items_df')
-        self.model_df = Lab().table_df['items']
-
-        # we store the columns list here for later use of db update
-        self.db_column_names = self.model_df.columns.tolist()
-
-        # set more columns for the view
-        self.model_df['category_name'] = self.model_df['category_id'].map(Lab().category_name_s)
-        self.model_df['flag'] = ''
-
-        # reindexing in the order of table view
-        self.model_df = self.model_df.reindex(self.column_names, axis=1)
-
-    def set_template_model_df(self):
-        """
-        Called when a new item needs to be created.
-        A template model has one row of new item
-        :return:
-        """
-        self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
-                              columns=self.column_names)
-
-    def add_new_row(self, new_df: pd.DataFrame) -> str:
-        """
-        Appends a new row of data to the model_df
-        :param new_df:
-        :return:
-        """
-        new_item_name = new_df.at[0, 'item_name']
-        if self.model_df[self.model_df.item_name == new_item_name].empty:
-            new_df['item_id'] = self.model_df['item_id'].max() + 1
-            self.model_df = pd.concat([self.model_df, new_df])
-            result_msg = f'Successfully add Item [{new_item_name}]'
-            logger.debug(result_msg)
-            return result_msg
-        else:
-            result_msg = f'Failed to add Item [{new_item_name}]: Duplicate item name'
-            logger.warning(result_msg)
-            return result_msg
-
-    def add_new_row_by_delegate(self):
-        print(self.model_df)
-        next_new_id = self.model_df['item_id'].max() + 1
-        print(f'new item id is {next_new_id}')
-
-        default_cat_id = 1
-        cat_name = Lab().category_name_s.loc[default_cat_id]
-
-        new_model_df = pd.DataFrame([(next_new_id, True, "", cat_name, "", default_cat_id, 'new')],
-                                     columns=self.column_names)
-
-        self.model_df = pd.concat([self.model_df, new_model_df])
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
@@ -222,95 +132,14 @@ class ItemModel(PandasModel):
 
         return super().setData(index, val, role)
 
-    def set_new_flag(self, index: QModelIndex):
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
-        self.set_all_editable_row(index.row())
-        print('set new flag')
-
-        super().setData(index, 'new')
-
-    def set_chg_flag(self, index: QModelIndex):
+    def make_a_new_row_df(self, next_new_id):
         """
-        Sets a 'changed' flag for the row of index
-        :param index:
+        Needs to be implemented in subclasses
+        :param next_new_id:
         :return:
         """
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
-
-        current_msg = self.data(index)
-        if 'changed' not in current_msg:
-            new_msg = current_msg + ' changed'
-            super().setData(index, new_msg)
-
-    def set_del_flag(self, index: QModelIndex):
-        """
-        Sets a 'deleted' flag for the row of index
-        :param index:
-        :return:
-        """
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
-
-        current_msg: str = self.data(index)
-        if 'deleted' in current_msg:
-            new_msg = current_msg.replace(' deleted', '')
-            super().setData(index, new_msg)
-            self.unset_uneditable_row(index.row())
-        else:
-            new_msg = current_msg + ' deleted'
-            super().setData(index, new_msg)
-            self.set_uneditable_row(index.row())
-
-    async def update_db(self):
-        """
-        Updates DB reflecting the changes made to model_df
-        :return:
-        """
-        logger.debug('update_db: Saving to DB ...')
-        return_msg = None
-
-        del_df = self.model_df.loc[self.model_df.flag.str.contains('deleted'), :]
-        if not del_df.empty:
-            logger.debug(f'{del_df}')
-            # if flag contains 'new', just drop it
-            del_df.drop(del_df[del_df.flag.str.contains('new')].index)
-            df_to_upload = del_df.loc[:, self.db_column_names]
-            results = await Lab().delete_items_df(df_to_upload)
-            logger.debug(f'update_db: results of deleting = {results}')
-            msg_list = []
-            for i, result in enumerate(results, start=1):
-                if isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
-                    msg_list.append(f'{i}: Item ID is in use, Cannot be deleted')
-                else:
-                    msg_list.append(f'{i}: {result}')
-            return_msg = '\n'.join(msg_list)
-            self.model_df.drop(del_df.index, inplace=True)
-
-            # reset all_editable_row for new rows
-            self.unset_uneditable_row(-1)
-
-        new_df = self.model_df.loc[self.model_df.flag.str.contains('new'), :]
-        if not new_df.empty:
-            logger.debug(f'{new_df}')
-            df_to_upload = new_df.loc[:, self.db_column_names]
-            # set item_id default to let DB assign an id without collision
-            df_to_upload.iloc[:, 0] = 'DEFAULT'
-            results = await Lab().insert_items_df(df_to_upload)
-            logger.debug(f'update_db: results of inserting new rows = {results}')
-
-            # reset all_editable_row for new rows
-            self.unset_all_editable_row(-1)
-
-        chg_df = self.model_df.loc[self.model_df.flag.str.contains('changed'), :]
-        if not chg_df.empty:
-            logger.debug(f'{chg_df}')
-            df_to_upload = chg_df.loc[:, self.db_column_names]
-            results = await Lab().upsert_items_df(df_to_upload)
-            logger.debug(f'update_db: results of changing = {results}')
-
-        return return_msg
+        default_cat_id = 1
+        cat_name = Lab().category_name_s.loc[default_cat_id]
+        new_model_df = pd.DataFrame([(next_new_id, True, "", cat_name, "", default_cat_id, 'new')],
+                                    columns=self.column_names)
+        return new_model_df

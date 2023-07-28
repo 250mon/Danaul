@@ -92,10 +92,23 @@ class InventoryDb:
         logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
-    async def delete_items_df(self, items_df: pd.DataFrame):
-        args = [(item.item_id,) for item in items_df.itertuples()]
+    async def delete_df(self, table: str, del_df: pd.DataFrame):
+        # args = [(item.item_id,) for item in items_df.itertuples()]
+        col_name, id_series = next(del_df.items())
+        args = [(_id,) for _id in id_series]
         logger.debug(f"delete_record: Delete ids {args} from items table ...")
-        return await self.db_util.delete('items', 'item_id', args)
+        return await self.db_util.delete(table, col_name, args)
+
+    async def update_df(self, table: str, up_df: pd.DataFrame):
+        col_names = up_df.columns
+        id_name = col_names[0]
+        place_holders = [f'{col_name}=${i}'for i, col_name in enumerate(col_names, start=2)]
+        ph_str = ','.join(place_holders)
+        stmt = f"UPDATE {table} SET {ph_str} WHERE {id_name}=$1"
+        args = [_tuple[1:] for _tuple in up_df.itertuples()]
+        logger.debug(f"update_df: {stmt}")
+        logger.debug(args)
+        return await self.db_util.executemany(stmt, args)
 
     async def update_skus_df(self, skus_df: pd.DataFrame):
         """
