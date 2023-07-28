@@ -98,7 +98,7 @@ class PandasModel(QAbstractTableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         # return Qt.NoItemFlags
 
-    def set_editable_cols(self, cols: List):
+    def set_editable_columns(self, cols: List):
         self.editable_cols_set.update(cols)
 
     def set_all_editable_row(self, row: int):

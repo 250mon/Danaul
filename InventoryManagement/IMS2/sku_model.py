@@ -1,10 +1,10 @@
 import os
 import pandas as pd
-import asyncpg.exceptions
 from typing import Dict, Tuple, List
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
 from pandas_model import PandasModel
+from item_model import ItemModel
 from di_lab import Lab
 from di_logger import Logs, logging
 from constants import ADMIN_GROUP
@@ -18,47 +18,55 @@ Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
 class SkuModel(PandasModel):
-    def __init__(self, user_name, template_flag=False):
+    def __init__(self, user_name, item_model: ItemModel):
+        self.item_model = item_model
+        item_name_df = self.item_model.model_df.loc[:, ['item_id', 'item_name']]
+        self.item_name_s = item_name_df.set_index('item_id')
+        self.item_id_s = item_name_df.set_index('item_name')
+
         super().__init__()
-        # for access control
-        self.user_name = user_name
 
-        # need category_id to category_name mapping table
-        self.category_df: pd.DataFrame = Lab().table_df['category']
-
-        # set data to model
-        # mapping-table indicating where the actual column is located in the table
-        self.column_names = ['sku_id', 'item_name', 'sku_valid',
-                             'sku_qty', 'min_qty', 'item_size', 'item_side',
-                             'expiration_date', 'description', 'item_id',
-                             'item_size_id', 'item_side_id', 'bit_code',
-                             'flag']
-
-        # a list of column names which is used for db update
-        self.db_column_names = None
-
-        if not template_flag:
-            self.set_model_df()
-        else:
-            self.set_template_model_df()
-
-        self.set_editable_cols()
-
-    def set_editable_cols(self):
+    def set_table_name(self):
         """
-        Sets up editable columns in the pandas model
+        Needs to be implemented in the subclasses
+        Returns a talbe name specified in the DB
         :return:
         """
-        # set editable columns
+        return 'skus'
+
+    def set_column_names(self):
+        """
+        Needs to be implemented in the subclasses
+        Returns column names that show in the table view
+        :return:
+        """
+        column_names = ['sku_id', 'item_name', 'sku_valid', 'sku_qty', 'min_qty',
+                        'item_size', 'item_side', 'expiration_date', 'description',
+                        'item_id', 'item_size_id', 'item_side_id', 'bit_code', 'flag']
+        return column_names
+
+    def set_add_on_cols(self):
+        """
+        Needs to be implemented in the subclasses
+        Adds extra columns of each name mapped to ids of supplementary data
+        :return:
+        """
+        # set more columns for the view
+        self.model_df['item_size_name'] = self.model_df['item_size_id'].map(Lab().item_size_name_s)
+        self.model_df['item_side_name'] = self.model_df['item_side_id'].map(Lab().item_side_name_s)
+        self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
+        self.model_df['flag'] = ''
+
+    def set_editable_columns(self):
+        """
+        Needs to be implemented in the subclasses
+        Returns column names that are editable by user
+        :return:
+        """
         editable_cols = ['min_qty', 'description']
         if self.user_name in ADMIN_GROUP:
             editable_cols += ['sku_valid', 'sku_qty', 'expiration_date']
-
-        self.editable_col_iloc: Dict[str, int] = {
-            col_name: self.model_df.columns.get_loc(col_name)
-            for col_name in editable_cols
-        }
-        super().set_editable_cols(list(self.editable_col_iloc.values()))
+        return editable_cols
 
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
         """
@@ -68,55 +76,9 @@ class SkuModel(PandasModel):
         col_index = self.model_df.columns.get_loc(col_name)
         if col_name == 'sku_valid':
             val_list = ['True', 'False']
-        elif col_name == 'category_name':
-            val_list = self.category_df['category_name'].values.tolist()
         else:
             val_list = None
         return col_index, val_list
-
-    async def update_model_df_from_db(self):
-        """
-        Receives data from DB and converts it to DF
-        :return:
-        """
-        logger.debug(f'update_model_df_from_db')
-        await Lab().update_lab_df_from_db('skus')
-        self.set_model_df()
-
-    def set_model_df(self):
-        """
-        Makes DataFrame out of data received from DB
-        :return:
-        """
-        # for category name mapping
-        cat_df = self.category_df.set_index('category_id')
-        cat_s: pd.Series = cat_df['category_name']
-
-        logger.debug('set_model_df: setting sku_model from lab.skus_df')
-        self.model_df = Lab().table_df['skus']
-
-        # we store the columns list here for later use of db update
-        self.db_column_names = self.model_df.columns.tolist()
-
-        # set more columns for the view
-        self.model_df['category_name'] = self.model_df['category_id'].map(cat_s)
-        self.model_df['flag'] = ''
-
-        # reindexing in the order of table view
-        self.model_df = self.model_df.reindex(self.column_names, axis=1)
-
-    def set_template_model_df(self):
-        """
-        Called when a new sku needs to be created.
-        A template model has one row of new sku
-        :return:
-        """
-        self.model_df = pd.DataFrame([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
-                              columns=self.column_names)
-
-    def add_new_row(self):
-        self.model_df.loc[-1, :] = pd.Series([(-1, True, "", 1, "", self.category_df.iat[0, 1], 'new')],
-                                                 columns=self.column_names)
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
@@ -142,7 +104,8 @@ class SkuModel(PandasModel):
         # for sorting, use SortRole
         elif role == self.SortRole:
             int_type_columns = [self.model_df.columns.get_loc(c) for c in
-                                ['sku_id', 'sku_valid', 'category_id']]
+                                ['sku_id', 'sku_valid', 'item_id', 'item_size_id',
+                                 'item_side_id', 'sku_qty', 'min_qty', 'bit_code']]
             # if column data is int, return int type
             if index.column() in int_type_columns:
                 return int(data_to_display)
@@ -174,120 +137,55 @@ class SkuModel(PandasModel):
             return False
 
         logger.debug(f'setData({index}, {value})')
-        # taking care of converting str type input to bool type
+
+        ret_value: object = value
+
         if index.column() == self.model_df.columns.get_loc('sku_valid'):
-            val: bool = False
+            # taking care of converting str type input to bool type
+            ret_value: bool = False
             if value == 'True':
-                val = True
-        elif index.column() == self.model_df.columns.get_loc('category_name'):
-            # for category name mapping
-            cat_df = self.category_df.set_index('category_name')
-            cat_s: pd.Series = cat_df['category_id']
-            self.model_df.iloc[index.row(),
-                    self.model_df.columns.get_loc('category_id')] = cat_s.loc[value]
-            val: object = value
+                ret_value = True
+        elif index.column() == self.model_df.columns.get_loc('item_size'):
+            id_col = self.model_df.columns.get_loc('item_size_id')
+            self.model_df.iloc[index.row(), id_col] = Lab().item_size_id_s.loc[value]
+        elif index.column() == self.model_df.columns.get_loc('item_side'):
+            id_col = self.model_df.columns.get_loc('item_side_id')
+            self.model_df.iloc[index.row(), id_col] = Lab().item_side_id_s.loc[value]
+        elif index.column() == self.model_df.columns.get_loc('item_name'):
+            id_col = self.model_df.columns.get_loc('item_id')
+            self.model_df.iloc[index.row(), id_col] = self.item_id_s.loc[value]
         else:
-            val: object = value
+            pass
 
         # Unless it is a new sku, setting data is followed by setting change flag
-
         flag_col_iloc: int = self.model_df.columns.get_loc('flag')
         if self.model_df.iloc[index.row(), flag_col_iloc] != 'new':
             self.set_chg_flag(index)
 
-        return super().setData(index, val, role)
+        return super().setData(index, ret_value, role)
 
-    def add_new_row(self, new_df: pd.DataFrame) -> str:
+    def make_a_new_row_df(self, next_new_id):
         """
-        Appends a new row of data to the model_df
-        :param new_df:
+        Needs to be implemented in subclasses
+        :param next_new_id:
         :return:
         """
-        new_sku_name = new_df.at[0, 'sku_name']
-        if self.model_df[self.model_df.sku_name == new_sku_name].empty:
-            new_df['sku_id'] = self.model_df['sku_id'].max() + 1
-            self.model_df = pd.concat([self.model_df, new_df])
-            result_msg = f'Successfully add Sku [{new_sku_name}]'
-            logger.debug(result_msg)
-            return result_msg
-        else:
-            result_msg = f'Failed to add Sku [{new_sku_name}]: Duplicate sku name'
-            logger.warning(result_msg)
-            return result_msg
-
-    def set_chg_flag(self, index: QModelIndex):
-        """
-        Sets a 'changed' flag for the row of index
-        :param index:
-        :return:
-        """
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
-
-        current_msg = self.data(index)
-        if 'changed' not in current_msg:
-            new_msg = current_msg + ' changed'
-            super().setData(index, new_msg)
-
-    def set_del_flag(self, index: QModelIndex):
-        """
-        Sets a 'deleted' flag for the row of index
-        :param index:
-        :return:
-        """
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
-
-        current_msg: str = self.data(index)
-        if 'deleted' in current_msg:
-            new_msg = current_msg.replace(' deleted', '')
-            super().setData(index, new_msg)
-            self.unset_uneditable_row(index.row())
-        else:
-            new_msg = current_msg + ' deleted'
-            super().setData(index, new_msg)
-            self.set_uneditable_row(index.row())
-
-    async def update_db(self):
-        """
-        Updates DB reflecting the changes made to model_df
-        :return:
-        """
-        logger.debug('update_db: Saving to DB ...')
-        return_msg = None
-
-        del_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('deleted')]
-        if not del_df.empty:
-            logger.debug(f'{del_df}')
-            # if flag contains 'new', just drop it
-            del_df.drop(del_df[del_df.flag.str.contains('new')].index)
-            df_to_upload = del_df[self.db_column_names]
-            results = await Lab().delete_skus_df(df_to_upload)
-            logger.debug(f'update_db: results of deleting = {results}')
-            msg_list = []
-            for i, result in enumerate(results, start=1):
-                if isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
-                    msg_list.append(f'{i}: Sku ID is in use, Cannot be deleted')
-                else:
-                    msg_list.append(f'{i}: {result}')
-            return_msg = '\n'.join(msg_list)
-            self.model_df.drop(del_df.index, inplace=True)
-
-        new_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('new')]
-        if not new_df.empty:
-            logger.debug(f'{new_df}')
-            df_to_upload = new_df[self.db_column_names]
-            results = await Lab().insert_skus_df(df_to_upload)
-            logger.debug(f'update_db: results of inserting new rows = {results}')
-            self.model_df.drop(new_df.index, inplace=True)
-
-        chg_df: pd.DataFrame = self.model_df[self.model_df.flag.str.contains('changed')]
-        if not chg_df.empty:
-            logger.debug(f'{chg_df}')
-            df_to_upload = chg_df[self.db_column_names]
-            results = await Lab().upsert_skus_df(df_to_upload)
-            logger.debug(f'update_db: results of changing = {results}')
-
-        return return_msg
+        default_item_size_id = 1
+        default_item_side_id = 1
+        iz_name = Lab().item_size_name_s.loc[default_item_size_id]
+        id_name = Lab().item_side_name_s.loc[default_item_side_id]
+        column_names = ['sku_id', 'item_name', 'sku_valid', 'sku_qty', 'min_qty',
+                        'item_size', 'item_side', 'expiration_date', 'description',
+                        'item_id', 'item_size_id', 'item_side_id', 'bit_code', 'flag']
+        new_model_df = pd.DataFrame([{'sku_id': next_new_id,
+                                      'item_name': 'test1',
+                                      'sku_valid': True,
+                                      'sku_qty': 0,
+                                      'min_qty': 2,
+                                      'item_size': iz_name,
+                                      'item_side': id_name,
+                                      'item_size_id': default_item_size_id,
+                                      'item_side_id': default_item_side_id,
+                                      'flag': 'new'}],
+                                    )
+        return new_model_df

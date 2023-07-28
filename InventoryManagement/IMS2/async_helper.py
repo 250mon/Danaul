@@ -40,15 +40,15 @@ class AsyncHelper(QObject):
         if hasattr(self.worker, "done_signal") and isinstance(self.worker.done_signal, Signal):
             self.worker.done_signal.connect(self.on_worker_done)
 
-    @Slot(str, pd.DataFrame)
-    def on_worker_started(self, action: str, df: pd.DataFrame):
+    @Slot(str)
+    def on_worker_started(self, action: str):
         """ To use asyncio and Qt together, one must run the asyncio
             event loop as a "guest" inside the Qt "host" event loop. """
         logger.debug(f'on_worker_started... {action}')
         if not self.entry:
             raise Exception("No entry point for the asyncio event loop was set.")
         asyncio.set_event_loop(self.loop)
-        self.loop.create_task(self.entry(action, df))
+        self.loop.create_task(self.entry(action))
         self.loop.call_soon(lambda: self.next_guest_run_schedule(action))
         self.done[action] = False  # Set this explicitly as we might want to restart the guest run.
         self.loop.run_forever()

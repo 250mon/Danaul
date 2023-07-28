@@ -9,7 +9,6 @@ from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
 from sku_model import SkuModel
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
-from single_sku_window import SingleSkuWindow
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -101,18 +100,8 @@ class SkuWidget(QWidget):
         logger.debug(f'{action}')
         if action == "add_sku":
             logger.debug('Adding sku ...')
-            new_sku_model = SkuModel(self.user_name, template_flag=True)
-            self.new_sku_proxy_model.setSourceModel(new_sku_model)
-            self.sku_window = SingleSkuWindow(self.new_sku_proxy_model, None, self)
-            # self.sku_model.layoutAboutToBeChanged.emit()
-            # self.sku_model.layoutChanged.emit()
-        elif action == "chg_sku":
-            logger.debug('Changing sku ...')
-            if selected_indexes := get_selected_indexes():
-                self.sku_window = SingleSkuWindow(self.sku_proxy_model,
-                                                  selected_indexes, self)
-                # self.sku_model.layoutAboutToBeChanged.emit()
-                # self.sku_model.layoutChanged.emit()
+            self.add_new_sku_by_delegate()
+
         elif action == "del_sku":
             logger.debug('Deleting sku ...')
             if selected_indexes := get_selected_indexes():
@@ -126,7 +115,7 @@ class SkuWidget(QWidget):
         self.start_signal.emit(action, df)
 
     @Slot(pd.DataFrame)
-    def add_new_sku(self, new_df: pd.DataFrame):
+    def add_new_sku_by_delegate(self, new_df: pd.DataFrame):
         """
         This is called when SingleSkuWindow emits a signal
         :param new_df:
@@ -137,6 +126,10 @@ class SkuWidget(QWidget):
         self.parent.statusBar().showMessage(result_msg)
         self.sku_model.layoutAboutToBeChanged.emit()
         self.sku_model.layoutChanged.emit()
+
+        row_count = self.sku_model.rowCount()
+        new_item_index = self.sku_model.index(row_count - 1, 0)
+        self.sku_model.set_new_flag(new_item_index)
 
     @Slot(object)
     def chg_skus(self, indexes: List[QModelIndex]):

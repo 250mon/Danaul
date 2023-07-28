@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
 from item_model import ItemModel
+from item_model_widget import ItemModelWidget
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
 from single_item_window import SingleItemWindow
@@ -20,7 +21,11 @@ class ItemWidget(QWidget):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.user_name = user_name
-        self.item_model = ItemModel(self.user_name)
+        self.delegate_mode = False
+        if self.delegate_mode:
+            self.item_model = ItemModel(self.user_name)
+        else:
+            self.item_model = ItemModelWidget(self.user_name)
         self.setup_item_view()
         self.setup_ui()
 
@@ -90,7 +95,7 @@ class ItemWidget(QWidget):
         self.setLayout(item_vbox)
 
     @Slot(str, pd.DataFrame)
-    def do_actions(self, action: str, df: pd.DataFrame = None):
+    def do_actions(self, action: str):
         def get_selected_indexes():
             # the indexes of proxy model
             selected_indexes = self.item_view.selectedIndexes()
@@ -105,31 +110,25 @@ class ItemWidget(QWidget):
         logger.debug(f'{action}')
         if action == "add_item":
             logger.debug('Adding item ...')
-            # Input window mode using DataMapperWidget
-            # new_item_model = ItemModel(self.user_name, template_flag=True)
-            # self.new_item_proxy_model.setSourceModel(new_item_model)
-            # self.item_window = SingleItemWindow(self.new_item_proxy_model, None, self)
-
-            # Delegate mode
-            self.add_new_item_by_delegate()
+            if self.delegate_mode:
+                # Delegate mode
+                self.add_new_item_by_delegate()
+            else:
+                # Input window mode using DataMapperWidget
+                new_item_model = ItemModelWidget(self.user_name, template_flag=True)
+                self.new_item_proxy_model.setSourceModel(new_item_model)
+                self.item_window = SingleItemWindow(self.new_item_proxy_model, None, self)
 
         elif action == "chg_item":
             logger.debug('Changing item ...')
-            if selected_indexes := get_selected_indexes():
+            if not self.delegate_mode and (selected_indexes := get_selected_indexes()):
                 self.item_window = SingleItemWindow(self.item_proxy_model,
                                                     selected_indexes, self)
+
         elif action == "del_item":
             logger.debug('Deleting item ...')
             if selected_indexes := get_selected_indexes():
                 self.delete_item(selected_indexes)
-
-
-    @Slot(str, pd.DataFrame)
-    def async_start(self, action: str, df: pd.DataFrame = None):
-        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
-        # inside the host(Qt) event loop
-        # AsyncHelper will eventually call self.update_df(action, df)
-        self.start_signal.emit(action, df)
 
 
     @Slot(pd.DataFrame)
@@ -139,7 +138,7 @@ class ItemWidget(QWidget):
         :param new_df:
         :return:
         """
-        result_msg = self.item_model.add_new_row_by_widget_mapper(new_df)
+        result_msg = self.item_model.add_new_row_by_widget(new_df)
         logger.debug(f'add_new_item: new item {result_msg} created')
         self.parent.statusBar().showMessage(result_msg)
         self.item_model.layoutAboutToBeChanged.emit()
@@ -159,7 +158,6 @@ class ItemWidget(QWidget):
         row_count = self.item_model.rowCount()
         new_item_index = self.item_model.index(row_count - 1, 0)
         self.item_model.set_new_flag(new_item_index)
-
 
     @Slot(object)
     def chg_items(self, indexes: List[QModelIndex]):

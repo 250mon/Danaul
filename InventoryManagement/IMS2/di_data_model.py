@@ -4,11 +4,9 @@ import asyncpg.exceptions
 from typing import Dict, Tuple, List
 from abc import abstractmethod
 from PySide6.QtCore import Qt, QModelIndex
-from PySide6.QtGui import QBrush, QFont
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import ADMIN_GROUP
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -19,31 +17,68 @@ Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
 class DataModel(PandasModel):
-    def __init__(self, table_name, user_name, col_names):
+    def __init__(self, user_name):
         super().__init__()
-        # for data name
-        self.table_name = table_name
         # for access control
         self.user_name = user_name
-
+        # for data name
+        self.table_name = self.set_table_name()
         # columns to show in the table view
-        # self.column_names = ['item_id', 'item_valid', 'item_name',
-        #                      'category_name', 'description', 'category_id',
-        #                      'flag']
-        self.column_names = col_names
-
+        self.column_names = self.set_column_names()
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
         # set model df
         self.set_model_df()
 
-        # set editable colums
-        # self.editable_cols = ['category_name', 'description']
-        self.editable_cols = []
-        if self.user_name in ADMIN_GROUP:
-            self.editable_cols += []
-        self.set_editable_cols()
+        # set editable columns
+        editable_cols = self.set_editable_columns()
+        print(editable_cols)
+        self.set_editable_cols_to_model(editable_cols)
+
+    @abstractmethod
+    def set_table_name(self):
+        """
+        Needs to be implemented in the subclasses
+        Returns a talbe name specified in the DB
+        :return:
+        """
+
+    @abstractmethod
+    def set_column_names(self):
+        """
+        Needs to be implemented in the subclasses
+        Returns column names that show in the table view
+        :return:
+        """
+
+    @abstractmethod
+    def set_add_on_cols(self):
+        """
+        Needs to be implemented in the subclasses
+        Adds extra columns of each name mapped to ids of auxiliary data
+        :return:
+        """
+
+    @abstractmethod
+    def set_editable_columns(self):
+        """
+        Needs to be implemented in the subclasses
+        Returns column names that are editable by user
+        :return:
+        """
+
+    def set_editable_cols_to_model(self, columns):
+        """
+        Sets up editable columns in the pandas model
+        :return:
+        """
+        # set editable columns
+        self.editable_col_iloc: Dict[str, int] = {
+            col_name: self.model_df.columns.get_loc(col_name)
+            for col_name in columns
+        }
+        super().set_editable_columns(list(self.editable_col_iloc.values()))
 
     def set_model_df(self):
         """
@@ -60,30 +95,7 @@ class DataModel(PandasModel):
         self.model_df = self.model_df.reindex(self.column_names, axis=1)
 
         # add name columns for ids of each auxiliary data
-        self.add_on_aux_cols()
-
-    @abstractmethod
-    def add_on_aux_cols(self):
-        """
-        Needs to be implemented in the subclasses
-        Adds extra columns of each name mapped to ids of auxiliary data
-        :return:
-        """
-        # set more columns for the view
-        # self.model_df['category_name'] = self.model_df['category_id'].map(Lab().category_name_s)
-        # self.model_df['flag'] = ''
-
-    def set_editable_cols(self):
-        """
-        Sets up editable columns in the pandas model
-        :return:
-        """
-        # set editable columns
-        self.editable_col_iloc: Dict[str, int] = {
-            col_name: self.model_df.columns.get_loc(col_name)
-            for col_name in self.editable_cols
-        }
-        super().set_editable_cols(list(self.editable_col_iloc.values()))
+        self.set_add_on_cols()
 
     @abstractmethod
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
