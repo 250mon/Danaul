@@ -3,7 +3,7 @@ import pandas as pd
 from typing import Dict, Tuple, List
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
-from pandas_model import PandasModel
+from di_data_model import DataModel
 from item_model import ItemModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -17,14 +17,24 @@ logger.setLevel(logging.DEBUG)
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
-class SkuModel(PandasModel):
-    def __init__(self, user_name, item_model: ItemModel):
-        self.item_model = item_model
-        item_name_df = self.item_model.model_df.loc[:, ['item_id', 'item_name']]
-        self.item_name_s = item_name_df.set_index('item_id')
-        self.item_id_s = item_name_df.set_index('item_name')
+class SkuModel(DataModel):
+    def __init__(self, user_name: str, item_id: int):
+        self.item_id = 1
+        self.item_name = ""
 
-        super().__init__()
+        super().__init__(user_name)
+
+        self.set_item_id(item_id)
+
+    def set_item_id(self, item_id: int):
+        self.item_id = item_id
+        self.item_name = self._find_item_name_from_id(self.item_id)
+        self.set_filtered_model_df(f'item_id == {item_id}')
+
+    def _find_item_name_from_id(self, item_id):
+        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name']]
+        self.item_name_s = item_name_df.set_index('item_id')
+        return self.item_name_s.loc[item_id]
 
     def set_table_name(self):
         """
@@ -52,9 +62,9 @@ class SkuModel(PandasModel):
         :return:
         """
         # set more columns for the view
-        self.model_df['item_size_name'] = self.model_df['item_size_id'].map(Lab().item_size_name_s)
-        self.model_df['item_side_name'] = self.model_df['item_side_id'].map(Lab().item_side_name_s)
-        self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
+        self.model_df['item_size'] = self.model_df['item_size_id'].map(Lab().item_size_name_s)
+        self.model_df['item_side'] = self.model_df['item_side_id'].map(Lab().item_side_name_s)
+        self.model_df['item_name'] = self.item_name
         self.model_df['flag'] = ''
 
     def set_editable_columns(self):
@@ -76,6 +86,10 @@ class SkuModel(PandasModel):
         col_index = self.model_df.columns.get_loc(col_name)
         if col_name == 'sku_valid':
             val_list = ['True', 'False']
+        elif col_name == 'item_size':
+            val_list = Lab().item_size_name_s.to_list()
+        elif col_name == 'item_side':
+            val_list = Lab().item_side_name_s.to_list()
         else:
             val_list = None
         return col_index, val_list
@@ -105,7 +119,7 @@ class SkuModel(PandasModel):
         elif role == self.SortRole:
             int_type_columns = [self.model_df.columns.get_loc(c) for c in
                                 ['sku_id', 'sku_valid', 'item_id', 'item_size_id',
-                                 'item_side_id', 'sku_qty', 'min_qty', 'bit_code']]
+                                 'item_side_id', 'sku_qty', 'min_qty']]
             # if column data is int, return int type
             if index.column() in int_type_columns:
                 return int(data_to_display)
@@ -151,9 +165,6 @@ class SkuModel(PandasModel):
         elif index.column() == self.model_df.columns.get_loc('item_side'):
             id_col = self.model_df.columns.get_loc('item_side_id')
             self.model_df.iloc[index.row(), id_col] = Lab().item_side_id_s.loc[value]
-        elif index.column() == self.model_df.columns.get_loc('item_name'):
-            id_col = self.model_df.columns.get_loc('item_id')
-            self.model_df.iloc[index.row(), id_col] = self.item_id_s.loc[value]
         else:
             pass
 
@@ -178,14 +189,18 @@ class SkuModel(PandasModel):
                         'item_size', 'item_side', 'expiration_date', 'description',
                         'item_id', 'item_size_id', 'item_side_id', 'bit_code', 'flag']
         new_model_df = pd.DataFrame([{'sku_id': next_new_id,
-                                      'item_name': 'test1',
+                                      'item_name': self.item_name,
                                       'sku_valid': True,
                                       'sku_qty': 0,
                                       'min_qty': 2,
                                       'item_size': iz_name,
                                       'item_side': id_name,
+                                      'expiration_date': 'DEFAULT',
+                                      'description': "",
+                                      'item_id': self.item_id,
                                       'item_size_id': default_item_size_id,
                                       'item_side_id': default_item_side_id,
+                                      'bit_code': 'A11',
                                       'flag': 'new'}],
                                     )
         return new_model_df

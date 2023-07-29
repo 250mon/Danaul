@@ -14,7 +14,6 @@ class ComboBoxDelegate(QStyledItemDelegate):
                      index: QModelIndex) -> QWidget:
         editor = QComboBox(parent)
         editor.addItems(self.combobox_items)
-        print('editor created')
         return editor
 
     def setEditorData(self,
@@ -26,7 +25,6 @@ class ComboBoxDelegate(QStyledItemDelegate):
         if idx:
             # set the current index of combobox to the idx
             editor.setCurrentIndex(idx)
-        print('setEditorData')
 
     def setModelData(self,
                      editor: QComboBox,

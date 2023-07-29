@@ -59,6 +59,7 @@ class ItemWidget(QWidget):
 
         # Set the model to the view
         self.item_view.setModel(self.item_proxy_model)
+        self.item_view.doubleClicked.connect(self.item_selected)
 
         # Set combo delegates for category and valid columns
         # For other columns, it uses default delegates (LineEdit)
@@ -202,3 +203,11 @@ class ItemWidget(QWidget):
         self.item_model.layoutChanged.emit()
 
         return result_str
+
+    @Slot(QModelIndex)
+    def item_selected(self, index: QModelIndex):
+        if index.isValid():
+            src_idx = self.item_proxy_model.mapToSource(index)
+            item_id = int(src_idx.siblingAtColumn(0).data())
+            self.parent.item_selected(item_id)
+

@@ -25,16 +25,14 @@ class DataModel(PandasModel):
         self.table_name = self.set_table_name()
         # columns to show in the table view
         self.column_names = self.set_column_names()
+        # set editable columns
+        self.editable_cols = self.set_editable_columns()
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
         # set model df
         self.set_model_df()
 
-        # set editable columns
-        editable_cols = self.set_editable_columns()
-        print(editable_cols)
-        self.set_editable_cols_to_model(editable_cols)
 
     @abstractmethod
     def set_table_name(self):
@@ -68,7 +66,7 @@ class DataModel(PandasModel):
         :return:
         """
 
-    def set_editable_cols_to_model(self, columns):
+    def set_editable_cols_to_model(self):
         """
         Sets up editable columns in the pandas model
         :return:
@@ -76,7 +74,7 @@ class DataModel(PandasModel):
         # set editable columns
         self.editable_col_iloc: Dict[str, int] = {
             col_name: self.model_df.columns.get_loc(col_name)
-            for col_name in columns
+            for col_name in self.editable_cols
         }
         super().set_editable_columns(list(self.editable_col_iloc.values()))
 
@@ -96,6 +94,22 @@ class DataModel(PandasModel):
 
         # add name columns for ids of each auxiliary data
         self.set_add_on_cols()
+
+        # set editable columns
+        self.set_editable_cols_to_model()
+
+    def set_filtered_model_df(self, query_str: str = ""):
+        """
+        Apply filter to model_df
+        :param query_str:
+        :return:
+        """
+        if False: #query_str != "":
+            logger.debug(f'set_filtered_model_df: {query_str}')
+            print(Lab().table_df['skus'])
+            self.model_df = Lab().table_df['skus'].query(query_str)
+            print('after')
+            print(self.model_df['item_id'])
 
     @abstractmethod
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:

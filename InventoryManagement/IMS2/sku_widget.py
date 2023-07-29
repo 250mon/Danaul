@@ -20,7 +20,7 @@ class SkuWidget(QWidget):
         self.parent: QMainWindow = parent
         self.user_name = user_name
         self.item_id = item_id
-        self.sku_model = SkuModel(self.user_name)
+        self.sku_model = SkuModel(self.user_name, self.item_id)
         self.setup_sku_view()
         self.setup_ui()
 
@@ -38,7 +38,7 @@ class SkuWidget(QWidget):
         self.sku_proxy_model.setSourceModel(self.sku_model)
         # For later use of new sku model, we need another proxymodel
         self.new_sku_proxy_model = QSortFilterProxyModel()
-        # Filtering is performed on sku_name column
+        # Filtering is performed on item_name column
         search_col_num = self.sku_model.model_df.columns.get_loc('item_name')
         self.sku_proxy_model.setFilterKeyColumn(search_col_num)
         # Sorting
@@ -173,3 +173,8 @@ class SkuWidget(QWidget):
         self.sku_model.layoutChanged.emit()
 
         return result_str
+
+    def item_selected(self, item_id: int):
+        self.sku_model.set_item_id(item_id)
+        self.sku_model.layoutAboutToBeChanged.emit()
+        self.sku_model.layoutChanged.emit()
