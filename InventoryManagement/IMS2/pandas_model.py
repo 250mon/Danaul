@@ -19,8 +19,9 @@ class PandasModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
         self.editable_cols_set = set()
-        self.all_editable_rows_set = set()
+        self.editable_rows_set = set()
         self.uneditable_rows_set = set()
+        self.all_editable_rows_set = set()
 
     def rowCount(self, parent=QModelIndex()) -> int:
         """ Override method from QAbstractTableModel
@@ -92,11 +93,22 @@ class PandasModel(QAbstractTableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         elif index.row() in self.all_editable_rows_set:
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
-        elif index.column() in self.editable_cols_set:
+        elif (index.row() in self.editable_rows_set and
+              index.column() in self.editable_cols_set):
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         # return Qt.NoItemFlags
+
+    def set_editable_row(self, row: int):
+        self.editable_rows_set.add(row)
+
+    def unset_editable_row(self, row: int):
+        if row in self.editable_rows_set:
+            self.editable_rows_set.remove(row)
+
+    def clear_editable_rows(self):
+        self.editable_rows_set.clear()
 
     def set_editable_columns(self, cols: List):
         self.editable_cols_set.update(cols)

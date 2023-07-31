@@ -146,7 +146,8 @@ class Lab(metaclass=Singleton):
         return await self.di_db.insert_df(table, new_df)
 
     async def update_df(self, table: str, up_df: pd.DataFrame):
-        return await self.di_db.update_df(up_df)
+        return await self.di_db.update_df(table, up_df)
+
     async def delete_df(self, table: str, del_df: pd.DataFrame):
         return await self.di_db.delete_df(table, del_df)
 

@@ -18,23 +18,13 @@ Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
 class SkuModel(DataModel):
-    def __init__(self, user_name: str, item_id: int):
-        self.item_id = 1
-        self.item_name = ""
-
+    def __init__(self, user_name: str):
+        self._find_item_names_from_ids()
         super().__init__(user_name)
 
-        self.set_item_id(item_id)
-
-    def set_item_id(self, item_id: int):
-        self.item_id = item_id
-        self.item_name = self._find_item_name_from_id(self.item_id)
-        self.set_filtered_model_df(f'item_id == {item_id}')
-
-    def _find_item_name_from_id(self, item_id):
+    def _find_item_names_from_ids(self):
         item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name']]
-        self.item_name_s = item_name_df.set_index('item_id')
-        return self.item_name_s.loc[item_id]
+        self.item_name_s = item_name_df.set_index('item_id').iloc[:, 0]
 
     def set_table_name(self):
         """
@@ -64,7 +54,7 @@ class SkuModel(DataModel):
         # set more columns for the view
         self.model_df['item_size'] = self.model_df['item_size_id'].map(Lab().item_size_name_s)
         self.model_df['item_side'] = self.model_df['item_side_id'].map(Lab().item_side_name_s)
-        self.model_df['item_name'] = self.item_name
+        self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
         self.model_df['flag'] = ''
 
     def set_editable_columns(self):
@@ -183,13 +173,13 @@ class SkuModel(DataModel):
         """
         default_item_size_id = 1
         default_item_side_id = 1
+        default_item_id = 1
         iz_name = Lab().item_size_name_s.loc[default_item_size_id]
         id_name = Lab().item_side_name_s.loc[default_item_side_id]
-        column_names = ['sku_id', 'item_name', 'sku_valid', 'sku_qty', 'min_qty',
-                        'item_size', 'item_side', 'expiration_date', 'description',
-                        'item_id', 'item_size_id', 'item_side_id', 'bit_code', 'flag']
+        item_name = self.item_name_s.loc[default_item_id]
+
         new_model_df = pd.DataFrame([{'sku_id': next_new_id,
-                                      'item_name': self.item_name,
+                                      'item_name': item_name,
                                       'sku_valid': True,
                                       'sku_qty': 0,
                                       'min_qty': 2,
@@ -197,7 +187,7 @@ class SkuModel(DataModel):
                                       'item_side': id_name,
                                       'expiration_date': 'DEFAULT',
                                       'description': "",
-                                      'item_id': self.item_id,
+                                      'item_id': default_item_id,
                                       'item_size_id': default_item_size_id,
                                       'item_side_id': default_item_side_id,
                                       'bit_code': 'A11',

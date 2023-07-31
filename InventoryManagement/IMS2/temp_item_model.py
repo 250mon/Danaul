@@ -17,7 +17,7 @@ logger.setLevel(logging.DEBUG)
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
-class ItemModelWidget(DataModel):
+class TempItemModel(DataModel):
     def __init__(self, user_name, template_flag=False):
         super().__init__(user_name)
 

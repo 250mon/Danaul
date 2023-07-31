@@ -83,7 +83,7 @@ class DataModel(PandasModel):
         Makes DataFrame out of data received from DB
         :return:
         """
-        logger.debug(f'set_model_df: setting {self.table_name}_model_f to the df of Lab')
+        logger.debug(f'set_model_df: setting the df of Lab to {self.table_name}_model_f')
         self.model_df = Lab().table_df[self.table_name]
 
         # we store the columns list here for later use of db update
@@ -92,24 +92,11 @@ class DataModel(PandasModel):
         # reindexing in the order of table view
         self.model_df = self.model_df.reindex(self.column_names, axis=1)
 
-        # add name columns for ids of each auxiliary data
+        # fill name columns against ids of each auxiliary data
         self.set_add_on_cols()
 
         # set editable columns
         self.set_editable_cols_to_model()
-
-    def set_filtered_model_df(self, query_str: str = ""):
-        """
-        Apply filter to model_df
-        :param query_str:
-        :return:
-        """
-        if False: #query_str != "":
-            logger.debug(f'set_filtered_model_df: {query_str}')
-            print(Lab().table_df['skus'])
-            self.model_df = Lab().table_df['skus'].query(query_str)
-            print('after')
-            print(self.model_df['item_id'])
 
     @abstractmethod
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
@@ -141,12 +128,15 @@ class DataModel(PandasModel):
         Adds a new row to the end
         :return:
         """
-        print(self.model_df)
         next_new_id = self.model_df.iloc[:, 0].max() + 1
-        print(f'add_new_row_by_delegate: New row id is {next_new_id}')
+        logger.debug(f'add_new_row_by_delegate: New row id is {next_new_id}')
 
         new_row_df = self.make_a_new_row_df(next_new_id)
         self.model_df = pd.concat([self.model_df, new_row_df])
+
+        row_count = self.rowCount()
+        new_item_index = self.index(row_count - 1, 0)
+        self.set_new_flag(new_item_index)
 
     @abstractmethod
     def make_a_new_row_df(self, next_new_id):
@@ -170,9 +160,10 @@ class DataModel(PandasModel):
         flag_col_iloc = self.model_df.columns.get_loc('flag')
         if index.column() != flag_col_iloc:
             index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
-        self.set_all_editable_row(index.row())
 
         super().setData(index, 'new')
+
+        self.set_all_editable_row(index.row())
 
     def set_chg_flag(self, index: QModelIndex):
         """
@@ -189,6 +180,8 @@ class DataModel(PandasModel):
             flag = current_msg + ' changed'
             super().setData(index, flag)
 
+        self.set_editable_row(index.row())
+
     def set_del_flag(self, index: QModelIndex):
         """
         Sets a 'deleted' flag in the flag column of the row of index
@@ -202,10 +195,11 @@ class DataModel(PandasModel):
         current_msg: str = self.data(index)
         if 'deleted' in current_msg:
             flag = current_msg.replace(' deleted', '')
+            self.unset_uneditable_row(index.row())
         else:
             flag = current_msg + ' deleted'
+            self.set_uneditable_row(index.row())
 
-        self.unset_uneditable_row(index.row())
         super().setData(index, flag)
 
     async def update_db(self):

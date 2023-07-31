@@ -57,7 +57,7 @@ class InventoryWindow(QMainWindow):
         item_dock_widget.setWidget(self.item_widget)
         self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
 
-        self.sku_widget = SkuWidget(self.user_name, 1)
+        self.sku_widget = SkuWidget(self.user_name)
         self.sku_widget.setMaximumWidth(1000)
 
         sku_dock_widget = QDockWidget('품목', self)
@@ -87,8 +87,7 @@ class InventoryWindow(QMainWindow):
         self.done_signal.emit(action)
 
     def item_selected(self, item_id: int):
-        print(f"selected {item_id}")
-        self.sku_widget.item_selected(item_id)
+        self.sku_widget.filter_selected_item(item_id)
 
 
 if __name__ == '__main__':

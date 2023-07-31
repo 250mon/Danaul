@@ -5,7 +5,9 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QMessageBox, QPushButton, QLineEdit,
     QTableView, QHBoxLayout, QVBoxLayout
 )
-from PySide6.QtCore import Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
+from PySide6.QtCore import (
+    Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex, QRegularExpression
+)
 from sku_model import SkuModel
 from di_logger import Logs, logging
 from combobox_delegate import ComboBoxDelegate
@@ -15,12 +17,11 @@ logger.setLevel(logging.DEBUG)
 
 
 class SkuWidget(QWidget):
-    def __init__(self, user_name, item_id, parent: QMainWindow = None):
+    def __init__(self, user_name, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.user_name = user_name
-        self.item_id = item_id
-        self.sku_model = SkuModel(self.user_name, self.item_id)
+        self.sku_model = SkuModel(self.user_name)
         self.setup_sku_view()
         self.setup_ui()
 
@@ -39,7 +40,7 @@ class SkuWidget(QWidget):
         # For later use of new sku model, we need another proxymodel
         self.new_sku_proxy_model = QSortFilterProxyModel()
         # Filtering is performed on item_name column
-        search_col_num = self.sku_model.model_df.columns.get_loc('item_name')
+        search_col_num = self.sku_model.model_df.columns.get_loc('item_id')
         self.sku_proxy_model.setFilterKeyColumn(search_col_num)
         # Sorting
         initial_sort_col_num = self.sku_model.model_df.columns.get_loc('sku_id')
@@ -174,7 +175,5 @@ class SkuWidget(QWidget):
 
         return result_str
 
-    def item_selected(self, item_id: int):
-        self.sku_model.set_item_id(item_id)
-        self.sku_model.layoutAboutToBeChanged.emit()
-        self.sku_model.layoutChanged.emit()
+    def filter_selected_item(self, item_id: int):
+        self.sku_proxy_model.setFilterFixedString(str(item_id))
