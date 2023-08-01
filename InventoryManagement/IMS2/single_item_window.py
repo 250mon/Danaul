@@ -16,20 +16,30 @@ logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 class SingleItemWindow(QWidget):
-    add_item_signal = Signal(pd.DataFrame)
+    add_item_signal = Signal(object)
     chg_item_signal = Signal(object)
 
     def __init__(self, proxy_model: QSortFilterProxyModel,
-                 indexes: List[QModelIndex] = None,
+                 indexes: List[QModelIndex] or QModelIndex,
                  parent=None):
         super().__init__()
         self.parent = parent
         self.proxy_model = proxy_model
-        self.model_indexes = indexes
+
+        # if the selected index is a single index, it means
+        # that we are editing a newly added item here.
+        if isinstance(indexes, List):
+            logger.debug("SingleItemWindow: change items mode")
+            self.new_item_mode = False
+            self.model_indexes = indexes
+        else:
+            logger.debug("SingleItemWindow: new item mode")
+            self.new_item_mode = True
+            self.model_indexes = [indexes]
 
         self.nameLabel = QLabel("제품명:")
         self.nameLineEdit = QLineEdit()
-        if indexes is not None:
+        if not self.new_item_mode:
             self.nameLineEdit.setReadOnly(True)
 
         self.validLabel = QLabel("유효:")
@@ -59,10 +69,10 @@ class SingleItemWindow(QWidget):
         self.addMapper()
 
         # wire the signals into the parent widget
-        if hasattr(self.parent, "add_new_item"):
-            self.add_item_signal.connect(self.parent.add_new_item)
-        if hasattr(self.parent, "chg_items"):
-            self.chg_item_signal.connect(self.parent.chg_items)
+        if hasattr(self.parent, "added_new_item_by_single_item_window"):
+            self.add_item_signal.connect(self.parent.added_new_item_by_single_item_window)
+        if hasattr(self.parent, "changed_items_by_single_item_window"):
+            self.chg_item_signal.connect(self.parent.changed_items_by_single_item_window)
 
         self.initializeUI()
 
@@ -90,7 +100,7 @@ class SingleItemWindow(QWidget):
             self.mapper.setCurrentIndex(self.model_indexes[0].row())
 
     def updateButtons(self, row):
-        if self.model_indexes is None:
+        if self.new_item_mode:
             self.previousButton.setEnabled(False)
             self.nextButton.setEnabled(False)
         else:
@@ -98,15 +108,15 @@ class SingleItemWindow(QWidget):
             self.nextButton.setEnabled(row < self.model_indexes[-1].row())
 
     def ok_clicked(self):
-        # modifying items
-        if self.model_indexes:
-            logger.debug(f'Modified Items Indexes: {self.model_indexes}')
+        if self.new_item_mode:
+            logger.debug(f'Added Item Index: {self.model_indexes[0]}')
+            self.mapper.submit()
+            self.add_item_signal.emit(self.model_indexes[0])
+        else:
+            logger.debug(f'Changed Items Indexes: {self.model_indexes}')
             self.mapper.submit()
             self.chg_item_signal.emit(self.model_indexes)
         # adding a new item
-        else:
-            self.mapper.submit()
-            self.add_item_signal.emit(self.proxy_model.sourceModel().model_df)
 
     def exit_clicked(self):
         self.close()

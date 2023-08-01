@@ -3,7 +3,7 @@ import pandas as pd
 import asyncpg.exceptions
 from typing import Dict, Tuple, List
 from abc import abstractmethod
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import QModelIndex
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -33,6 +33,9 @@ class DataModel(PandasModel):
         # set model df
         self.set_model_df()
 
+
+    def get_col_number(self, col_name):
+        return self.model_df.columns.get_loc(col_name)
 
     @abstractmethod
     def set_table_name(self):
@@ -73,7 +76,7 @@ class DataModel(PandasModel):
         """
         # set editable columns
         self.editable_col_iloc: Dict[str, int] = {
-            col_name: self.model_df.columns.get_loc(col_name)
+            col_name: self.get_col_number(col_name)
             for col_name in self.editable_cols
         }
         super().set_editable_columns(list(self.editable_col_iloc.values()))
@@ -105,14 +108,6 @@ class DataModel(PandasModel):
         Returns values list and column index for creating combobox
         :return:
         """
-        # col_index = self.model_df.columns.get_loc(col_name)
-        # if col_name == 'item_valid':
-        #     val_list = ['True', 'False']
-        # elif col_name == 'category_name':
-        #     val_list = Lab().category_name_s.to_list()
-        # else:
-        #     val_list = None
-        # return col_index, val_list
 
     async def update_model_df_from_db(self):
         """
@@ -123,20 +118,29 @@ class DataModel(PandasModel):
         await Lab().update_lab_df_from_db(self.table_name)
         self.set_model_df()
 
-    def add_new_row_by_delegate(self):
+        self.layoutAboutToBeChanged.emit()
+        self.layoutChanged.emit()
+
+    def add_new_row(self) -> QModelIndex:
         """
         Adds a new row to the end
         :return:
         """
         next_new_id = self.model_df.iloc[:, 0].max() + 1
-        logger.debug(f'add_new_row_by_delegate: New row id is {next_new_id}')
+        logger.debug(f'add_new_row: New model_df_row id is {next_new_id}')
 
         new_row_df = self.make_a_new_row_df(next_new_id)
-        self.model_df = pd.concat([self.model_df, new_row_df])
+        self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
 
+        # TODO: needs to update how to get new_item_index
         row_count = self.rowCount()
         new_item_index = self.index(row_count - 1, 0)
         self.set_new_flag(new_item_index)
+
+        self.layoutAboutToBeChanged.emit()
+        self.layoutChanged.emit()
+
+        return new_item_index
 
     @abstractmethod
     def make_a_new_row_df(self, next_new_id):
@@ -145,11 +149,38 @@ class DataModel(PandasModel):
         :param next_new_id:
         :return:
         """
-        # default_cat_id = 1
-        # cat_name = Lab().category_name_s.loc[default_cat_id]
-        # new_model_df = pd.DataFrame([(next_new_id, True, "", cat_name, "", default_cat_id, 'new')],
-        #                             columns=self.column_names)
-        # return new_model_df
+
+    @abstractmethod
+    def validate_new_row(self, index: QModelIndex):
+        """
+        Needs to be implemented in subclasses
+        :param index:
+        :return:
+        """
+
+    def drop_rows(self, indexes: List[QModelIndex]):
+        id_col = self.get_col_number('item_id')
+        ids = []
+        for idx in indexes:
+            print(f'idx {idx}')
+            if idx.column() != id_col:
+                id = int(idx.siblingAtColumn(id_col).data())
+                print(f'id {id}')
+            else:
+                id = int(idx.data())
+                print(f'id {id}')
+            ids.append(id)
+
+        if len(ids) > 0:
+            print(ids)
+            print(self.model_df.iloc[:, 0])
+            print(self.model_df.iloc[:, 0].isin(ids))
+            self.model_df.drop(self.model_df[self.model_df.iloc[:, 0].isin(ids)].index, inplace=True)
+            print(self.model_df)
+            logger.debug(f'drop_items: model_df dropped item_id {ids}')
+
+        self.layoutAboutToBeChanged.emit()
+        self.layoutChanged.emit()
 
     def set_new_flag(self, index: QModelIndex):
         """
@@ -157,7 +188,7 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
+        flag_col_iloc = self.get_col_number('flag')
         if index.column() != flag_col_iloc:
             index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
 
@@ -171,7 +202,7 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
+        flag_col_iloc = self.get_col_number('flag')
         if index.column() != flag_col_iloc:
             index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
 
@@ -188,7 +219,7 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flag_col_iloc = self.model_df.columns.get_loc('flag')
+        flag_col_iloc = self.get_col_number('flag')
         if index.column() != flag_col_iloc:
             index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
 
@@ -221,7 +252,7 @@ class DataModel(PandasModel):
             msg_list = []
             for i, result in enumerate(results, start=1):
                 if isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
-                    msg_list.append(f'{i}: Item ID is in use, Cannot be deleted')
+                    msg_list.append(f'{i}: ID is in use, Cannot be deleted')
                 else:
                     msg_list.append(f'{i}: {result}')
             return_msg = '\n'.join(msg_list)
@@ -250,3 +281,4 @@ class DataModel(PandasModel):
             logger.debug(f'update_db: results of changing = {results}')
 
         return return_msg
+

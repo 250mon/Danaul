@@ -96,13 +96,13 @@ class InventoryDb:
         # args = [(item.item_id,) for item in items_df.itertuples()]
         col_name, id_series = next(del_df.items())
         args = [(_id,) for _id in id_series]
-        logger.debug(f"delete_record: Delete ids {args} from items table ...")
+        logger.debug(f"delete_df: Delete ids {args} from items table ...")
         return await self.db_util.delete(table, col_name, args)
 
     async def update_df(self, table: str, up_df: pd.DataFrame):
         col_names = up_df.columns
         id_name = col_names[0]
-        place_holders = [f'{col_name}=${i}'for i, col_name in enumerate(col_names, start=2)]
+        place_holders = [f'{col_name}=${i}'for i, col_name in enumerate(col_names[1:], start=2)]
         ph_str = ','.join(place_holders)
         stmt = f"UPDATE {table} SET {ph_str} WHERE {id_name}=$1"
         args = [_tuple[1:] for _tuple in up_df.itertuples()]

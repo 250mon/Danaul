@@ -1,69 +1,61 @@
 import os
-import pandas as pd
-from typing import List
-from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QMessageBox, QPushButton, QLineEdit,
-    QTableView, QHBoxLayout, QVBoxLayout
-)
-from PySide6.QtCore import (
-    Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex, QRegularExpression
-)
-from sku_model import SkuModel
+from PySide6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout
+from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
+from table_view import InventoryTableView
 from combobox_delegate import ComboBoxDelegate
+
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
-
-class SkuWidget(QWidget):
-    def __init__(self, user_name, parent: QMainWindow = None):
+class SkuWidget(InventoryTableView):
+    def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-        self.user_name = user_name
-        self.sku_model = SkuModel(self.user_name)
-        self.setup_sku_view()
-        self.setup_ui()
 
-    def setup_sku_view(self):
-        # skus view
-        self.sku_view = QTableView(self)
-        self.sku_view.horizontalHeader().setStretchLastSection(True)
-        self.sku_view.setAlternatingRowColors(True)
-        self.sku_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.sku_view.resizeColumnsToContents()
-        self.sku_view.setSortingEnabled(True)
-
-        # QSortFilterProxyModel enables filtering columns and sorting rows
-        self.sku_proxy_model = QSortFilterProxyModel()
-        self.sku_proxy_model.setSourceModel(self.sku_model)
-        # For later use of new sku model, we need another proxymodel
-        self.new_sku_proxy_model = QSortFilterProxyModel()
+    def _setup_proxy_model(self):
+        """
+        Needs to be implemented
+        :return:
+        """
         # Filtering is performed on item_name column
-        search_col_num = self.sku_model.model_df.columns.get_loc('item_id')
-        self.sku_proxy_model.setFilterKeyColumn(search_col_num)
+        search_col_num = self.source_model.get_col_number('item_name')
+        self.proxy_model.setFilterKeyColumn(search_col_num)
+
         # Sorting
-        initial_sort_col_num = self.sku_model.model_df.columns.get_loc('sku_id')
-        self.sku_proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
-        self.sku_proxy_model.setSortRole(self.sku_model.SortRole)
+        self.proxy_model.setSortRole(self.source_model.SortRole)
+        initial_sort_col_num = self.source_model.get_col_number('sku_id')
+        self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
-        # Set the model to the view
-        self.sku_view.setModel(self.sku_proxy_model)
+    def _setup_table_view(self):
+        super()._setup_table_view()
+        self.table_view.doubleClicked.connect(self.row_double_clicked)
+        self.table_view.activated.connect(self.row_activated)
 
+    def _setup_delegate_for_columns(self):
+        """
+        Needs to be implemented
+        :return:
+        """
         # Set combo delegates for category and valid columns
         # For other columns, it uses default delegates (LineEdit)
-        for col_name in self.sku_model.editable_col_iloc.keys():
-            col_index, val_list = self.sku_model.get_editable_cols_combobox_info(col_name)
-            combo_delegate = ComboBoxDelegate(val_list, self)
-            self.sku_view.setItemDelegateForColumn(col_index, combo_delegate)
+        for col_name in self.source_model.editable_col_iloc.keys():
+            if col_name != 'description':
+                col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
+                combo_delegate = ComboBoxDelegate(val_list, self)
+                self.table_view.setItemDelegateForColumn(col_index, combo_delegate)
 
-    def setup_ui(self):
-        self.sku_search_bar = QLineEdit(self)
-        self.sku_search_bar.setPlaceholderText('품목명 입력')
-        self.sku_search_bar.textChanged.connect(
-            self.sku_proxy_model.setFilterFixedString)
+    def _setup_ui(self):
+        """
+        Needs to be implemented
+        :return:
+        """
+        search_bar = QLineEdit(self)
+        search_bar.setPlaceholderText('품목명 입력')
+        search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_sku_btn = QPushButton('추가')
         add_sku_btn.clicked.connect(lambda: self.do_actions("add_sku"))
         chg_sku_btn = QPushButton('수정')
@@ -74,7 +66,7 @@ class SkuWidget(QWidget):
         if hasattr(self.parent, "async_start"):
             save_sku_btn.clicked.connect(lambda: self.parent.async_start("sku_save"))
         sku_hbox = QHBoxLayout()
-        sku_hbox.addWidget(self.sku_search_bar)
+        sku_hbox.addWidget(search_bar)
         sku_hbox.addStretch(1)
         sku_hbox.addWidget(add_sku_btn)
         sku_hbox.addWidget(chg_sku_btn)
@@ -82,98 +74,54 @@ class SkuWidget(QWidget):
         sku_hbox.addWidget(save_sku_btn)
         sku_vbox = QVBoxLayout()
         sku_vbox.addLayout(sku_hbox)
-        sku_vbox.addWidget(self.sku_view)
+        sku_vbox.addWidget(self.table_view)
         self.setLayout(sku_vbox)
 
-    @Slot(str, pd.DataFrame)
-    def do_actions(self, action: str, df: pd.DataFrame = None):
-        def get_selected_indexes():
-            # the indexes of proxy model
-            selected_indexes = self.sku_view.selectedIndexes()
-            check_indexes = [idx.isValid() for idx in selected_indexes]
-            if len(selected_indexes) > 0 and False not in check_indexes:
-                logger.debug(f'Indexes selected: {selected_indexes}')
-                return selected_indexes
-            else:
-                logger.debug(f'Indexes not selected or invalid: {selected_indexes}')
-                return None
-
-        logger.debug(f'{action}')
+    @Slot(str)
+    def do_actions(self, action: str):
+        """
+        Needs to be implemented
+        :param action:
+        :return:
+        """
+        logger.debug(f'do_action: {action}')
         if action == "add_sku":
             logger.debug('Adding sku ...')
-            self.add_new_sku_by_delegate()
+            self.add_new_row()
+
+        elif action == "chg_sku":
+            logger.debug('Changing sku ...')
+            if selected_indexes := self._get_selected_indexes():
+                self.change_rows_by_delegate(selected_indexes)
 
         elif action == "del_sku":
             logger.debug('Deleting sku ...')
-            if selected_indexes := get_selected_indexes():
-                self.delete_sku(selected_indexes)
+            if selected_indexes := self._get_selected_indexes():
+                self.delete_rows(selected_indexes)
 
-    @Slot(str, pd.DataFrame)
-    def async_start(self, action: str, df: pd.DataFrame = None):
-        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
-        # inside the host(Qt) event loop
-        # AsyncHelper will eventually call self.update_df(action, df)
-        self.start_signal.emit(action, df)
 
-    @Slot(pd.DataFrame)
-    def add_new_sku_by_delegate(self, new_df: pd.DataFrame):
+    @Slot(QModelIndex)
+    def row_double_clicked(self, index: QModelIndex):
         """
-        This is called when SingleSkuWindow emits a signal
-        :param new_df:
+        An item being double clicked in item view automatically makes
+        the sku view to do filtering to show the skus of the item only.
+        :param index:
         :return:
         """
-        result_msg = self.sku_model.add_new_row(new_df)
-        logger.debug(f'add_new_sku: new sku {result_msg} created')
-        self.parent.statusBar().showMessage(result_msg)
-        self.sku_model.layoutAboutToBeChanged.emit()
-        self.sku_model.layoutChanged.emit()
+        if index.isValid():
+            src_idx = self.proxy_model.mapToSource(index)
+            sku_id = int(src_idx.siblingAtColumn(0).data())
+            if hasattr(self.parent, 'sku_selected'):
+                self.parent.sku_selected(sku_id)
 
-        row_count = self.sku_model.rowCount()
-        new_item_index = self.sku_model.index(row_count - 1, 0)
-        self.sku_model.set_new_flag(new_item_index)
-
-    @Slot(object)
-    def chg_skus(self, indexes: List[QModelIndex]):
+    @Slot(QModelIndex)
+    def row_activated(self, index: QModelIndex):
         """
-        This is called when SingleSkuWindow emits a signal
-        :param indexes:
+        While changing items, activating other items would make changing
+        to stop.
+        :param index:
         :return:
         """
-        flag_col = self.sku_model.model_df.columns.get_loc('flag')
-        for idx in indexes:
-            if idx.column() == flag_col:
-                self.sku_model.set_chg_flag(idx)
-                logger.debug(f'chg_skus: sku {idx.row()} changed')
-
-    def delete_sku(self, indexes: List[QModelIndex]):
-        '''
-        This is called from a Button
-        Just tagging as 'deleted' in flag column instead of dropping
-        Actual dropping is done during saving into DB
-        :param indexes:
-        :return:
-        '''
-        flag_col = self.sku_model.model_df.columns.get_loc('flag')
-        for idx in indexes:
-            src_idx = self.sku_proxy_model.mapToSource(idx)
-            if idx.column() == flag_col:
-                self.sku_model.set_del_flag(src_idx)
-                logger.debug(f'delete_sku: skus{src_idx.row()} deleted')
-
-    async def save_to_db(self):
-        result_str = await self.sku_model.update_db()
-        if result_str is not None:
-            QMessageBox.information(self,
-                                    'Save Results',
-                                    result_str,
-                                    QMessageBox.Close)
-        # update model_df
-        logger.debug('Updating model_df ...')
-        await self.sku_model.update_model_df_from_db()
-        self.sku_model.layoutAboutToBeChanged.emit()
-        self.sku_model.layoutChanged.emit()
-
-        return result_str
-
-    def filter_selected_item(self, item_id: int):
-        self.sku_proxy_model.setFilterFixedString(str(item_id))
+        src_idx = self.proxy_model.mapToSource(index)
+        if src_idx.row() not in self.source_model.editable_rows_set:
+            self.source_model.clear_editable_rows()

@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from typing import Dict, Tuple, List
+from typing import Tuple, List
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
@@ -64,7 +64,7 @@ class ItemModel(DataModel):
         Returns values list and column index for creating combobox
         :return:
         """
-        col_index = self.model_df.columns.get_loc(col_name)
+        col_index = self.get_col_number(col_name)
         if col_name == 'item_valid':
             val_list = ['True', 'False']
         elif col_name == 'category_name':
@@ -86,9 +86,9 @@ class ItemModel(DataModel):
         if data_to_display is None:
             return None
 
-        flag_col_iloc: int = self.model_df.columns.get_loc('flag')
+        flag_col_iloc: int = self.get_col_number('flag')
         is_deleted = 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
-        valid_col_iloc: int = self.model_df.columns.get_loc('item_valid')
+        valid_col_iloc: int = self.get_col_number('item_valid')
         is_valid = self.model_df.iloc[index.row(), valid_col_iloc]
 
         if role == Qt.DisplayRole or role == Qt.EditRole:
@@ -96,7 +96,7 @@ class ItemModel(DataModel):
 
         # for sorting, use SortRole
         elif role == self.SortRole:
-            int_type_columns = [self.model_df.columns.get_loc(c) for c in
+            int_type_columns = [self.get_col_number(c) for c in
                                 ['item_id', 'item_valid', 'category_id']]
             # if column data is int, return int type
             if index.column() in int_type_columns:
@@ -132,16 +132,16 @@ class ItemModel(DataModel):
 
         ret_value: object = value
 
-        if index.column() == self.model_df.columns.get_loc('item_valid'):
+        if index.column() == self.get_col_number('item_valid'):
             # taking care of converting str type input to bool type
             ret_value: bool = False
             if value == 'True':
                 ret_value = True
-        elif index.column() == self.model_df.columns.get_loc('category_name'):
+        elif index.column() == self.get_col_number('category_name'):
             # if setting category_name, automatically setting category_id accordingly
-            cat_id_col = self.model_df.columns.get_loc('category_id')
+            cat_id_col = self.get_col_number('category_id')
             self.model_df.iloc[index.row(), cat_id_col] = Lab().category_id_s[value]
-        elif index.column() == self.model_df.columns.get_loc('item_name'):
+        elif index.column() == self.get_col_number('item_name'):
             # when a new row is added, item_name needs to be checked if any duplicate
             if not self.model_df[self.model_df.item_name == value].empty:
                 logger.debug(f'setData: item name({value}) is already in use')
@@ -150,7 +150,7 @@ class ItemModel(DataModel):
             pass
 
         # Unless it is a new item, setting data is followed by setting change flag
-        flag_col_iloc: int = self.model_df.columns.get_loc('flag')
+        flag_col_iloc: int = self.get_col_number('flag')
         if self.model_df.iloc[index.row(), flag_col_iloc] != 'new':
             self.set_chg_flag(index)
 
@@ -167,3 +167,20 @@ class ItemModel(DataModel):
         new_model_df = pd.DataFrame([(next_new_id, True, "", cat_name, "", default_cat_id, 'new')],
                                     columns=self.column_names)
         return new_model_df
+
+    def validate_new_row(self, index: QModelIndex) -> bool:
+        """
+        Needs to be implemented in subclasses
+        :param index:
+        :return:
+        """
+        item_name_col = self.get_col_number('item_name')
+        new_item_name = index.siblingAtColumn(item_name_col).data()
+        if (new_item_name is not None and
+                new_item_name != "" and
+                new_item_name not in self.model_df['item_name']):
+            logger.debug(f"validate_new_item: item_name {new_item_name} is valid")
+            return True
+        else:
+            logger.debug(f"validate_new_item: item_name {new_item_name} is not valid")
+            return False

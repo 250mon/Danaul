@@ -78,6 +78,7 @@ class SkuModel(DataModel):
             val_list = ['True', 'False']
         elif col_name == 'item_size':
             val_list = Lab().item_size_name_s.to_list()
+            print(f'item_size {val_list}')
         elif col_name == 'item_side':
             val_list = Lab().item_side_name_s.to_list()
         else:
@@ -194,3 +195,10 @@ class SkuModel(DataModel):
                                       'flag': 'new'}],
                                     )
         return new_model_df
+    def validate_new_row(self, index: QModelIndex) -> bool:
+        """
+        Needs to be implemented in subclasses
+        :param index:
+        :return:
+        """
+        return True

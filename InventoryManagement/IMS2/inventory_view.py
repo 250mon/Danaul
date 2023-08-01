@@ -5,10 +5,11 @@ from login_widget import LoginWidget
 from async_helper import AsyncHelper
 from di_lab import Lab
 from di_db import InventoryDb
-from di_logger import Logs, logging
-from single_item_window import SingleItemWindow
+from item_model import ItemModel
+from sku_model import SkuModel
 from item_widget import ItemWidget
 from sku_widget import SkuWidget
+from di_logger import Logs, logging
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -26,29 +27,29 @@ class InventoryWindow(QMainWindow):
         super().__init__()
         # self.login()
         self.user_name = None
-        self.initializeUI('admin')
+        self.initUI('admin')
 
     def login(self):
         self.login_widget = LoginWidget(DB_SETTINGS_FILE, self)
-        self.login_widget.start_main.connect(self.initializeUI)
+        self.login_widget.start_main.connect(self.initUI)
         self.login_widget.show()
 
     @Slot(str)
-    def initializeUI(self, user_name: str):
+    def initUI(self, user_name: str):
         self.user_name = user_name
         self.setMinimumSize(1500, 800)
         self.setWindowTitle("다나을 재고관리")
-        # self.item_model = ItemModel(self.user_name)
+
+        self.item_model = ItemModel(self.user_name)
+        self.sku_model = SkuModel(self.user_name)
 
         self.setUpMainWindow()
-
-        #
-        self. async_helper = AsyncHelper(self, self.save_to_db)
-
+        self.async_helper = AsyncHelper(self, self.save_to_db)
         self.show()
 
     def setUpMainWindow(self):
-        self.item_widget = ItemWidget(self.user_name, self)
+        self.item_widget = ItemWidget(self)
+        self.item_widget.set_source_model(self.item_model)
         self.item_widget.setMaximumWidth(500)
 
         item_dock_widget = QDockWidget('품목', self)
@@ -57,7 +58,8 @@ class InventoryWindow(QMainWindow):
         item_dock_widget.setWidget(self.item_widget)
         self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
 
-        self.sku_widget = SkuWidget(self.user_name)
+        self.sku_widget = SkuWidget(self)
+        self.sku_widget.set_source_model(self.sku_model)
         self.sku_widget.setMaximumWidth(1000)
 
         sku_dock_widget = QDockWidget('품목', self)
@@ -70,7 +72,7 @@ class InventoryWindow(QMainWindow):
     def async_start(self, action: str):
         # send signal to AsyncHelper to schedule the guest (asyncio) event loop
         # inside the host(Qt) event loop
-        # AsyncHelper will eventually call self.update_df(action, df)
+        # AsyncHelper will eventually call self.save_to_db(action, action)
         self.start_signal.emit(action)
 
     async def save_to_db(self, action: str):
@@ -84,6 +86,9 @@ class InventoryWindow(QMainWindow):
         if action == "item_save":
             logger.debug('Saving items ...')
             result_str = await self.item_widget.save_to_db()
+        elif action == "sku_save":
+            logger.debug('Saving skus ...')
+            result_str = await self.sku_widget.save_to_db()
         self.done_signal.emit(action)
 
     def item_selected(self, item_id: int):

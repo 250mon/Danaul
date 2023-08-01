@@ -1,9 +1,8 @@
 import os
 import sys
 import asyncio
-from typing import Dict, List
+from typing import List
 from datetime import date
-from IMS2.unused.data_classes import Sku, Transaction
 from di_db import InventoryDb
 import pandas as pd
 from di_logger import Logs, logging
@@ -113,7 +112,6 @@ class Lab(metaclass=Singleton):
         list_of_dict = [dict(result) for result in results]
         df = pd.DataFrame(list_of_dict)
         df.fillna("", inplace=True)
-        logger.debug(f'\n{df}')
         return df
 
     def make_ref_series(self):
