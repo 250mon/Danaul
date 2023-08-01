@@ -47,6 +47,13 @@ class InventoryTableView(QWidget):
 
         self._setup_ui()
 
+    @abstractmethod
+    def _setup_proxy_model(self):
+        """
+        Needs to be implemented
+        :return:
+        """
+
     def _setup_table_view(self):
         """
         Common
@@ -59,13 +66,6 @@ class InventoryTableView(QWidget):
         self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.table_view.resizeColumnsToContents()
         self.table_view.setSortingEnabled(True)
-
-    @abstractmethod
-    def _setup_proxy_model(self):
-        """
-        Needs to be implemented
-        :return:
-        """
 
 
     @abstractmethod

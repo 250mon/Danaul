@@ -2,7 +2,7 @@ import os
 from PySide6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
-from table_view import InventoryTableView
+from di_table_view import InventoryTableView
 from combobox_delegate import ComboBoxDelegate
 
 
