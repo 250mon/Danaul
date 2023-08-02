@@ -1,10 +1,10 @@
 import os
 import pandas as pd
+from datetime import datetime, date
 from typing import Dict, Tuple, List
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex, QDate, QDateTime
 from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
-from item_model import ItemModel
 from di_lab import Lab
 from di_logger import Logs, logging
 from constants import ADMIN_GROUP
@@ -26,7 +26,7 @@ class SkuModel(DataModel):
         item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name']]
         self.item_name_s = item_name_df.set_index('item_id').iloc[:, 0]
 
-    def set_table_name(self):
+    def table_name(self):
         """
         Needs to be implemented in the subclasses
         Returns a talbe name specified in the DB
@@ -34,7 +34,7 @@ class SkuModel(DataModel):
         """
         return 'skus'
 
-    def set_column_names(self):
+    def column_names(self):
         """
         Needs to be implemented in the subclasses
         Returns column names that show in the table view
@@ -57,7 +57,7 @@ class SkuModel(DataModel):
         self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
         self.model_df['flag'] = ''
 
-    def set_editable_columns(self):
+    def editable_columns(self):
         """
         Needs to be implemented in the subclasses
         Returns column names that are editable by user
@@ -65,7 +65,7 @@ class SkuModel(DataModel):
         """
         editable_cols = ['min_qty', 'description']
         if self.user_name in ADMIN_GROUP:
-            editable_cols += ['sku_valid', 'sku_qty', 'expiration_date']
+            editable_cols += ['sku_valid', 'expiration_date']
         return editable_cols
 
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
@@ -76,14 +76,13 @@ class SkuModel(DataModel):
         col_index = self.model_df.columns.get_loc(col_name)
         if col_name == 'sku_valid':
             val_list = ['True', 'False']
-        elif col_name == 'item_size':
-            val_list = Lab().item_size_name_s.to_list()
-            print(f'item_size {val_list}')
-        elif col_name == 'item_side':
-            val_list = Lab().item_side_name_s.to_list()
         else:
             val_list = None
         return col_index, val_list
+
+    def pydate_to_qdate(self, pydate: date):
+        qdate = QDate.fromString(str(pydate), "yyyy-MM-dd")
+        return qdate
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
@@ -91,37 +90,37 @@ class SkuModel(DataModel):
         QTableView accepts only QString as input for display
         Returns data cell from the pandas DataFrame
         """
+        def is_deleted_row(index: QModelIndex) -> bool:
+            flag_col_iloc: int = self.get_col_number('flag')
+            return 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
+
+        def is_valid_row(index: QModelIndex) -> bool:
+            valid_col_iloc: int = self.get_col_number('sku_valid')
+            return self.model_df.iloc[index.row(), valid_col_iloc]
+
         if not index.isValid():
             return None
 
         data_to_display = self.model_df.iloc[index.row(), index.column()]
-        if data_to_display is None:
-            return None
 
-        flag_col_iloc: int = self.model_df.columns.get_loc('flag')
-        is_deleted = 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
-        valid_col_iloc: int = self.model_df.columns.get_loc('sku_valid')
-        is_valid = self.model_df.iloc[index.row(), valid_col_iloc]
-
-        if role == Qt.DisplayRole or role == Qt.EditRole:
-            return str(data_to_display)
-
-        # for sorting, use SortRole
-        elif role == self.SortRole:
-            int_type_columns = [self.model_df.columns.get_loc(c) for c in
-                                ['sku_id', 'sku_valid', 'item_id', 'item_size_id',
+        if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
+            int_type_columns = [self.get_col_number(c) for c in
+                                ['sku_id', 'item_id', 'item_size_id',
                                  'item_side_id', 'sku_qty', 'min_qty']]
-            # if column data is int, return int type
             if index.column() in int_type_columns:
+                # if column data is int, return int type
                 return int(data_to_display)
-            # otherwise, string type
+            elif index.column() == self.get_col_number('expiration_date'):
+                # data type is datetime.date
+                return self.pydate_to_qdate(data_to_display)
             else:
-                return data_to_display
+                # otherwise, string type
+                return str(data_to_display)
 
-        elif role == Qt.BackgroundRole and is_deleted:
+        elif role == Qt.BackgroundRole and is_deleted_row(index):
             return QBrush(Qt.darkGray)
 
-        elif role == Qt.BackgroundRole and not is_valid:
+        elif role == Qt.BackgroundRole and not is_valid_row(index):
             return QBrush(Qt.lightGray)
 
         else:

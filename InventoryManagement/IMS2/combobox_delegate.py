@@ -1,4 +1,6 @@
-from PySide6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QComboBox
+from PySide6.QtWidgets import (
+    QWidget, QStyledItemDelegate, QStyleOptionViewItem, QComboBox
+)
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
 from typing import List
 
@@ -19,9 +21,9 @@ class ComboBoxDelegate(QStyledItemDelegate):
     def setEditorData(self,
                       editor: QComboBox,
                       index: QModelIndex) -> None:
-        current_value = index.data(Qt.EditRole)
+        data_val = index.data(Qt.EditRole)
         # idx is the index of the item in the list
-        idx = self.combobox_items.index(current_value)
+        idx = self.combobox_items.index(data_val)
         if idx:
             # set the current index of combobox to the idx
             editor.setCurrentIndex(idx)

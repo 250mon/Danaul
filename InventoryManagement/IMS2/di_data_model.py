@@ -22,23 +22,23 @@ class DataModel(PandasModel):
         # for access control
         self.user_name = user_name
         # for data name
-        self.table_name = self.set_table_name()
+        self.table_name = self.table_name()
         # columns to show in the table view
-        self.column_names = self.set_column_names()
+        self.column_names = self.column_names()
         # set editable columns
-        self.editable_cols = self.set_editable_columns()
+        self.editable_cols = self.editable_columns()
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
         # set model df
-        self.set_model_df()
+        self._set_model_df()
 
 
-    def get_col_number(self, col_name):
+    def get_col_number(self, col_name) -> int:
         return self.model_df.columns.get_loc(col_name)
 
     @abstractmethod
-    def set_table_name(self):
+    def table_name(self) -> str:
         """
         Needs to be implemented in the subclasses
         Returns a talbe name specified in the DB
@@ -46,7 +46,7 @@ class DataModel(PandasModel):
         """
 
     @abstractmethod
-    def set_column_names(self):
+    def column_names(self) -> List[str]:
         """
         Needs to be implemented in the subclasses
         Returns column names that show in the table view
@@ -54,7 +54,7 @@ class DataModel(PandasModel):
         """
 
     @abstractmethod
-    def set_add_on_cols(self):
+    def set_add_on_cols(self) -> None:
         """
         Needs to be implemented in the subclasses
         Adds extra columns of each name mapped to ids of auxiliary data
@@ -62,14 +62,14 @@ class DataModel(PandasModel):
         """
 
     @abstractmethod
-    def set_editable_columns(self):
+    def editable_columns(self) -> List[str]:
         """
         Needs to be implemented in the subclasses
         Returns column names that are editable by user
         :return:
         """
 
-    def set_editable_cols_to_model(self):
+    def set_editable_columns(self):
         """
         Sets up editable columns in the pandas model
         :return:
@@ -81,7 +81,7 @@ class DataModel(PandasModel):
         }
         super().set_editable_columns(list(self.editable_col_iloc.values()))
 
-    def set_model_df(self):
+    def _set_model_df(self):
         """
         Makes DataFrame out of data received from DB
         :return:
@@ -99,7 +99,7 @@ class DataModel(PandasModel):
         self.set_add_on_cols()
 
         # set editable columns
-        self.set_editable_cols_to_model()
+        self.set_editable_columns()
 
     @abstractmethod
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
@@ -116,7 +116,7 @@ class DataModel(PandasModel):
         """
         logger.debug(f'update_model_df_from_db: downloading data from DB')
         await Lab().update_lab_df_from_db(self.table_name)
-        self.set_model_df()
+        self._set_model_df()
 
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()

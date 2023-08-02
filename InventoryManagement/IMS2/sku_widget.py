@@ -1,9 +1,13 @@
 import os
-from PySide6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import (
+    QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
+    QSpinBox
+)
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
 from di_table_view import InventoryTableView
 from combobox_delegate import ComboBoxDelegate
+from spinbox_delegate import SpinBoxDelegate
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -20,7 +24,7 @@ class SkuWidget(InventoryTableView):
         :return:
         """
         # Filtering is performed on item_name column
-        search_col_num = self.source_model.get_col_number('item_name')
+        search_col_num = self.source_model.get_col_number('item_id')
         self.proxy_model.setFilterKeyColumn(search_col_num)
 
         # Sorting
@@ -43,10 +47,16 @@ class SkuWidget(InventoryTableView):
         # Set combo delegates for category and valid columns
         # For other columns, it uses default delegates (LineEdit)
         for col_name in self.source_model.editable_col_iloc.keys():
-            if col_name != 'description':
+            if col_name == 'min_qty':
+                self.spinbox_delegate = SpinBoxDelegate(0, 1000)
+                col_index = self.source_model.editable_col_iloc[col_name]
+                print(col_index)
+                self.table_view.setItemDelegateForColumn(col_index, self.spinbox_delegate)
+            elif col_name != 'description':
                 col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
-                combo_delegate = ComboBoxDelegate(val_list, self)
-                self.table_view.setItemDelegateForColumn(col_index, combo_delegate)
+                self.combo_delegate = ComboBoxDelegate(val_list, self)
+                print(col_index)
+                self.table_view.setItemDelegateForColumn(col_index, self.combo_delegate)
 
     def _setup_ui(self):
         """
@@ -125,3 +135,7 @@ class SkuWidget(InventoryTableView):
         src_idx = self.proxy_model.mapToSource(index)
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
+
+    def filter_selected_item(self, item_id: int):
+        self.proxy_model.setFilterRegularExpression(f"^{item_id}$")
+        # self.proxy_model.setFilterFixedString(item_id)

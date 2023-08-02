@@ -20,7 +20,7 @@ class ItemModel(DataModel):
     def __init__(self, user_name):
         super().__init__(user_name)
 
-    def set_table_name(self):
+    def table_name(self):
         """
         Needs to be implemented in the subclasses
         Returns a talbe name specified in the DB
@@ -28,7 +28,7 @@ class ItemModel(DataModel):
         """
         return 'items'
 
-    def set_column_names(self):
+    def column_names(self):
         """
         Needs to be implemented in the subclasses
         Returns column names that show in the table view
@@ -48,7 +48,7 @@ class ItemModel(DataModel):
         self.model_df['category_name'] = self.model_df['category_id'].map(Lab().category_name_s)
         self.model_df['flag'] = ''
 
-    def set_editable_columns(self):
+    def editable_columns(self):
         """
         Needs to be implemented in the subclasses
         Returns column names that are editable by user
@@ -79,36 +79,33 @@ class ItemModel(DataModel):
         QTableView accepts only QString as input for display
         Returns data cell from the pandas DataFrame
         """
+        def is_deleted_row(index: QModelIndex) -> bool:
+            flag_col_iloc: int = self.get_col_number('flag')
+            return 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
+
+        def is_valid_row(index: QModelIndex) -> bool:
+            valid_col_iloc: int = self.get_col_number('item_valid')
+            return self.model_df.iloc[index.row(), valid_col_iloc]
+
         if not index.isValid():
             return None
 
         data_to_display = self.model_df.iloc[index.row(), index.column()]
-        if data_to_display is None:
-            return None
 
-        flag_col_iloc: int = self.get_col_number('flag')
-        is_deleted = 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
-        valid_col_iloc: int = self.get_col_number('item_valid')
-        is_valid = self.model_df.iloc[index.row(), valid_col_iloc]
-
-        if role == Qt.DisplayRole or role == Qt.EditRole:
-            return str(data_to_display)
-
-        # for sorting, use SortRole
-        elif role == self.SortRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
             int_type_columns = [self.get_col_number(c) for c in
                                 ['item_id', 'item_valid', 'category_id']]
-            # if column data is int, return int type
             if index.column() in int_type_columns:
+                # if column data is int, return int type
                 return int(data_to_display)
-            # otherwise, string type
             else:
-                return data_to_display
+                # otherwise, string type
+                return str(data_to_display)
 
-        elif role == Qt.BackgroundRole and is_deleted:
+        elif role == Qt.BackgroundRole and is_deleted_row(index):
             return QBrush(Qt.darkGray)
 
-        elif role == Qt.BackgroundRole and not is_valid:
+        elif role == Qt.BackgroundRole and not is_valid_row(index):
             return QBrush(Qt.lightGray)
 
         else:
