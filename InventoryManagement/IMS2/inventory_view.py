@@ -92,7 +92,13 @@ class InventoryWindow(QMainWindow):
         self.done_signal.emit(action)
 
     def item_selected(self, item_id: int):
+        """
+        A double-click event in item.table_view triggers this method,
+        and this method consequently calls sku.table_view to display
+        the item selected
+        """
         self.sku_widget.filter_selected_item(item_id)
+        self.sku_model.set_item_id(item_id)
 
 
 if __name__ == '__main__':

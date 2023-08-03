@@ -15,7 +15,7 @@ class ItemWidget(InventoryTableView):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-        self.delegate_mode = False
+        self.delegate_mode = True
 
     def _setup_proxy_model(self):
         """
@@ -45,8 +45,8 @@ class ItemWidget(InventoryTableView):
         """
         # Set combo delegates for category and valid columns
         # For other columns, it uses default delegates (LineEdit)
-        for col_name in self.source_model.editable_col_iloc.keys():
-            if col_name != 'description':
+        for col_name in self.source_model.column_names:
+            if col_name == 'categrory_name' or col_name == 'item_valid':
                 col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
                 combo_delegate = ComboBoxDelegate(val_list, self)
                 self.table_view.setItemDelegateForColumn(col_index, combo_delegate)
@@ -91,6 +91,7 @@ class ItemWidget(InventoryTableView):
         if action == "add_item":
             logger.debug('Adding item ...')
             new_item_index = self.add_new_row()
+            logger.debug(f'do_actions: add_item {new_item_index}')
             if not self.delegate_mode:
                 # Input window mode using DataMapperWidget
                 self.item_window = SingleItemWindow(self.proxy_model,
@@ -99,6 +100,7 @@ class ItemWidget(InventoryTableView):
         elif action == "chg_item":
             logger.debug('Changing item ...')
             if selected_indexes := self._get_selected_indexes():
+                logger.debug(f'do_actions: chg_item {selected_indexes}')
                 if self.delegate_mode:
                     self.change_rows_by_delegate(selected_indexes)
                 else:
@@ -108,6 +110,7 @@ class ItemWidget(InventoryTableView):
         elif action == "del_item":
             logger.debug('Deleting item ...')
             if selected_indexes := self._get_selected_indexes():
+                logger.debug(f'do_actions: del_item {selected_indexes}')
                 self.delete_rows(selected_indexes)
 
     @Slot(object)
@@ -118,6 +121,9 @@ class ItemWidget(InventoryTableView):
         index is indicating the item_id column of a new item
         :return:
         """
+        if self.source_model.is_flag_column(index):
+            logger.debug(f'added_new_item_by_single_item_window: item {index.row()} added')
+
         if not self.source_model.validate_new_row(index):
             self.source_model.drop_rows([index])
 
@@ -128,11 +134,10 @@ class ItemWidget(InventoryTableView):
         :param indexes:
         :return:
         """
-        flag_col = self.source_model.get_col_number('flag')
         for idx in indexes:
-            if idx.column() == flag_col:
+            if self.source_model.is_flag_column(idx):
                 self.source_model.set_chg_flag(idx)
-                logger.debug(f'chg_items: items {idx.row()} changed')
+                logger.debug(f'changed_items_by_single_item_window: items {idx.row()} changed')
 
 
     @Slot(QModelIndex)

@@ -1,14 +1,17 @@
 import os
 import sys
 import pandas as pd
+from typing import Dict
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
 from typing import List
+from constants import EditLevel
 from di_logger import Logs, logging
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
+
 
 class PandasModel(QAbstractTableModel):
     """A model to interface a Qt view with pandas dataframe """
@@ -18,10 +21,12 @@ class PandasModel(QAbstractTableModel):
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
+        self.edit_level = EditLevel.Modifiable
+        self.col_idx_edit_lvl = None
+        self.all_editable_rows_set = set()
         self.editable_cols_set = set()
         self.editable_rows_set = set()
         self.uneditable_rows_set = set()
-        self.all_editable_rows_set = set()
 
     def rowCount(self, parent=QModelIndex()) -> int:
         """ Override method from QAbstractTableModel
@@ -91,14 +96,18 @@ class PandasModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if index.row() in self.uneditable_rows_set:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        elif index.row() in self.all_editable_rows_set:
-            return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         elif (index.row() in self.editable_rows_set and
-              index.column() in self.editable_cols_set):
+                self.col_idx_edit_lvl[index.column()] <= self.edit_level):
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         # return Qt.NoItemFlags
+
+    def set_edit_level(self, level: EditLevel):
+        self.edit_level = level
+
+    def set_column_edit_level(self, col_idx_level: Dict[int, int]):
+        self.col_idx_edit_lvl = col_idx_level
 
     def set_editable_row(self, row: int):
         self.editable_rows_set.add(row)

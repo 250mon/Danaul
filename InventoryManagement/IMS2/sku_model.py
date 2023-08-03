@@ -7,7 +7,7 @@ from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import ADMIN_GROUP
+from constants import ADMIN_GROUP, EditLevel
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -19,31 +19,44 @@ Also, converting model data(dataframe) back into a data class to update db
 """
 class SkuModel(DataModel):
     def __init__(self, user_name: str):
+        self.init_params()
+        self.selected_item_id = None
         self._find_item_names_from_ids()
         super().__init__(user_name)
 
-    def _find_item_names_from_ids(self):
-        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name']]
-        self.item_name_s = item_name_df.set_index('item_id').iloc[:, 0]
+    def init_params(self):
+        self.set_table_name('skus')
 
-    def table_name(self):
-        """
-        Needs to be implemented in the subclasses
-        Returns a talbe name specified in the DB
-        :return:
-        """
-        return 'skus'
-
-    def column_names(self):
-        """
-        Needs to be implemented in the subclasses
-        Returns column names that show in the table view
-        :return:
-        """
         column_names = ['sku_id', 'item_name', 'sku_valid', 'sku_qty', 'min_qty',
                         'item_size', 'item_side', 'expiration_date', 'description',
                         'item_id', 'item_size_id', 'item_side_id', 'bit_code', 'flag']
-        return column_names
+        self.set_column_names(column_names)
+
+        col_edit_lvl = {
+            'sku_id': EditLevel.NotEditable,
+            'item_name': EditLevel.NotEditable,
+            'sku_valid': EditLevel.Modifiable,
+            'sku_qty': EditLevel.Creatable,
+            'min_qty': EditLevel.Modifiable,
+            'item_size': EditLevel.Creatable,
+            'item_side': EditLevel.Creatable,
+            'expiration_date': EditLevel.Creatable,
+            'description': EditLevel.Modifiable,
+            'item_id': EditLevel.NotEditable,
+            'item_size_id': EditLevel.NotEditable,
+            'item_side_id': EditLevel.NotEditable,
+            'bit_code': EditLevel.Modifiable,
+            'flag': EditLevel.NotEditable
+        }
+        self.set_column_edit_level(col_edit_lvl)
+
+    def set_item_id(self, item_id: int):
+        self.selected_item_id = item_id
+
+    def _find_item_names_from_ids(self):
+        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name']]
+        self.item_name_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 0]
+        self.item_id_s: pd.Series = item_name_df.set_index('item_name').iloc[:, 0]
 
     def set_add_on_cols(self):
         """
@@ -91,12 +104,10 @@ class SkuModel(DataModel):
         Returns data cell from the pandas DataFrame
         """
         def is_deleted_row(index: QModelIndex) -> bool:
-            flag_col_iloc: int = self.get_col_number('flag')
-            return 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
+            return 'deleted' in self.model_df.iloc[index.row(), self.get_col_number('flag')]
 
         def is_valid_row(index: QModelIndex) -> bool:
-            valid_col_iloc: int = self.get_col_number('sku_valid')
-            return self.model_df.iloc[index.row(), valid_col_iloc]
+            return self.model_df.iloc[index.row(), self.get_col_number('sku_valid')]
 
         if not index.isValid():
             return None
@@ -144,23 +155,34 @@ class SkuModel(DataModel):
 
         ret_value: object = value
 
-        if index.column() == self.model_df.columns.get_loc('sku_valid'):
+        if index.column() == self.get_col_number('sku_valid'):
             # taking care of converting str type input to bool type
             ret_value: bool = False
             if value == 'True':
                 ret_value = True
-        elif index.column() == self.model_df.columns.get_loc('item_size'):
-            id_col = self.model_df.columns.get_loc('item_size_id')
+        elif index.column() == self.get_col_number('item_name'):
+            if value in self.item_name_s.tolist():
+                id_col = self.get_col_number('item_id')
+                self.model_df.iloc[index.row(), id_col] = self.item_id_s.loc[value]
+            else:
+                logger.debug(f'setData: item_name({value}) is not valid')
+                return False
+        elif index.column() == self.get_col_number('item_size'):
+            id_col = self.get_col_number('item_size_id')
             self.model_df.iloc[index.row(), id_col] = Lab().item_size_id_s.loc[value]
-        elif index.column() == self.model_df.columns.get_loc('item_side'):
-            id_col = self.model_df.columns.get_loc('item_side_id')
+        elif index.column() == self.get_col_number('item_side'):
+            id_col = self.get_col_number('item_side_id')
             self.model_df.iloc[index.row(), id_col] = Lab().item_side_id_s.loc[value]
         else:
             pass
 
-        # Unless it is a new sku, setting data is followed by setting change flag
-        flag_col_iloc: int = self.model_df.columns.get_loc('flag')
-        if self.model_df.iloc[index.row(), flag_col_iloc] != 'new':
+        # Tell the pandas model whether the data is editable or not
+        if self.model_df.iloc[index.row(), self.get_col_number('flag')] == 'new':
+            # editing a newly created row
+            self.set_edit_level(EditLevel.Creatable)
+        else:
+            # changing a row
+            self.set_edit_level(EditLevel.Modifiable)
             self.set_chg_flag(index)
 
         return super().setData(index, ret_value, role)
@@ -173,26 +195,30 @@ class SkuModel(DataModel):
         """
         default_item_size_id = 1
         default_item_side_id = 1
-        default_item_id = 1
+        if self.selected_item_id is not None:
+            default_item_id = self.selected_item_id
+        else:
+            default_item_id = 0
         iz_name = Lab().item_size_name_s.loc[default_item_size_id]
         id_name = Lab().item_side_name_s.loc[default_item_side_id]
-        item_name = self.item_name_s.loc[default_item_id]
+        item_name = ''
 
-        new_model_df = pd.DataFrame([{'sku_id': next_new_id,
-                                      'item_name': item_name,
-                                      'sku_valid': True,
-                                      'sku_qty': 0,
-                                      'min_qty': 2,
-                                      'item_size': iz_name,
-                                      'item_side': id_name,
-                                      'expiration_date': 'DEFAULT',
-                                      'description': "",
-                                      'item_id': default_item_id,
-                                      'item_size_id': default_item_size_id,
-                                      'item_side_id': default_item_side_id,
-                                      'bit_code': 'A11',
-                                      'flag': 'new'}],
-                                    )
+        new_model_df = pd.DataFrame([{
+            'sku_id': next_new_id,
+            'item_name': item_name,
+            'sku_valid': True,
+            'sku_qty': 0,
+            'min_qty': 2,
+            'item_size': iz_name,
+            'item_side': id_name,
+            'expiration_date': 'DEFAULT',
+            'description': "",
+            'item_id': default_item_id,
+            'item_size_id': default_item_size_id,
+            'item_side_id': default_item_side_id,
+            'bit_code': 'A11',
+            'flag': 'new'
+        }])
         return new_model_df
     def validate_new_row(self, index: QModelIndex) -> bool:
         """

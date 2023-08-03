@@ -38,14 +38,16 @@ class SingleItemWindow(QWidget):
             self.model_indexes = [indexes]
 
         self.nameLabel = QLabel("제품명:")
-        self.nameLineEdit = QLineEdit()
-        if not self.new_item_mode:
-            self.nameLineEdit.setReadOnly(True)
+        if self.new_item_mode:
+            self.nameLineEdit = QLineEdit()
+            # self.nameLineEdit.setReadOnly(True)
+        else:
+            self.nameBox = QLabel()
 
         self.validLabel = QLabel("유효:")
         self.validComboBox = QComboBox()
         self.validComboBox.addItems(['True', 'False'])
-        if 'item_valid' not in self.proxy_model.sourceModel().editable_col_iloc.keys():
+        if 'item_valid' not in self.proxy_model.sourceModel().editable_col_dicts.keys():
             self.validComboBox.setEnabled(False)
 
         self.categoryLabel = QLabel("제품군:")
@@ -62,7 +64,10 @@ class SingleItemWindow(QWidget):
         self.okButton = QPushButton("&Ok")
         self.exitButton = QPushButton("&Exit")
 
-        self.nameLabel.setBuddy(self.nameLineEdit)
+        if self.new_item_mode:
+            self.nameLabel.setBuddy(self.nameLineEdit)
+        else:
+            self.nameLabel.setBuddy(self.nameBox)
         self.validLabel.setBuddy(self.validComboBox)
         self.categoryLabel.setBuddy(self.categoryComboBox)
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
@@ -81,7 +86,8 @@ class SingleItemWindow(QWidget):
         self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
         self.mapper.setModel(self.proxy_model)
         self.mapper.addMapping(self.validComboBox, 1)
-        self.mapper.addMapping(self.nameLineEdit, 2)
+        if self.new_item_mode:
+            self.mapper.addMapping(self.nameLineEdit, 2)
         self.mapper.addMapping(self.categoryComboBox, 3)
         self.mapper.addMapping(self.descriptionTextEdit, 4)
 
@@ -94,7 +100,7 @@ class SingleItemWindow(QWidget):
 
         # if model_indexes is not given, it means adding a new row
         # otherwise the rows of model_indexes are being modified
-        if self.model_indexes is None:
+        if self.new_item_mode:
             self.mapper.toLast()
         else:
             self.mapper.setCurrentIndex(self.model_indexes[0].row())
@@ -104,6 +110,8 @@ class SingleItemWindow(QWidget):
             self.previousButton.setEnabled(False)
             self.nextButton.setEnabled(False)
         else:
+            name_col = self.proxy_model.sourceModel().get_col_number('item_name')
+            self.nameBox.setText(self.proxy_model.index(row, name_col).data())
             self.previousButton.setEnabled(row > self.model_indexes[0].row())
             self.nextButton.setEnabled(row < self.model_indexes[-1].row())
 
@@ -119,6 +127,8 @@ class SingleItemWindow(QWidget):
         # adding a new item
 
     def exit_clicked(self):
+        if self.new_item_mode:
+            self.add_item_signal.emit(self.model_indexes[0])
         self.close()
 
     def initializeUI(self):
@@ -133,7 +143,10 @@ class SingleItemWindow(QWidget):
 
         gridbox = QGridLayout()
         gridbox.addWidget(self.nameLabel, 0, 0, 1, 1)
-        gridbox.addWidget(self.nameLineEdit, 0, 1, 1, 1)
+        if self.new_item_mode:
+            gridbox.addWidget(self.nameLineEdit, 0, 1, 1, 1)
+        else:
+            gridbox.addWidget(self.nameBox, 0, 1, 1, 1)
         gridbox.addWidget(self.categoryLabel, 1, 0, 1, 1)
         gridbox.addWidget(self.categoryComboBox, 1, 1, 1, 1)
         gridbox.addWidget(self.descriptionLabel, 3, 0, 1, 1, Qt.AlignTop)

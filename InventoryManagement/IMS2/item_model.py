@@ -6,7 +6,7 @@ from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import ADMIN_GROUP
+from constants import ADMIN_GROUP, EditLevel
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -18,25 +18,26 @@ Also, converting model data(dataframe) back into a data class to update db
 """
 class ItemModel(DataModel):
     def __init__(self, user_name):
+        self.init_params()
         super().__init__(user_name)
 
-    def table_name(self):
-        """
-        Needs to be implemented in the subclasses
-        Returns a talbe name specified in the DB
-        :return:
-        """
-        return 'items'
+    def init_params(self):
+        self.set_table_name('items')
 
-    def column_names(self):
-        """
-        Needs to be implemented in the subclasses
-        Returns column names that show in the table view
-        :return:
-        """
         column_names = ['item_id', 'item_valid', 'item_name', 'category_name',
                         'description', 'category_id', 'flag']
-        return column_names
+        self.set_column_names(column_names)
+
+        col_edit_lvl = {
+            'item_id': EditLevel.NotEditable,
+            'item_valid': EditLevel.Modifiable,
+            'item_name': EditLevel.Creatable,
+            'category_name': EditLevel.Modifiable,
+            'description': EditLevel.Modifiable,
+            'category_id': EditLevel.NotEditable,
+            'flag': EditLevel.NotEditable
+        }
+        self.set_column_edit_level(col_edit_lvl)
 
     def set_add_on_cols(self):
         """
@@ -80,12 +81,10 @@ class ItemModel(DataModel):
         Returns data cell from the pandas DataFrame
         """
         def is_deleted_row(index: QModelIndex) -> bool:
-            flag_col_iloc: int = self.get_col_number('flag')
-            return 'deleted' in self.model_df.iloc[index.row(), flag_col_iloc]
+            return 'deleted' in self.model_df.iloc[index.row(), self.get_col_number('flag')]
 
         def is_valid_row(index: QModelIndex) -> bool:
-            valid_col_iloc: int = self.get_col_number('item_valid')
-            return self.model_df.iloc[index.row(), valid_col_iloc]
+            return self.model_df.iloc[index.row(), self.get_col_number('item_valid')]
 
         if not index.isValid():
             return None
@@ -94,7 +93,7 @@ class ItemModel(DataModel):
 
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
             int_type_columns = [self.get_col_number(c) for c in
-                                ['item_id', 'item_valid', 'category_id']]
+                                ['item_id', 'category_id']]
             if index.column() in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
@@ -146,9 +145,13 @@ class ItemModel(DataModel):
         else:
             pass
 
-        # Unless it is a new item, setting data is followed by setting change flag
-        flag_col_iloc: int = self.get_col_number('flag')
-        if self.model_df.iloc[index.row(), flag_col_iloc] != 'new':
+        # Tell the pandas model whether the data is editable or not
+        if self.model_df.iloc[index.row(), self.get_col_number('flag')] == 'new':
+            # editing a newly created row
+            self.set_edit_level(EditLevel.Creatable)
+        else:
+            # changing a row
+            self.set_edit_level(EditLevel.Modifiable)
             self.set_chg_flag(index)
 
         return super().setData(index, ret_value, role)
@@ -161,8 +164,15 @@ class ItemModel(DataModel):
         """
         default_cat_id = 1
         cat_name = Lab().category_name_s.loc[default_cat_id]
-        new_model_df = pd.DataFrame([(next_new_id, True, "", cat_name, "", default_cat_id, 'new')],
-                                    columns=self.column_names)
+        new_model_df = pd.DataFrame([{
+            'item_id': next_new_id,
+            'item_valid': True,
+            'item_name': "",
+            'category_name': cat_name,
+            'description': "",
+            'category_id': default_cat_id,
+            'flag': 'new'
+        }])
         return new_model_df
 
     def validate_new_row(self, index: QModelIndex) -> bool:

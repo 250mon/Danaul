@@ -46,16 +46,14 @@ class SkuWidget(InventoryTableView):
         """
         # Set combo delegates for category and valid columns
         # For other columns, it uses default delegates (LineEdit)
-        for col_name in self.source_model.editable_col_iloc.keys():
+        for col_name in self.source_model.editable_col_dicts.keys():
             if col_name == 'min_qty':
                 self.spinbox_delegate = SpinBoxDelegate(0, 1000)
-                col_index = self.source_model.editable_col_iloc[col_name]
-                print(col_index)
+                col_index = self.source_model.editable_col_dicts[col_name]
                 self.table_view.setItemDelegateForColumn(col_index, self.spinbox_delegate)
             elif col_name != 'description':
                 col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
                 self.combo_delegate = ComboBoxDelegate(val_list, self)
-                print(col_index)
                 self.table_view.setItemDelegateForColumn(col_index, self.combo_delegate)
 
     def _setup_ui(self):
@@ -137,5 +135,11 @@ class SkuWidget(InventoryTableView):
             self.source_model.clear_editable_rows()
 
     def filter_selected_item(self, item_id: int):
+        """
+        A double-click event in item.table_view triggers the parent's
+        item_selected method which in turn calls this method
+        :param item_id:
+        :return:
+        """
         self.proxy_model.setFilterRegularExpression(f"^{item_id}$")
         # self.proxy_model.setFilterFixedString(item_id)

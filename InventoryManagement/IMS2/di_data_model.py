@@ -21,10 +21,6 @@ class DataModel(PandasModel):
         super().__init__()
         # for access control
         self.user_name = user_name
-        # for data name
-        self.table_name = self.table_name()
-        # columns to show in the table view
-        self.column_names = self.column_names()
         # set editable columns
         self.editable_cols = self.editable_columns()
         # a list of columns which are used to make a df updating db
@@ -33,25 +29,31 @@ class DataModel(PandasModel):
         # set model df
         self._set_model_df()
 
+    def set_table_name(self, table_name: str):
+        self.table_name = table_name
+
+    def set_column_names(self, column_names: List[str]):
+        self.column_names = column_names
+
+    def set_column_edit_level(self, col_edit_lvl: Dict[str, int]):
+        """
+        Converts column name to column index in the Dict
+        And register it to the Pandas model
+        :param col_edit_lvl:
+        :return:
+        """
+        colidx_edit_lvl = {}
+        for col_name, lvl in col_edit_lvl.items():
+            col_idx = self.column_names.index(col_name)
+            colidx_edit_lvl[col_idx] = lvl
+        super().set_column_edit_level(colidx_edit_lvl)
 
     def get_col_number(self, col_name) -> int:
         return self.model_df.columns.get_loc(col_name)
 
-    @abstractmethod
-    def table_name(self) -> str:
-        """
-        Needs to be implemented in the subclasses
-        Returns a talbe name specified in the DB
-        :return:
-        """
-
-    @abstractmethod
-    def column_names(self) -> List[str]:
-        """
-        Needs to be implemented in the subclasses
-        Returns column names that show in the table view
-        :return:
-        """
+    def is_flag_column(self, index: QModelIndex) -> bool:
+        flag_col = self.get_col_number('flag')
+        return index.column() == flag_col
 
     @abstractmethod
     def set_add_on_cols(self) -> None:
@@ -75,11 +77,10 @@ class DataModel(PandasModel):
         :return:
         """
         # set editable columns
-        self.editable_col_iloc: Dict[str, int] = {
-            col_name: self.get_col_number(col_name)
-            for col_name in self.editable_cols
+        self.editable_col_dicts: Dict[str, int] = {
+            col_name: self.get_col_number(col_name) for col_name in self.editable_cols
         }
-        super().set_editable_columns(list(self.editable_col_iloc.values()))
+        super().set_editable_columns(list(self.editable_col_dicts.values()))
 
     def _set_model_df(self):
         """
@@ -135,7 +136,6 @@ class DataModel(PandasModel):
         # TODO: needs to update how to get new_item_index
         row_count = self.rowCount()
         new_item_index = self.index(row_count - 1, 0)
-        self.set_new_flag(new_item_index)
 
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
@@ -162,39 +162,18 @@ class DataModel(PandasModel):
         id_col = self.get_col_number('item_id')
         ids = []
         for idx in indexes:
-            print(f'idx {idx}')
             if idx.column() != id_col:
                 id = int(idx.siblingAtColumn(id_col).data())
-                print(f'id {id}')
             else:
                 id = int(idx.data())
-                print(f'id {id}')
             ids.append(id)
 
         if len(ids) > 0:
-            print(ids)
-            print(self.model_df.iloc[:, 0])
-            print(self.model_df.iloc[:, 0].isin(ids))
             self.model_df.drop(self.model_df[self.model_df.iloc[:, 0].isin(ids)].index, inplace=True)
-            print(self.model_df)
             logger.debug(f'drop_items: model_df dropped item_id {ids}')
 
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
-
-    def set_new_flag(self, index: QModelIndex):
-        """
-        Sets a 'new' flag in the flag column of the row of index
-        :param index:
-        :return:
-        """
-        flag_col_iloc = self.get_col_number('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
-
-        super().setData(index, 'new')
-
-        self.set_all_editable_row(index.row())
 
     def set_chg_flag(self, index: QModelIndex):
         """
@@ -202,9 +181,9 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flag_col_iloc = self.get_col_number('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
+        flag_col_num = self.get_col_number('flag')
+        if index.column() != flag_col_num:
+            index: QModelIndex = index.siblingAtColumn(flag_col_num)
 
         current_msg = self.data(index)
         if 'changed' not in current_msg:
@@ -219,9 +198,9 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flag_col_iloc = self.get_col_number('flag')
-        if index.column() != flag_col_iloc:
-            index: QModelIndex = index.siblingAtColumn(flag_col_iloc)
+        flag_col_num = self.get_col_number('flag')
+        if index.column() != flag_col_num:
+            index: QModelIndex = index.siblingAtColumn(flag_col_num)
 
         current_msg: str = self.data(index)
         if 'deleted' in current_msg:

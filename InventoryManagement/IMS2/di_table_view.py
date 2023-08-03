@@ -124,10 +124,9 @@ class InventoryTableView(QWidget):
         :param indexes:
         :return:
         """
-        flag_col = self.source_model.get_col_number('flag')
         for idx in indexes:
-            src_idx = self.proxy_model.mapToSource(idx)
-            if idx.column() == flag_col:
+            if self.source_model.is_flag_column(idx):
+                src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_chg_flag(src_idx)
                 logger.debug(f'change_rows_by_delegate: items {src_idx.row()} changed')
 
@@ -140,10 +139,9 @@ class InventoryTableView(QWidget):
         :param indexes:
         :return:
         """
-        flag_col = self.source_model.get_col_number('flag')
         for idx in indexes:
-            src_idx = self.proxy_model.mapToSource(idx)
-            if idx.column() == flag_col:
+            if self.source_model.is_flag_column(idx):
+                src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_del_flag(src_idx)
                 logger.debug(f'delete_rows: rows {src_idx.row()} deleted')
 
