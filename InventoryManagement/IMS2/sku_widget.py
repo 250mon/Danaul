@@ -44,14 +44,14 @@ class SkuWidget(InventoryTableView):
         Needs to be implemented
         :return:
         """
-        # Set combo delegates for category and valid columns
-        # For other columns, it uses default delegates (LineEdit)
-        for col_name in self.source_model.editable_col_dicts.keys():
+        # Set up delegates for each column
+        # For the columns not specified, default delegates (LineEdit) is used
+        for col_name in self.source_model.column_names:
             if col_name == 'min_qty':
                 self.spinbox_delegate = SpinBoxDelegate(0, 1000)
-                col_index = self.source_model.editable_col_dicts[col_name]
+                col_index = self.source_model.get_col_number(col_name)
                 self.table_view.setItemDelegateForColumn(col_index, self.spinbox_delegate)
-            elif col_name != 'description':
+            elif col_name == 'sku_valid' or col_name == 'item_size' or col_name == 'item_side':
                 col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
                 self.combo_delegate = ComboBoxDelegate(val_list, self)
                 self.table_view.setItemDelegateForColumn(col_index, self.combo_delegate)

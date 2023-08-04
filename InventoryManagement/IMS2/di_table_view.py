@@ -11,7 +11,6 @@ from PySide6.QtCore import (
 )
 from di_data_model import DataModel
 from di_logger import Logs, logging
-from combobox_delegate import ComboBoxDelegate
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -111,8 +110,12 @@ class InventoryTableView(QWidget):
         :return:
         """
         new_item_index = self.source_model.add_new_row()
-        logger.debug(f'add_new_row: a new row is being created')
-        self.parent.statusBar().showMessage('A new row being created')
+        if new_item_index is None:
+            logger.debug(f'add_new_row: Failed creating a new row')
+            self.parent.statusBar().showMessage('Failed creating a new row')
+        else:
+            logger.debug(f'add_new_row: a new row is being created')
+            self.parent.statusBar().showMessage('A new row being created')
         return new_item_index
 
     def change_rows_by_delegate(self, indexes: List[QModelIndex]):
@@ -124,11 +127,14 @@ class InventoryTableView(QWidget):
         :param indexes:
         :return:
         """
+        chg_rows = set()
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_chg_flag(src_idx)
-                logger.debug(f'change_rows_by_delegate: items {src_idx.row()} changed')
+                chg_rows.add(src_idx.row())
+
+        logger.debug(f'change_rows_by_delegate: rows {chg_rows} being changed')
 
     def delete_rows(self, indexes: List[QModelIndex]):
         """

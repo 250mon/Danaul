@@ -7,6 +7,7 @@ from PySide6.QtCore import QModelIndex
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
+from constants import EditLevel
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -21,8 +22,6 @@ class DataModel(PandasModel):
         super().__init__()
         # for access control
         self.user_name = user_name
-        # set editable columns
-        self.editable_cols = self.editable_columns()
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
@@ -63,25 +62,6 @@ class DataModel(PandasModel):
         :return:
         """
 
-    @abstractmethod
-    def editable_columns(self) -> List[str]:
-        """
-        Needs to be implemented in the subclasses
-        Returns column names that are editable by user
-        :return:
-        """
-
-    def set_editable_columns(self):
-        """
-        Sets up editable columns in the pandas model
-        :return:
-        """
-        # set editable columns
-        self.editable_col_dicts: Dict[str, int] = {
-            col_name: self.get_col_number(col_name) for col_name in self.editable_cols
-        }
-        super().set_editable_columns(list(self.editable_col_dicts.values()))
-
     def _set_model_df(self):
         """
         Makes DataFrame out of data received from DB
@@ -98,9 +78,6 @@ class DataModel(PandasModel):
 
         # fill name columns against ids of each auxiliary data
         self.set_add_on_cols()
-
-        # set editable columns
-        self.set_editable_columns()
 
     @abstractmethod
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
@@ -122,15 +99,19 @@ class DataModel(PandasModel):
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
-    def add_new_row(self) -> QModelIndex:
+    def add_new_row(self) -> QModelIndex or None:
         """
         Adds a new row to the end
-        :return:
+        :return: QModelIndex if succeeds, otherwise None
         """
         next_new_id = self.model_df.iloc[:, 0].max() + 1
         logger.debug(f'add_new_row: New model_df_row id is {next_new_id}')
 
         new_row_df = self.make_a_new_row_df(next_new_id)
+        # when new df was not created correctly
+        if new_row_df is None:
+            return None
+
         self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
 
         # TODO: needs to update how to get new_item_index
@@ -140,6 +121,10 @@ class DataModel(PandasModel):
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
+        # handles model flags
+        self.set_edit_level(EditLevel.Creatable)
+        self.set_editable_row(new_item_index.row())
+
         return new_item_index
 
     @abstractmethod
@@ -147,14 +132,6 @@ class DataModel(PandasModel):
         """
         Needs to be implemented in subclasses
         :param next_new_id:
-        :return:
-        """
-
-    @abstractmethod
-    def validate_new_row(self, index: QModelIndex):
-        """
-        Needs to be implemented in subclasses
-        :param index:
         :return:
         """
 
@@ -190,6 +167,8 @@ class DataModel(PandasModel):
             flag = current_msg + ' changed'
             super().setData(index, flag)
 
+        # handles model flags
+        self.set_edit_level(EditLevel.Modifiable)
         self.set_editable_row(index.row())
 
     def set_del_flag(self, index: QModelIndex):
@@ -217,8 +196,30 @@ class DataModel(PandasModel):
         Updates DB reflecting the changes made to model_df
         :return:
         """
+        def make_return_msg(total_results: Dict[str, str or None]):
+            messages = {}
+            # total_results are composed of 3 results: new, chg, del
+            # Each result are composed of result from multiple queries
+            for op_type, result in total_results.items():
+                if result is None:
+                    msg = '성공!!'
+                elif isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
+                    msg = f'항목이 현재 사용 중이므로 삭제할 수 없습니다.'
+                elif isinstance(result, asyncpg.exceptions.UniqueViolationError):
+                    msg = f'중복 데이터가 존재합니다. 항목 새로 만들기가 실패하였습니다.'
+                else:
+                    msg = str(result)
+
+                messages[op_type] = msg
+
+            return_msg = '<RESULTS>'
+            for op_type, msg in messages.items():
+                return_msg += ('\n' + op_type + ': ' + msg)
+            return return_msg
+
         logger.debug('update_db: Saving to DB ...')
-        return_msg = None
+
+        total_results = {}
 
         del_df = self.model_df.loc[self.model_df.flag.str.contains('deleted'), :]
         if not del_df.empty:
@@ -226,19 +227,10 @@ class DataModel(PandasModel):
             # if flag contains 'new', just drop it
             del_df.drop(del_df[del_df.flag.str.contains('new')].index)
             df_to_upload = del_df.loc[:, self.db_column_names]
-            results = await Lab().delete_df(self.table_name, df_to_upload)
-            logger.debug(f'update_db: results of deleting = {results}')
-            msg_list = []
-            for i, result in enumerate(results, start=1):
-                if isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
-                    msg_list.append(f'{i}: ID is in use, Cannot be deleted')
-                else:
-                    msg_list.append(f'{i}: {result}')
-            return_msg = '\n'.join(msg_list)
+            results_del = await Lab().delete_df(self.table_name, df_to_upload)
+            total_results['삭제'] = results_del
+            logger.debug(f'update_db: result of deleting = {results_del}')
             self.model_df.drop(del_df.index, inplace=True)
-
-            # reset all_editable_row for new rows
-            self.unset_uneditable_row(-1)
 
         new_df = self.model_df.loc[self.model_df.flag.str.contains('new'), :]
         if not new_df.empty:
@@ -246,18 +238,18 @@ class DataModel(PandasModel):
             df_to_upload = new_df.loc[:, self.db_column_names]
             # set id default to let DB assign an id without collision
             df_to_upload.iloc[:, 0] = 'DEFAULT'
-            results = await Lab().insert_df(self.table_name, df_to_upload)
-            logger.debug(f'update_db: results of inserting new rows = {results}')
-
-            # reset all_editable_row for new rows
-            self.unset_all_editable_row(-1)
+            results_new = await Lab().insert_df(self.table_name, df_to_upload)
+            total_results['추가'] = results_new
+            logger.debug(f'update_db: result of inserting new rows = {results_new}')
 
         chg_df = self.model_df.loc[self.model_df.flag.str.contains('changed'), :]
         if not chg_df.empty:
             logger.debug(f'{chg_df}')
             df_to_upload = chg_df.loc[:, self.db_column_names]
-            results = await Lab().update_df(self.table_name, df_to_upload)
-            logger.debug(f'update_db: results of changing = {results}')
+            results_chg = await Lab().update_df(self.table_name, df_to_upload)
+            total_results['수정'] = results_chg
+            logger.debug(f'update_db: result of changing = {results_chg}')
 
+        return_msg = make_return_msg(total_results)
         return return_msg
 

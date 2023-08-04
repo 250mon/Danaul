@@ -96,7 +96,7 @@ class InventoryDb:
         # args = [(item.item_id,) for item in items_df.itertuples()]
         col_name, id_series = next(del_df.items())
         args = [(_id,) for _id in id_series]
-        logger.debug(f"delete_df: Delete ids {args} from items table ...")
+        logger.debug(f"delete_df: Delete {col_name} = {args} from {table} ...")
         return await self.db_util.delete(table, col_name, args)
 
     async def update_df(self, table: str, up_df: pd.DataFrame):

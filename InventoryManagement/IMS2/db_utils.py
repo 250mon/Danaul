@@ -227,6 +227,12 @@ class DbUtil:
         :param col_name: column name to check
         :param args: argments to search for
         :return:
+            When using executemany,
+                if successful, None
+                otherwise, exception or string
+            When using pool_execute,
+                if successful, list of results of queries
+                otherwise, exception
         """
         if not isinstance(args, List):
             logger.error(f"delete: args' type{type(args)} must be List[Tuple]")
@@ -240,6 +246,7 @@ class DbUtil:
         logger.debug(f'delete: Delete rows ...')
         logger.debug(args)
 
-        results = await self.pool_execute(stmt, args)
+        # results = await self.pool_execute(stmt, args)
+        results = await self.executemany(stmt, args)
         logger.debug(f'delete: results::\n{results}')
         return results

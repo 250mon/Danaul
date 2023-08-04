@@ -9,7 +9,6 @@ from di_lab import Lab
 from di_logger import Logs, logging
 from constants import ADMIN_GROUP, EditLevel
 
-
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
@@ -17,6 +16,8 @@ logger.setLevel(logging.DEBUG)
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
+
+
 class SkuModel(DataModel):
     def __init__(self, user_name: str):
         self.init_params()
@@ -54,9 +55,10 @@ class SkuModel(DataModel):
         self.selected_item_id = item_id
 
     def _find_item_names_from_ids(self):
-        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name']]
+        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name', 'item_valid']]
         self.item_name_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 0]
         self.item_id_s: pd.Series = item_name_df.set_index('item_name').iloc[:, 0]
+        self.item_valid_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 1]
 
     def set_add_on_cols(self):
         """
@@ -70,17 +72,6 @@ class SkuModel(DataModel):
         self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
         self.model_df['flag'] = ''
 
-    def editable_columns(self):
-        """
-        Needs to be implemented in the subclasses
-        Returns column names that are editable by user
-        :return:
-        """
-        editable_cols = ['min_qty', 'description']
-        if self.user_name in ADMIN_GROUP:
-            editable_cols += ['sku_valid', 'expiration_date']
-        return editable_cols
-
     def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
         """
         Returns values list and column index for creating combobox
@@ -89,6 +80,10 @@ class SkuModel(DataModel):
         col_index = self.model_df.columns.get_loc(col_name)
         if col_name == 'sku_valid':
             val_list = ['True', 'False']
+        elif col_name == "item_size":
+            val_list = Lab().item_size_name_s.to_list()
+        elif col_name == "item_side":
+            val_list = Lab().item_side_name_s.to_list()
         else:
             val_list = None
         return col_index, val_list
@@ -103,6 +98,7 @@ class SkuModel(DataModel):
         QTableView accepts only QString as input for display
         Returns data cell from the pandas DataFrame
         """
+
         def is_deleted_row(index: QModelIndex) -> bool:
             return 'deleted' in self.model_df.iloc[index.row(), self.get_col_number('flag')]
 
@@ -176,32 +172,28 @@ class SkuModel(DataModel):
         else:
             pass
 
-        # Tell the pandas model whether the data is editable or not
-        if self.model_df.iloc[index.row(), self.get_col_number('flag')] == 'new':
-            # editing a newly created row
-            self.set_edit_level(EditLevel.Creatable)
-        else:
-            # changing a row
-            self.set_edit_level(EditLevel.Modifiable)
-            self.set_chg_flag(index)
-
         return super().setData(index, ret_value, role)
 
-    def make_a_new_row_df(self, next_new_id):
+    def make_a_new_row_df(self, next_new_id) -> pd.DataFrame or None:
         """
         Needs to be implemented in subclasses
         :param next_new_id:
-        :return:
+        :return: new dataframe if succeeds, otherwise None
         """
+        if self.selected_item_id is None:
+            logger.error('make_a_new_row_df: item_id is empty')
+            return None
+        elif not self.item_valid_s[self.selected_item_id]:
+            logger.error('make_a_new_row_df: item_id is not valid')
+            return None
+
+        default_item_id = self.selected_item_id
+        item_name = self.item_name_s[default_item_id]
+        logger.debug(f'make_a_new_row_df: {default_item_id} {item_name} being created')
         default_item_size_id = 1
-        default_item_side_id = 1
-        if self.selected_item_id is not None:
-            default_item_id = self.selected_item_id
-        else:
-            default_item_id = 0
         iz_name = Lab().item_size_name_s.loc[default_item_size_id]
+        default_item_side_id = 1
         id_name = Lab().item_side_name_s.loc[default_item_side_id]
-        item_name = ''
 
         new_model_df = pd.DataFrame([{
             'sku_id': next_new_id,
@@ -220,10 +212,3 @@ class SkuModel(DataModel):
             'flag': 'new'
         }])
         return new_model_df
-    def validate_new_row(self, index: QModelIndex) -> bool:
-        """
-        Needs to be implemented in subclasses
-        :param index:
-        :return:
-        """
-        return True

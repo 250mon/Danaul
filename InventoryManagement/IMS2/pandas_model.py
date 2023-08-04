@@ -22,9 +22,6 @@ class PandasModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
         self.edit_level = EditLevel.Modifiable
-        self.col_idx_edit_lvl = None
-        self.all_editable_rows_set = set()
-        self.editable_cols_set = set()
         self.editable_rows_set = set()
         self.uneditable_rows_set = set()
 
@@ -119,9 +116,6 @@ class PandasModel(QAbstractTableModel):
     def clear_editable_rows(self):
         self.editable_rows_set.clear()
 
-    def set_editable_columns(self, cols: List):
-        self.editable_cols_set.update(cols)
-
     def set_all_editable_row(self, row: int):
         """
         Makes every column editable for new rows
@@ -130,19 +124,6 @@ class PandasModel(QAbstractTableModel):
         """
         self.all_editable_rows_set.add(row)
         logger.debug(f'set_all_editable_row: row {row}')
-
-    def unset_all_editable_row(self, row: int):
-        if row == -1:
-            logger.debug(f'unset_all_editable_row: '
-                         f'remove all rows from {self.all_editable_rows_set}')
-            self.all_editable_rows_set.clear()
-        else:
-            logger.debug(f'unset_all_editable_row: '
-                         f'remove row {row} from {self.all_editable_rows_set}')
-            if row in self.all_editable_rows_set:
-                self.all_editable_rows_set.remove(row)
-            else:
-                logger.warn(f'unset_all_editable_row: cannot find row {row} in the set')
 
     def set_uneditable_row(self, row: int):
         """
