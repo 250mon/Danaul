@@ -46,7 +46,7 @@ class ItemWidget(InventoryTableView):
         # Set combo delegates for category and valid columns
         # For other columns, it uses default delegates (LineEdit)
         for col_name in self.source_model.column_names:
-            if col_name == 'category_name' or col_name == 'item_valid':
+            if col_name == 'category_name' or col_name == 'active':
                 col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
                 combo_delegate = ComboBoxDelegate(val_list, self)
                 self.table_view.setItemDelegateForColumn(col_index, combo_delegate)

@@ -24,20 +24,20 @@ class ItemModel(DataModel):
     def init_params(self):
         self.set_table_name('items')
 
-        column_names = ['item_id', 'item_valid', 'item_name', 'category_name',
+        column_names = ['item_id', 'active', 'item_name', 'category_name',
                         'description', 'category_id', 'flag']
         self.set_column_names(column_names)
 
-        col_edit_lvl = {
+        self.col_edit_lvl = {
             'item_id': EditLevel.NotEditable,
-            'item_valid': EditLevel.Modifiable,
+            'active': EditLevel.AdminModifiable,
             'item_name': EditLevel.Creatable,
-            'category_name': EditLevel.Modifiable,
-            'description': EditLevel.Modifiable,
+            'category_name': EditLevel.UserModifiable,
+            'description': EditLevel.UserModifiable,
             'category_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
-        self.set_column_edit_level(col_edit_lvl)
+        self.set_column_edit_level(self.col_edit_lvl)
 
     def set_add_on_cols(self):
         """
@@ -55,7 +55,7 @@ class ItemModel(DataModel):
         :return:
         """
         col_index = self.get_col_number(col_name)
-        if col_name == 'item_valid':
+        if col_name == 'active':
             val_list = ['True', 'False']
         elif col_name == 'category_name':
             val_list = Lab().category_name_s.to_list()
@@ -69,32 +69,35 @@ class ItemModel(DataModel):
         QTableView accepts only QString as input for display
         Returns data cell from the pandas DataFrame
         """
-        def is_deleted_row(index: QModelIndex) -> bool:
-            return 'deleted' in self.model_df.iloc[index.row(), self.get_col_number('flag')]
-
-        def is_valid_row(index: QModelIndex) -> bool:
-            return self.model_df.iloc[index.row(), self.get_col_number('item_valid')]
-
         if not index.isValid():
             return None
 
+        col_name = self.get_col_name(index.column())
         data_to_display = self.model_df.iloc[index.row(), index.column()]
-
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = [self.get_col_number(c) for c in
-                                ['item_id', 'category_id']]
-            if index.column() in int_type_columns:
+            int_type_columns = ['item_id', 'category_id']
+            if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
             else:
                 # otherwise, string type
                 return str(data_to_display)
 
-        elif role == Qt.BackgroundRole and is_deleted_row(index):
-            return QBrush(Qt.darkGray)
-
-        elif role == Qt.BackgroundRole and not is_valid_row(index):
-            return QBrush(Qt.lightGray)
+        elif role == Qt.BackgroundRole:
+            if self.is_row_type(index, 'deleted'):
+                return QBrush(Qt.darkGray)
+            elif not self.is_active_row(index):
+                return QBrush(Qt.lightGray)
+            elif self.is_row_type(index, 'new'):
+                if self.col_edit_lvl[col_name] == EditLevel.Creatable:
+                    return QBrush(Qt.darkYellow)
+                else:
+                    return QBrush(Qt.yellow)
+            elif self.is_row_type(index, 'changed'):
+                if self.col_edit_lvl[col_name] == self.edit_level:
+                    return QBrush(Qt.darkBlue)
+                else:
+                    return QBrush(Qt.blue)
 
         else:
             return None
@@ -117,7 +120,7 @@ class ItemModel(DataModel):
 
         ret_value: object = value
 
-        if index.column() == self.get_col_number('item_valid'):
+        if index.column() == self.get_col_number('active'):
             # taking care of converting str type input to bool type
             ret_value: bool = False
             if value == 'True':
@@ -146,7 +149,7 @@ class ItemModel(DataModel):
         cat_name = Lab().category_name_s.loc[default_cat_id]
         new_model_df = pd.DataFrame([{
             'item_id': next_new_id,
-            'item_valid': True,
+            'active': True,
             'item_name': "",
             'category_name': cat_name,
             'description': "",

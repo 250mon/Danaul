@@ -1,4 +1,5 @@
 import sys, os
+from typing import List
 from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
 from PySide6.QtCore import Qt, Signal, Slot
 from login_widget import LoginWidget
@@ -86,10 +87,23 @@ class InventoryWindow(QMainWindow):
         if action == "item_save":
             logger.debug('Saving items ...')
             result_str = await self.item_widget.save_to_db()
+            logger.debug('Updating models ...')
+            await self.update_models(['items', 'skus'])
         elif action == "sku_save":
             logger.debug('Saving skus ...')
             result_str = await self.sku_widget.save_to_db()
+            await self.update_models(['skus'])
         self.done_signal.emit(action)
+
+    async def update_models(self, model_names: List):
+        if 'items' in model_names:
+            await self.item_model.update()
+
+        if 'skus' in model_names:
+            await self.sku_model.update()
+
+        if 'transactions' in model_names:
+            pass
 
     def item_selected(self, item_id: int):
         """

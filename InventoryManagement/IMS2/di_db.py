@@ -81,11 +81,11 @@ class InventoryDb:
         stmt = """INSERT INTO items VALUES(DEFAULT, $1, $2, $3, $4)
                     ON CONFLICT (item_name)
                     DO
-                     UPDATE SET item_valid = $1,
+                     UPDATE SET active = $1,
                                 item_name = $2,
                                 category_id = $3,
                                 description = $4"""
-        args = [(item.item_valid, item.item_name, item.category_id, item.description)
+        args = [(item.active, item.item_name, item.category_id, item.description)
                 for item in items_df.itertuples()]
 
         logger.debug("Upsert Items ...")
@@ -116,7 +116,7 @@ class InventoryDb:
         :param skus:
         :return:
         """
-        stmt = """UPDATE skus SET sku_valid = $2,
+        stmt = """UPDATE skus SET active = $2,
                                   bit_code = $3,
                                   sku_qty = $4,
                                   min_qty = $5,
@@ -126,7 +126,7 @@ class InventoryDb:
                                   expiration_date = $9,
                                   description = $10
                               WHERE sku_id = $1"""
-        args = [(sku.sku_id, sku.sku_valid, sku.bit_code, sku.sku_qty,
+        args = [(sku.sku_id, sku.active, sku.bit_code, sku.sku_qty,
                  sku.min_qty, sku.item_id, sku.item_size_id, sku.item_side_id,
                  sku.expiration_date, sku.description)
                 for sku in skus_df.itertuples()]
@@ -217,7 +217,7 @@ async def main():
     async def insert_items():
         items_df = pd.DataFrame({
             'item_id':       [1, 2, 3],
-            'item_valid':    [True, True, True],
+            'active':    [True, True, True],
             'item_name':     ['써지겔', '아토베리어', 'test1'],
             'category_id':   [1, 1, 1],
             'description':   ['', '', '']
@@ -227,7 +227,7 @@ async def main():
     async def insert_skus():
         skus_df = pd.DataFrame({
             'sku_id':           [1, 2, 3],
-            'sku_valid':        [True, True, True],
+            'active':        [True, True, True],
             'bit_code':         ['bb', 'cc', 'aa'],
             'sku_qty':          [1, 3, 9],
             'min_qty':          [2, 2, 2],
@@ -266,10 +266,10 @@ async def main():
         stmt = """
             SELECT
                 i.item_id,
-                i.item_valid,
+                i.active,
                 i.item_name,
                 s.sku_id,
-                s.sku_valid,
+                s.active,
                 s.sku_qty,
                 s.min_qty,
                 isz.item_size,

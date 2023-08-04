@@ -1,13 +1,13 @@
 import os
 import pandas as pd
-from datetime import datetime, date
 from typing import Dict, Tuple, List
-from PySide6.QtCore import Qt, QModelIndex, QDate, QDateTime
+from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
 from constants import ADMIN_GROUP, EditLevel
+from datetime_utils import *
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -22,43 +22,48 @@ class SkuModel(DataModel):
     def __init__(self, user_name: str):
         self.init_params()
         self.selected_item_id = None
-        self._find_item_names_from_ids()
+        self.update_items_params()
+        # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
     def init_params(self):
         self.set_table_name('skus')
 
-        column_names = ['sku_id', 'item_name', 'sku_valid', 'sku_qty', 'min_qty',
+        column_names = ['sku_id', 'item_name', 'active', 'sku_qty', 'min_qty',
                         'item_size', 'item_side', 'expiration_date', 'description',
-                        'item_id', 'item_size_id', 'item_side_id', 'bit_code', 'flag']
+                        'bit_code', 'item_id', 'item_size_id', 'item_side_id', 'flag']
         self.set_column_names(column_names)
 
-        col_edit_lvl = {
+        self.col_edit_lvl = {
             'sku_id': EditLevel.NotEditable,
             'item_name': EditLevel.NotEditable,
-            'sku_valid': EditLevel.Modifiable,
+            'active': EditLevel.AdminModifiable,
             'sku_qty': EditLevel.Creatable,
-            'min_qty': EditLevel.Modifiable,
+            'min_qty': EditLevel.UserModifiable,
             'item_size': EditLevel.Creatable,
             'item_side': EditLevel.Creatable,
             'expiration_date': EditLevel.Creatable,
-            'description': EditLevel.Modifiable,
+            'description': EditLevel.UserModifiable,
+            'bit_code': EditLevel.AdminModifiable,
             'item_id': EditLevel.NotEditable,
             'item_size_id': EditLevel.NotEditable,
             'item_side_id': EditLevel.NotEditable,
-            'bit_code': EditLevel.Modifiable,
             'flag': EditLevel.NotEditable
         }
-        self.set_column_edit_level(col_edit_lvl)
+        self.set_column_edit_level(self.col_edit_lvl)
 
     def set_item_id(self, item_id: int):
         self.selected_item_id = item_id
 
-    def _find_item_names_from_ids(self):
-        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name', 'item_valid']]
+    def update_items_params(self):
+        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name', 'active']]
         self.item_name_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 0]
         self.item_id_s: pd.Series = item_name_df.set_index('item_name').iloc[:, 0]
-        self.item_valid_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 1]
+        self.active_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 1]
+
+    async def update(self):
+        await super().update()
+        self.update_items_params()
 
     def set_add_on_cols(self):
         """
@@ -78,7 +83,7 @@ class SkuModel(DataModel):
         :return:
         """
         col_index = self.model_df.columns.get_loc(col_name)
-        if col_name == 'sku_valid':
+        if col_name == 'active':
             val_list = ['True', 'False']
         elif col_name == "item_size":
             val_list = Lab().item_size_name_s.to_list()
@@ -88,48 +93,45 @@ class SkuModel(DataModel):
             val_list = None
         return col_index, val_list
 
-    def pydate_to_qdate(self, pydate: date):
-        qdate = QDate.fromString(str(pydate), "yyyy-MM-dd")
-        return qdate
-
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
         Override method from QAbstractTableModel
         QTableView accepts only QString as input for display
         Returns data cell from the pandas DataFrame
         """
-
-        def is_deleted_row(index: QModelIndex) -> bool:
-            return 'deleted' in self.model_df.iloc[index.row(), self.get_col_number('flag')]
-
-        def is_valid_row(index: QModelIndex) -> bool:
-            return self.model_df.iloc[index.row(), self.get_col_number('sku_valid')]
-
         if not index.isValid():
             return None
 
+        col_name = self.get_col_name(index.column())
         data_to_display = self.model_df.iloc[index.row(), index.column()]
-
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = [self.get_col_number(c) for c in
-                                ['sku_id', 'item_id', 'item_size_id',
-                                 'item_side_id', 'sku_qty', 'min_qty']]
-            if index.column() in int_type_columns:
+            int_type_columns = ['sku_id', 'item_id', 'item_size_id',
+                                'item_side_id', 'sku_qty', 'min_qty']
+            if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
-            elif index.column() == self.get_col_number('expiration_date'):
+            elif col_name == 'expiration_date':
                 # data type is datetime.date
-                return self.pydate_to_qdate(data_to_display)
+                return pydate_to_qdate(data_to_display)
             else:
                 # otherwise, string type
                 return str(data_to_display)
 
-        elif role == Qt.BackgroundRole and is_deleted_row(index):
-            return QBrush(Qt.darkGray)
-
-        elif role == Qt.BackgroundRole and not is_valid_row(index):
-            return QBrush(Qt.lightGray)
-
+        elif role == Qt.BackgroundRole:
+            if self.is_row_type(index, 'deleted'):
+                return QBrush(Qt.darkGray)
+            elif not self.is_active_row(index):
+                return QBrush(Qt.lightGray)
+            elif self.is_row_type(index, 'new'):
+                if self.col_edit_lvl[col_name] == EditLevel.Creatable:
+                    return QBrush(Qt.darkYellow)
+                else:
+                    return QBrush(Qt.yellow)
+            elif self.is_row_type(index, 'changed'):
+                if self.col_edit_lvl[col_name] == self.edit_level:
+                    return QBrush(Qt.darkBlue)
+                else:
+                    return QBrush(Qt.blue)
         else:
             return None
 
@@ -149,13 +151,14 @@ class SkuModel(DataModel):
 
         logger.debug(f'setData({index}, {value})')
 
-        ret_value: object = value
+        obj_type_value: object = value
 
-        if index.column() == self.get_col_number('sku_valid'):
+        if index.column() == self.get_col_number('active'):
             # taking care of converting str type input to bool type
-            ret_value: bool = False
             if value == 'True':
-                ret_value = True
+                obj_type_value = True
+            else:
+                obj_type_value: bool = False
         elif index.column() == self.get_col_number('item_name'):
             if value in self.item_name_s.tolist():
                 id_col = self.get_col_number('item_id')
@@ -169,10 +172,14 @@ class SkuModel(DataModel):
         elif index.column() == self.get_col_number('item_side'):
             id_col = self.get_col_number('item_side_id')
             self.model_df.iloc[index.row(), id_col] = Lab().item_side_id_s.loc[value]
+        elif index.column() == self.get_col_number('expiration_date'):
+            # data type is datetime.date
+            if isinstance(value, QDate):
+                obj_type_value = qdate_to_pydate(value)
         else:
             pass
 
-        return super().setData(index, ret_value, role)
+        return super().setData(index, obj_type_value, role)
 
     def make_a_new_row_df(self, next_new_id) -> pd.DataFrame or None:
         """
@@ -183,8 +190,8 @@ class SkuModel(DataModel):
         if self.selected_item_id is None:
             logger.error('make_a_new_row_df: item_id is empty')
             return None
-        elif not self.item_valid_s[self.selected_item_id]:
-            logger.error('make_a_new_row_df: item_id is not valid')
+        elif not self.active_s[self.selected_item_id]:
+            logger.error('make_a_new_row_df: item_id is not active')
             return None
 
         default_item_id = self.selected_item_id
@@ -198,17 +205,17 @@ class SkuModel(DataModel):
         new_model_df = pd.DataFrame([{
             'sku_id': next_new_id,
             'item_name': item_name,
-            'sku_valid': True,
+            'active': True,
             'sku_qty': 0,
             'min_qty': 2,
             'item_size': iz_name,
             'item_side': id_name,
             'expiration_date': 'DEFAULT',
             'description': "",
+            'bit_code': 'A11',
             'item_id': default_item_id,
             'item_size_id': default_item_size_id,
             'item_side_id': default_item_side_id,
-            'bit_code': 'A11',
             'flag': 'new'
         }])
         return new_model_df

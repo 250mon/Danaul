@@ -21,7 +21,7 @@ class PandasModel(QAbstractTableModel):
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
-        self.edit_level = EditLevel.Modifiable
+        self.edit_level = EditLevel.UserModifiable
         self.editable_rows_set = set()
         self.uneditable_rows_set = set()
 

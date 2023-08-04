@@ -7,7 +7,7 @@ from PySide6.QtCore import QModelIndex
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import EditLevel
+from constants import EditLevel, ADMIN_GROUP
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -22,6 +22,10 @@ class DataModel(PandasModel):
         super().__init__()
         # for access control
         self.user_name = user_name
+        if self.user_name in ADMIN_GROUP:
+            self.modifiable = EditLevel.AdminModifiable
+        else:
+            self.modifiable = EditLevel.UserModifiable
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
@@ -47,12 +51,21 @@ class DataModel(PandasModel):
             colidx_edit_lvl[col_idx] = lvl
         super().set_column_edit_level(colidx_edit_lvl)
 
-    def get_col_number(self, col_name) -> int:
+    def get_col_number(self, col_name: str) -> int:
         return self.model_df.columns.get_loc(col_name)
+
+    def get_col_name(self, col_num: int) -> str:
+        return self.model_df.columns[col_num]
 
     def is_flag_column(self, index: QModelIndex) -> bool:
         flag_col = self.get_col_number('flag')
         return index.column() == flag_col
+
+    def is_row_type(self, index: QModelIndex, rtype: str) -> bool:
+        return rtype in self.model_df.iloc[index.row(), self.get_col_number('flag')]
+
+    def is_active_row(self, index: QModelIndex) -> bool:
+        return self.model_df.iloc[index.row(), self.get_col_number('active')]
 
     @abstractmethod
     def set_add_on_cols(self) -> None:
@@ -99,6 +112,16 @@ class DataModel(PandasModel):
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
+    async def update(self):
+        """
+        Update the model whenever relevant DB data changes
+        Called by inventory_view
+        If there needs any model specific update, it's implemented in
+        the subclasses
+        :return:
+        """
+        await self.update_model_df_from_db()
+
     def add_new_row(self) -> QModelIndex or None:
         """
         Adds a new row to the end
@@ -122,7 +145,7 @@ class DataModel(PandasModel):
         self.layoutChanged.emit()
 
         # handles model flags
-        self.set_edit_level(EditLevel.Creatable)
+        self.set_edit_level(self.modifiable)
         self.set_editable_row(new_item_index.row())
 
         return new_item_index
@@ -168,7 +191,7 @@ class DataModel(PandasModel):
             super().setData(index, flag)
 
         # handles model flags
-        self.set_edit_level(EditLevel.Modifiable)
+        self.set_edit_level(self.modifiable)
         self.set_editable_row(index.row())
 
     def set_del_flag(self, index: QModelIndex):
@@ -191,7 +214,7 @@ class DataModel(PandasModel):
 
         super().setData(index, flag)
 
-    async def update_db(self):
+    async def save_to_db(self):
         """
         Updates DB reflecting the changes made to model_df
         :return:

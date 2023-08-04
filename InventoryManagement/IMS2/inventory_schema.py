@@ -10,7 +10,7 @@ CREATE_ITEM_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS items(
         item_id SERIAL PRIMARY KEY,
-        item_valid BOOL NOT NULL DEFAULT TRUE,
+        active BOOL NOT NULL DEFAULT TRUE,
         item_name TEXT NOT NULL,
         category_id INT NOT NULL,
         description TEXT,
@@ -38,7 +38,7 @@ CREATE_SKU_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS skus(
         sku_id SERIAL PRIMARY KEY,
-        sku_valid BOOL NOT NULL DEFAULT TRUE,
+        active BOOL NOT NULL DEFAULT TRUE,
         bit_code VARCHAR(20),
         sku_qty INT NOT NULL,
         min_qty INT NOT NULL DEFAULT 2,

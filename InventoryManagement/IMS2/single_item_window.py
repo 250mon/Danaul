@@ -44,11 +44,11 @@ class SingleItemWindow(QWidget):
         else:
             self.nameBox = QLabel()
 
-        self.validLabel = QLabel("유효:")
-        self.validComboBox = QComboBox()
-        self.validComboBox.addItems(['True', 'False'])
-        if 'item_valid' not in self.proxy_model.sourceModel().editable_col_dicts.keys():
-            self.validComboBox.setEnabled(False)
+        self.activeLabel = QLabel("활성:")
+        self.activeComboBox = QComboBox()
+        self.activeComboBox.addItems(['True', 'False'])
+        if 'active' not in self.proxy_model.sourceModel().editable_col_dicts.keys():
+            self.activeComboBox.setEnabled(False)
 
         self.categoryLabel = QLabel("제품군:")
         self.categoryComboBox = QComboBox()
@@ -68,7 +68,7 @@ class SingleItemWindow(QWidget):
             self.nameLabel.setBuddy(self.nameLineEdit)
         else:
             self.nameLabel.setBuddy(self.nameBox)
-        self.validLabel.setBuddy(self.validComboBox)
+        self.activeLabel.setBuddy(self.activeComboBox)
         self.categoryLabel.setBuddy(self.categoryComboBox)
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
         self.addMapper()
@@ -85,7 +85,7 @@ class SingleItemWindow(QWidget):
         self.mapper = QDataWidgetMapper(self)
         self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
         self.mapper.setModel(self.proxy_model)
-        self.mapper.addMapping(self.validComboBox, 1)
+        self.mapper.addMapping(self.activeComboBox, 1)
         if self.new_item_mode:
             self.mapper.addMapping(self.nameLineEdit, 2)
         self.mapper.addMapping(self.categoryComboBox, 3)
@@ -152,8 +152,8 @@ class SingleItemWindow(QWidget):
         gridbox.addWidget(self.descriptionLabel, 3, 0, 1, 1, Qt.AlignTop)
         gridbox.addWidget(self.descriptionTextEdit, 3, 1, 1, 1)
         gridbox.addLayout(vbox1, 3, 2, 1, 1)
-        gridbox.addWidget(self.validLabel, 4, 0, 1, 1)
-        gridbox.addWidget(self.validComboBox, 4, 1, 1, 1)
+        gridbox.addWidget(self.activeLabel, 4, 0, 1, 1)
+        gridbox.addWidget(self.activeComboBox, 4, 1, 1, 1)
         gridbox.addLayout(hbox1, 5, 1, 1, 1)
 
         self.setLayout(gridbox)

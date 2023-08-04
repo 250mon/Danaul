@@ -16,6 +16,7 @@ from di_logger import Logs, logging
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
+
 class InventoryTableView(QWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
@@ -66,7 +67,6 @@ class InventoryTableView(QWidget):
         self.table_view.resizeColumnsToContents()
         self.table_view.setSortingEnabled(True)
 
-
     @abstractmethod
     def _setup_delegate_for_columns(self):
         """
@@ -95,7 +95,8 @@ class InventoryTableView(QWidget):
         else:
             logger.debug(f'Indexes not selected or invalid: {selected_indexes}')
             return None
-    @Slot(str, pd.DataFrame)
+
+    @Slot(str)
     def do_actions(self, action: str):
         """
         Needs to be implemented
@@ -156,15 +157,10 @@ class InventoryTableView(QWidget):
         Common
         :return:
         """
-        result_str = await self.source_model.update_db()
+        result_str = await self.source_model.save_to_db()
         if result_str is not None:
             QMessageBox.information(self,
                                     'Save Results',
                                     result_str,
                                     QMessageBox.Close)
-        # update model_df
-        logger.debug('Updating model_df ...')
-        await self.source_model.update_model_df_from_db()
-
         return result_str
-

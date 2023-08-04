@@ -21,7 +21,7 @@ class Singleton(type):
 
 sku_query = """
     SELECT
-        s.sku_id, s.sku_valid, s.bit_code, s.sku_qty, s.min_qty,
+        s.sku_id, s.active, s.bit_code, s.sku_qty, s.min_qty,
         s.item_id, s.item_size_id, s.item_side_id, s.expiration_date,
         i.item_name, isz.item_size, isd.item_side
     FROM skus AS s
@@ -182,7 +182,7 @@ async def main(lab):
     # Convert a dataframe into classes and insert them into DB
     new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
                                  [None, True, 'n6', 3, 'change']],
-                                columns=['item_id', 'item_valid', 'item_name',
+                                columns=['item_id', 'active', 'item_name',
                                          'category_id', 'description'])
     # await lab.di_db.insert_items_df(new_items_df)
     await lab.di_db.upsert_items_df(new_items_df)
