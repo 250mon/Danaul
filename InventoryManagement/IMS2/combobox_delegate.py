@@ -42,4 +42,3 @@ class ComboBoxDelegate(QStyledItemDelegate):
                              option: QStyleOptionViewItem,
                              index: QModelIndex) -> None:
         editor.setGeometry(option.rect)
-
