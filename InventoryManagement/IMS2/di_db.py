@@ -216,7 +216,7 @@ async def main():
 
     async def insert_items():
         items_df = pd.DataFrame({
-            'item_id':       [1, 2, 3],
+            'item_id':       ['DEFAULT', 'DEFAULT', 'DEFAULT'],
             'active':    [True, True, True],
             'item_name':     ['써지겔', '아토베리어', 'test1'],
             'category_id':   [1, 1, 1],
@@ -226,7 +226,7 @@ async def main():
 
     async def insert_skus():
         skus_df = pd.DataFrame({
-            'sku_id':           [1, 2, 3],
+            'sku_id':           ['DEFAULT', 'DEFAULT', 'DEFAULT'],
             'active':        [True, True, True],
             'bit_code':         ['bb', 'cc', 'aa'],
             'sku_qty':          [1, 3, 9],
