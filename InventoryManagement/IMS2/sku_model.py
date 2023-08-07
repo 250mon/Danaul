@@ -50,7 +50,7 @@ class SkuModel(DataModel):
             'item_side_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
-        self.set_column_edit_level(self.col_edit_lvl)
+        self.set_column_index_edit_level(self.col_edit_lvl)
 
     def set_item_id(self, item_id: int):
         self.selected_item_id = item_id
@@ -123,12 +123,12 @@ class SkuModel(DataModel):
             elif not self.is_active_row(index):
                 return QBrush(Qt.lightGray)
             elif self.is_row_type(index, 'new'):
-                if self.col_edit_lvl[col_name] == EditLevel.Creatable:
-                    return QBrush(Qt.darkYellow)
-                else:
+                if self.col_edit_lvl[col_name] <= EditLevel.Creatable:
                     return QBrush(Qt.yellow)
+                else:
+                    return QBrush(Qt.darkYellow)
             elif self.is_row_type(index, 'changed'):
-                if self.col_edit_lvl[col_name] == self.edit_level:
+                if self.col_edit_lvl[col_name] <= self.edit_level:
                     return QBrush(Qt.darkBlue)
                 else:
                     return QBrush(Qt.blue)

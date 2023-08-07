@@ -26,6 +26,7 @@ class DataModel(PandasModel):
             self.modifiable = EditLevel.AdminModifiable
         else:
             self.modifiable = EditLevel.UserModifiable
+        self.set_edit_level(self.modifiable)
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
@@ -38,18 +39,18 @@ class DataModel(PandasModel):
     def set_column_names(self, column_names: List[str]):
         self.column_names = column_names
 
-    def set_column_edit_level(self, col_edit_lvl: Dict[str, int]):
+    def set_column_index_edit_level(self, col_edit_lvl: Dict[str, EditLevel]):
         """
         Converts column name to column index in the Dict
         And register it to the Pandas model
         :param col_edit_lvl:
         :return:
         """
-        colidx_edit_lvl = {}
+        col_idx_edit_lvl = {}
         for col_name, lvl in col_edit_lvl.items():
             col_idx = self.column_names.index(col_name)
-            colidx_edit_lvl[col_idx] = lvl
-        super().set_column_edit_level(colidx_edit_lvl)
+            col_idx_edit_lvl[col_idx] = lvl
+        super().set_column_index_edit_level(col_idx_edit_lvl)
 
     def get_col_number(self, col_name: str) -> int:
         return self.model_df.columns.get_loc(col_name)
@@ -145,8 +146,7 @@ class DataModel(PandasModel):
         self.layoutChanged.emit()
 
         # handles model flags
-        self.set_edit_level(self.modifiable)
-        self.set_editable_row(new_item_index.row())
+        self.set_editable_new_row(new_item_index.row())
 
         return new_item_index
 
@@ -191,7 +191,6 @@ class DataModel(PandasModel):
             super().setData(index, flag)
 
         # handles model flags
-        self.set_edit_level(self.modifiable)
         self.set_editable_row(index.row())
 
     def set_del_flag(self, index: QModelIndex):
@@ -263,6 +262,7 @@ class DataModel(PandasModel):
             df_to_upload.iloc[:, 0] = 'DEFAULT'
             results_new = await Lab().insert_df(self.table_name, df_to_upload)
             total_results['추가'] = results_new
+            self.clear_editable_new_rows()
             logger.debug(f'update_db: result of inserting new rows = {results_new}')
 
         chg_df = self.model_df.loc[self.model_df.flag.str.contains('changed'), :]

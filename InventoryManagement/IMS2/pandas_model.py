@@ -5,6 +5,8 @@ from typing import Dict
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
 from typing import List
+
+from IMS2.constants import EditLevel
 from constants import EditLevel
 from di_logger import Logs, logging
 
@@ -22,6 +24,7 @@ class PandasModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
         self.edit_level = EditLevel.UserModifiable
+        self.new_rows_set = set()
         self.editable_rows_set = set()
         self.uneditable_rows_set = set()
 
@@ -93,6 +96,9 @@ class PandasModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if index.row() in self.uneditable_rows_set:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        elif (index.row() in self.new_rows_set and
+              self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable):
+            return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         elif (index.row() in self.editable_rows_set and
                 self.col_idx_edit_lvl[index.column()] <= self.edit_level):
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
@@ -103,8 +109,9 @@ class PandasModel(QAbstractTableModel):
     def set_edit_level(self, level: EditLevel):
         self.edit_level = level
 
-    def set_column_edit_level(self, col_idx_level: Dict[int, int]):
-        self.col_idx_edit_lvl = col_idx_level
+    def set_column_index_edit_level(self,
+                                    col_idx_edit_level: Dict[int, EditLevel]):
+        self.col_idx_edit_lvl = col_idx_edit_level
 
     def set_editable_row(self, row: int):
         self.editable_rows_set.add(row)
@@ -116,14 +123,18 @@ class PandasModel(QAbstractTableModel):
     def clear_editable_rows(self):
         self.editable_rows_set.clear()
 
-    def set_all_editable_row(self, row: int):
+    def set_editable_new_row(self, row: int):
         """
         Makes every column editable for new rows
         :param row:
         :return:
         """
-        self.all_editable_rows_set.add(row)
-        logger.debug(f'set_all_editable_row: row {row}')
+        self.new_rows_set.add(row)
+        logger.debug(f'set_editable_new_row : row {row}')
+
+    def clear_editable_new_rows(self):
+        self.new_rows_set.clear()
+        logger.debug(f'set_editable_new_row : clearing')
 
     def set_uneditable_row(self, row: int):
         """

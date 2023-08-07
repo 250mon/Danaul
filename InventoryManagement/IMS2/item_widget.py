@@ -156,7 +156,7 @@ class ItemWidget(InventoryTableView):
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
-        """
+        self.return_ = """
         While changing items, activating other items would make changing
         to stop.
         :param index:
@@ -164,4 +164,4 @@ class ItemWidget(InventoryTableView):
         """
         src_idx = self.proxy_model.mapToSource(index)
         if src_idx.row() not in self.source_model.editable_rows_set:
-            self.source_model.clear_editable_rows()
+            self.rows = self.source_model.clear_editable_rows()
