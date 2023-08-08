@@ -1,15 +1,18 @@
 import os
 from typing import List
-from PySide6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import (
+    QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout
+)
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
 from di_table_view import InventoryTableView
+from di_default_delegate import DefaultDelegate
 from combobox_delegate import ComboBoxDelegate
 from single_item_window import SingleItemWindow
 
-
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
+
 
 class ItemWidget(InventoryTableView):
     def __init__(self, parent: QMainWindow = None):
@@ -49,7 +52,13 @@ class ItemWidget(InventoryTableView):
             if col_name == 'category_name' or col_name == 'active':
                 col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
                 combo_delegate = ComboBoxDelegate(val_list, self)
+                combo_delegate.set_model(self.source_model)
                 self.table_view.setItemDelegateForColumn(col_index, combo_delegate)
+            else:
+                col_index = self.source_model.get_col_number(col_name)
+                default_delegate = DefaultDelegate(self)
+                default_delegate.set_model(self.source_model)
+                self.table_view.setItemDelegateForColumn(col_index, default_delegate)
 
     def _setup_ui(self):
         """

@@ -28,7 +28,7 @@ class ItemModel(DataModel):
                         'description', 'category_id', 'flag']
         self.set_column_names(column_names)
 
-        self.col_edit_lvl = {
+        self.column_edit_level = {
             'item_id': EditLevel.NotEditable,
             'active': EditLevel.AdminModifiable,
             'item_name': EditLevel.Creatable,
@@ -37,7 +37,7 @@ class ItemModel(DataModel):
             'category_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
-        self.set_column_index_edit_level(self.col_edit_lvl)
+        self.set_column_index_edit_level(self.column_edit_level)
 
     def set_add_on_cols(self):
         """
@@ -83,21 +83,21 @@ class ItemModel(DataModel):
                 # otherwise, string type
                 return str(data_to_display)
 
-        elif role == Qt.BackgroundRole:
-            if self.is_row_type(index, 'deleted'):
-                return QBrush(Qt.darkGray)
-            elif not self.is_active_row(index):
-                return QBrush(Qt.lightGray)
-            elif self.is_row_type(index, 'new'):
-                if self.col_edit_lvl[col_name] <= EditLevel.Creatable:
-                    return QBrush(Qt.yellow)
-                else:
-                    return QBrush(Qt.darkYellow)
-            elif self.is_row_type(index, 'changed'):
-                if self.col_edit_lvl[col_name] <= self.edit_level:
-                    return QBrush(Qt.green)
-                else:
-                    return QBrush(Qt.darkGreen)
+        # elif role == Qt.BackgroundRole:
+        #     if self.is_row_type(index, 'deleted'):
+        #         return QBrush(Qt.darkGray)
+        #     elif not self.is_active_row(index):
+        #         return QBrush(Qt.lightGray)
+        #     elif self.is_row_type(index, 'new'):
+        #         if self.column_edit_level[col_name] <= EditLevel.Creatable:
+        #             return QBrush(Qt.yellow)
+        #         else:
+        #             return QBrush(Qt.darkYellow)
+        #     elif self.is_row_type(index, 'changed'):
+        #         if self.column_edit_level[col_name] <= self.edit_level:
+        #             return QBrush(Qt.green)
+        #         else:
+        #             return QBrush(Qt.darkGreen)
 
         else:
             return None

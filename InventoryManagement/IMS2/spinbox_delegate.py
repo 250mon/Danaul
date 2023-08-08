@@ -2,9 +2,10 @@ from PySide6.QtWidgets import (
     QWidget, QStyledItemDelegate, QStyleOptionViewItem, QSpinBox
 )
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
+from di_default_delegate import DefaultDelegate
 
 
-class SpinBoxDelegate(QStyledItemDelegate):
+class SpinBoxDelegate(DefaultDelegate):
     def __init__(self, min=0, max=10, parent=None):
         super().__init__(parent)
         self.min = min

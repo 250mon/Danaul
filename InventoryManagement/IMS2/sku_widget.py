@@ -1,17 +1,18 @@
 import os
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
-    QSpinBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
 from di_table_view import InventoryTableView
+from di_default_delegate import DefaultDelegate
 from combobox_delegate import ComboBoxDelegate
 from spinbox_delegate import SpinBoxDelegate
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
+
 
 class SkuWidget(InventoryTableView):
     def __init__(self, parent: QMainWindow = None):
@@ -55,6 +56,11 @@ class SkuWidget(InventoryTableView):
                 col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
                 self.combo_delegate = ComboBoxDelegate(val_list, self)
                 self.table_view.setItemDelegateForColumn(col_index, self.combo_delegate)
+            # else:
+            #     col_index = self.source_model.get_col_number(col_name)
+            #     if self.source_model.col_idx_edit_lvl[col_index] <= self.source_model.edit_level:
+            #         default_delegate = DefaultDelegate(self)
+            #         self.table_view.setItemDelegateForColumn(col_index, default_delegate)
 
     def _setup_ui(self):
         """
