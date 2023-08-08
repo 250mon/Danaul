@@ -129,9 +129,9 @@ class SkuModel(DataModel):
                     return QBrush(Qt.darkYellow)
             elif self.is_row_type(index, 'changed'):
                 if self.col_edit_lvl[col_name] <= self.edit_level:
-                    return QBrush(Qt.darkBlue)
+                    return QBrush(Qt.green)
                 else:
-                    return QBrush(Qt.blue)
+                    return QBrush(Qt.darkGreen)
         else:
             return None
 

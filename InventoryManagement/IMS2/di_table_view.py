@@ -66,6 +66,13 @@ class InventoryTableView(QWidget):
         self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.table_view.resizeColumnsToContents()
         self.table_view.setSortingEnabled(True)
+        self.setStyleSheet(
+            "QTableView::item:selected"
+            "{"
+            "background-color : #d9fffb;"
+            "selection-color : #000000;"
+            "}"
+        )
 
     @abstractmethod
     def _setup_delegate_for_columns(self):
