@@ -4,9 +4,6 @@ import pandas as pd
 from typing import Dict
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
-from typing import List
-
-from IMS2.constants import EditLevel
 from constants import EditLevel
 from di_logger import Logs, logging
 

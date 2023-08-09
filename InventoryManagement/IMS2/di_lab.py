@@ -135,6 +135,8 @@ class Lab(metaclass=Singleton):
         self.item_side_id_s = make_series('item_side', False)
         self.tr_type_name_s = make_series('transaction_type', True)
         self.tr_type_id_s = make_series('transaction_type', False)
+        self.user_name_s = make_series('users', True)
+        self.user_id_s = make_series('users', False)
 
     async def update_lab_df_from_db(self, table: str):
         logger.debug(f'update_lab_df_from_db: table {table}')

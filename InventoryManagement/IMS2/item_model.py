@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from typing import Tuple, List
+from typing import Dict, List, Tuple
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
@@ -49,19 +49,25 @@ class ItemModel(DataModel):
         self.model_df['category_name'] = self.model_df['category_id'].map(Lab().category_name_s)
         self.model_df['flag'] = ''
 
-    def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
+    def get_default_delegate_info(self) -> List[int]:
         """
-        Returns values list and column index for creating combobox
+        Returns a list of column indexes for default delegate
         :return:
         """
-        col_index = self.get_col_number(col_name)
-        if col_name == 'active':
-            val_list = ['True', 'False']
-        elif col_name == 'category_name':
-            val_list = Lab().category_name_s.to_list()
-        else:
-            val_list = None
-        return col_index, val_list
+        default_info_list = [self.get_col_number(c) for c in ['item_name', 'description']]
+        return default_info_list
+
+    def get_combobox_delegate_info(self) -> Dict[int, List]:
+        """
+        Returns a dictionary of column indexes and val lists of the combobox
+        for combobox delegate
+        :return:
+        """
+        combo_info_dict = {
+            self.get_col_number('active'): ['True', 'False'],
+            self.get_col_number('category_name'): Lab().category_name_s.to_list()
+        }
+        return combo_info_dict
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """

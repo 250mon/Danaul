@@ -93,13 +93,28 @@ class DataModel(PandasModel):
         # fill name columns against ids of each auxiliary data
         self.set_add_on_cols()
 
-    @abstractmethod
-    def get_editable_cols_combobox_info(self, col_name: str) -> Tuple[int, List]:
+    def get_default_delegate_info(self) -> List[int]:
         """
-        Needs to be implemented in the subclasses
-        Returns values list and column index for creating combobox
+        Returns a list of column indexes for default delegate
         :return:
         """
+        return []
+
+    def get_combobox_delegate_info(self) -> Dict[int, List]:
+        """
+        Returns a dictionary of column indexes and val lists of the combobox
+        for combobox delegate
+        :return:
+        """
+        return {}
+
+    def get_spinbox_delegate_info(self) -> Dict[int, List]:
+        """
+        Returns a dictionary of column indexes and val lists of the spinbox
+        for spinbox delegate
+        :return:
+        """
+        return {}
 
     async def update_model_df_from_db(self):
         """
@@ -123,32 +138,22 @@ class DataModel(PandasModel):
         """
         await self.update_model_df_from_db()
 
-    def add_new_row(self) -> QModelIndex or None:
+    def append_new_row(self):
         """
-        Adds a new row to the end
-        :return: QModelIndex if succeeds, otherwise None
+        Appends a new row to the end of the model
+        :return:
         """
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+
         next_new_id = self.model_df.iloc[:, 0].max() + 1
-        logger.debug(f'add_new_row: New model_df_row id is {next_new_id}')
-
+        logger.debug(f'append_new_row: New model_df_row id is {next_new_id}')
         new_row_df = self.make_a_new_row_df(next_new_id)
-        # when new df was not created correctly
-        if new_row_df is None:
-            return None
-
         self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
 
-        # TODO: needs to update how to get new_item_index
-        row_count = self.rowCount()
-        new_item_index = self.index(row_count - 1, 0)
-
-        self.layoutAboutToBeChanged.emit()
-        self.layoutChanged.emit()
+        self.endInsertRows()
 
         # handles model flags
-        self.set_editable_new_row(new_item_index.row())
-
-        return new_item_index
+        self.set_editable_new_row(self.rowCount() - 1)
 
     @abstractmethod
     def make_a_new_row_df(self, next_new_id):

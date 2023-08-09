@@ -2,7 +2,6 @@ from PySide6.QtWidgets import (
     QWidget, QStyledItemDelegate, QStyleOptionViewItem, QComboBox
 )
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
-from PySide6.QtGui import QPainter, QBrush
 from typing import List
 from di_default_delegate import DefaultDelegate
 
@@ -38,22 +37,6 @@ class ComboBoxDelegate(DefaultDelegate):
         value = editor.currentText()
         # set the text value to the model
         model.setData(index, value, Qt.EditRole)
-
-    # def paint(self,
-    #           painter: QPainter,
-    #           option: QStyleOptionViewItem,
-    #           index: QModelIndex):
-    #     painter.save()
-    #
-    #     # painter.setRenderHint(QPainter.Antialiasing, True)
-    #     # painter.setPen(Qt.NoPen)
-    #
-    #     painter.setBrush(QBrush(Qt.green, Qt.BrushStyle(Qt.SolidPattern)))
-    #     # painter.setBrush(option.palette.highlight())
-    #     # painter.setBrush(option.palette.windowText())
-    #     painter.fillRect(option.rect, painter.brush())
-    #
-    #     painter.restore()
 
     def updateEditorGeometry(self,
                              editor: QComboBox,

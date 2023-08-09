@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PySide6.QtCore import QModelIndex, Qt
-from PySide6.QtGui import QBrush
+from PySide6.QtGui import QBrush, QColor
 from pandas_model import PandasModel
 
 
@@ -18,4 +18,4 @@ class DefaultDelegate(QStyledItemDelegate):
         super().initStyleOption(option, index)
         if (self.p_model is not None and
                 self.p_model.col_idx_edit_lvl[index.column()] <= self.p_model.edit_level):
-            option.backgroundBrush = QBrush(Qt.green)
+            option.backgroundBrush = QBrush(QColor("#D1F2EB"))

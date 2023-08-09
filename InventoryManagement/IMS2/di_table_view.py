@@ -10,6 +10,9 @@ from PySide6.QtCore import (
     Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
 )
 from di_data_model import DataModel
+from di_default_delegate import DefaultDelegate
+from combobox_delegate import ComboBoxDelegate
+from spinbox_delegate import SpinBoxDelegate
 from di_logger import Logs, logging
 
 
@@ -43,7 +46,7 @@ class InventoryTableView(QWidget):
 
         self._setup_table_view()
         self.table_view.setModel(self.proxy_model)
-        self._setup_delegate_for_columns()
+        self.setup_delegate_for_columns()
 
         self._setup_ui()
 
@@ -74,12 +77,24 @@ class InventoryTableView(QWidget):
             "}"
         )
 
-    @abstractmethod
-    def _setup_delegate_for_columns(self):
+    def setup_delegate_for_columns(self):
         """
         Needs to be implemented
         :return:
         """
+        for col_idx in self.source_model.get_default_delegate_info():
+            default_delegate = DefaultDelegate(self.source_model)
+            self.table_view.setItemDelegateForColumn(col_idx, default_delegate)
+
+        for col_idx, val_list in self.source_model.get_combobox_delegate_info().items():
+            combo_delegate = ComboBoxDelegate(val_list, self)
+            combo_delegate.set_model(self.source_model)
+            self.table_view.setItemDelegateForColumn(col_idx, combo_delegate)
+
+        for col_idx, val_list in self.source_model.get_spinbox_delegate_info().items():
+            spin_delegate = SpinBoxDelegate(*val_list, self)
+            spin_delegate.set_model(self.source_model)
+            self.table_view.setItemDelegateForColumn(col_idx, spin_delegate)
 
     @abstractmethod
     def _setup_ui(self):
@@ -117,14 +132,8 @@ class InventoryTableView(QWidget):
         This is called from a Button
         :return:
         """
-        new_item_index = self.source_model.add_new_row()
-        if new_item_index is None:
-            logger.debug(f'add_new_row: Failed creating a new row')
-            self.parent.statusBar().showMessage('Failed creating a new row')
-        else:
-            logger.debug(f'add_new_row: a new row is being created')
-            self.parent.statusBar().showMessage('A new row being created')
-        return new_item_index
+        self.source_model.append_new_row()
+
 
     def change_rows_by_delegate(self, indexes: List[QModelIndex]):
         """

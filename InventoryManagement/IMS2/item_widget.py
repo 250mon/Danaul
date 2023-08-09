@@ -6,8 +6,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
 from di_table_view import InventoryTableView
-from di_default_delegate import DefaultDelegate
-from combobox_delegate import ComboBoxDelegate
 from single_item_window import SingleItemWindow
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -41,24 +39,8 @@ class ItemWidget(InventoryTableView):
         self.table_view.doubleClicked.connect(self.row_double_clicked)
         self.table_view.activated.connect(self.row_activated)
 
-    def _setup_delegate_for_columns(self):
-        """
-        Needs to be implemented
-        :return:
-        """
-        # Set combo delegates for category and valid columns
-        # For other columns, it uses default delegates (LineEdit)
-        for col_name in self.source_model.column_names:
-            if col_name == 'category_name' or col_name == 'active':
-                col_index, val_list = self.source_model.get_editable_cols_combobox_info(col_name)
-                combo_delegate = ComboBoxDelegate(val_list, self)
-                combo_delegate.set_model(self.source_model)
-                self.table_view.setItemDelegateForColumn(col_index, combo_delegate)
-            else:
-                col_index = self.source_model.get_col_number(col_name)
-                default_delegate = DefaultDelegate(self)
-                default_delegate.set_model(self.source_model)
-                self.table_view.setItemDelegateForColumn(col_index, default_delegate)
+    def setup_delegate_for_columns(self):
+        super().setup_delegate_for_columns()
 
     def _setup_ui(self):
         """
@@ -99,10 +81,10 @@ class ItemWidget(InventoryTableView):
         logger.debug(f'do_action: {action}')
         if action == "add_item":
             logger.debug('Adding item ...')
-            new_item_index = self.add_new_row()
-            logger.debug(f'do_actions: add_item {new_item_index}')
+            self.add_new_row()
             if not self.delegate_mode:
                 # Input window mode using DataMapperWidget
+                new_item_index = self.source_model.index(self.source_model.rowCount()-1, 0)
                 self.item_window = SingleItemWindow(self.proxy_model,
                                                     new_item_index, self)
 
