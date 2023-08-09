@@ -138,7 +138,7 @@ class DataModel(PandasModel):
         """
         await self.update_model_df_from_db()
 
-    def append_new_row(self):
+    def append_new_row(self, **kwargs):
         """
         Appends a new row to the end of the model
         :return:
@@ -147,7 +147,7 @@ class DataModel(PandasModel):
 
         next_new_id = self.model_df.iloc[:, 0].max() + 1
         logger.debug(f'append_new_row: New model_df_row id is {next_new_id}')
-        new_row_df = self.make_a_new_row_df(next_new_id)
+        new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
         self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
 
         self.endInsertRows()
@@ -156,7 +156,7 @@ class DataModel(PandasModel):
         self.set_editable_new_row(self.rowCount() - 1)
 
     @abstractmethod
-    def make_a_new_row_df(self, next_new_id):
+    def make_a_new_row_df(self, next_new_id, **kwargs):
         """
         Needs to be implemented in subclasses
         :param next_new_id:

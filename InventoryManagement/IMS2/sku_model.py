@@ -29,11 +29,6 @@ class SkuModel(DataModel):
     def init_params(self):
         self.set_table_name('skus')
 
-        column_names = ['sku_id', 'item_name', 'active', 'sku_qty', 'min_qty',
-                        'item_size', 'item_side', 'expiration_date', 'description',
-                        'bit_code', 'item_id', 'item_size_id', 'item_side_id', 'flag']
-        self.set_column_names(column_names)
-
         self.col_edit_lvl = {
             'sku_id': EditLevel.NotEditable,
             'item_name': EditLevel.NotEditable,
@@ -50,16 +45,17 @@ class SkuModel(DataModel):
             'item_side_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
+        self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
     def set_item_id(self, item_id: int):
         self.selected_item_id = item_id
 
     def update_items_params(self):
-        item_name_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name', 'active']]
-        self.item_name_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 0]
-        self.item_id_s: pd.Series = item_name_df.set_index('item_name').iloc[:, 0]
-        self.active_s: pd.Series = item_name_df.set_index('item_id').iloc[:, 1]
+        items_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name', 'active']]
+        self.item_name_s: pd.Series = items_df.set_index('item_id').iloc[:, 0]
+        self.item_id_s: pd.Series = items_df.set_index('item_name').iloc[:, 0]
+        self.item_active_s: pd.Series = items_df.set_index('item_id').iloc[:, 1]
 
     async def update(self):
         await super().update()
@@ -153,7 +149,7 @@ class SkuModel(DataModel):
 
     def setData(self,
                 index: QModelIndex,
-                value: str,
+                value: object,
                 role=Qt.EditRole):
         """
         Override method from QAbstractTableModel
@@ -167,14 +163,12 @@ class SkuModel(DataModel):
 
         logger.debug(f'setData({index}, {value})')
 
-        obj_type_value: object = value
-
         if index.column() == self.get_col_number('active'):
             # taking care of converting str type input to bool type
             if value == 'True':
-                obj_type_value = True
+                value = True
             else:
-                obj_type_value: bool = False
+                value = False
         elif index.column() == self.get_col_number('item_name'):
             if value in self.item_name_s.tolist():
                 id_col = self.get_col_number('item_id')
@@ -191,13 +185,11 @@ class SkuModel(DataModel):
         elif index.column() == self.get_col_number('expiration_date'):
             # data type is datetime.date
             if isinstance(value, QDate):
-                obj_type_value = qdate_to_pydate(value)
-        else:
-            pass
+                value = qdate_to_pydate(value)
 
-        return super().setData(index, obj_type_value, role)
+        return super().setData(index, value, role)
 
-    def make_a_new_row_df(self, next_new_id) -> pd.DataFrame or None:
+    def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame or None:
         """
         Needs to be implemented in subclasses
         :param next_new_id:
@@ -206,7 +198,7 @@ class SkuModel(DataModel):
         if self.selected_item_id is None:
             logger.error('make_a_new_row_df: item_id is empty')
             return None
-        elif not self.active_s[self.selected_item_id]:
+        elif not self.item_active_s[self.selected_item_id]:
             logger.error('make_a_new_row_df: item_id is not active')
             return None
 

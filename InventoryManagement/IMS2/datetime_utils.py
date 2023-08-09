@@ -12,7 +12,6 @@ def qdate_to_pydate(qdate: QDate) -> date:
 
 def pydt_to_qdt(pydt: datetime) -> QDateTime:
     pydt_str = pydt.strftime("%Y-%m-%d %H:%M:%S")
-    print(pydt_str)
     return QDateTime.fromString(pydt_str, "yyyy-MM-dd hh:mm:ss")
 
 

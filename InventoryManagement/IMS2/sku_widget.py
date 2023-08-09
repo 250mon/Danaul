@@ -22,8 +22,8 @@ class SkuWidget(InventoryTableView):
         :return:
         """
         # Filtering is performed on item_name column
-        # search_col_num = self.source_model.get_col_number('item_name')
-        # self.proxy_model.setFilterKeyColumn(search_col_num)
+        search_col_num = self.source_model.get_col_number('item_id')
+        self.proxy_model.setFilterKeyColumn(search_col_num)
 
         # Sorting
         # For sorting, model data needs to be read in certain deterministic order
@@ -52,6 +52,8 @@ class SkuWidget(InventoryTableView):
         # search_bar = QLineEdit(self)
         # search_bar.setPlaceholderText('품목명 입력')
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
+        view_all_btn = QPushButton('전체조회')
+        view_all_btn.clicked.connect(lambda : self.filter_selected_item(None))
         add_sku_btn = QPushButton('추가')
         add_sku_btn.clicked.connect(lambda: self.do_actions("add_sku"))
         chg_sku_btn = QPushButton('수정')
@@ -62,7 +64,7 @@ class SkuWidget(InventoryTableView):
         if hasattr(self.parent, "async_start"):
             save_sku_btn.clicked.connect(lambda: self.parent.async_start("sku_save"))
         sku_hbox = QHBoxLayout()
-        # sku_hbox.addWidget(search_bar)
+        sku_hbox.addWidget(view_all_btn)
         sku_hbox.addStretch(1)
         sku_hbox.addWidget(add_sku_btn)
         sku_hbox.addWidget(chg_sku_btn)
@@ -99,8 +101,9 @@ class SkuWidget(InventoryTableView):
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        An item being double clicked in item view automatically makes
-        the sku view to do filtering to show the skus of the item only.
+        A sku being double clicked in the sku view automatically makes
+        the transaction view to do filtering to show the transactions of
+        the selected sku.
         :param index:
         :return:
         """
@@ -113,7 +116,7 @@ class SkuWidget(InventoryTableView):
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
         """
-        While changing items, activating other items would make changing
+        While changing rows, activating other rows would make the change
         to stop.
         :param index:
         :return:
@@ -122,12 +125,15 @@ class SkuWidget(InventoryTableView):
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
 
-    def filter_selected_item(self, item_id: int):
+    def filter_selected_item(self, item_id: int or None):
         """
-        A double-click event in item.table_view triggers the parent's
+        A double-click event in the item view triggers the parent's
         item_selected method which in turn calls this method
         :param item_id:
         :return:
         """
-        self.proxy_model.setFilterRegularExpression(f"^{item_id}$")
+        if item_id is None:
+            self.proxy_model.setFilterRegularExpression("^\\d*$")
+        else:
+            self.proxy_model.setFilterRegularExpression(f"^{item_id}$")
         # self.proxy_model.setFilterFixedString(item_id)

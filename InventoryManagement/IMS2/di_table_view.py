@@ -126,13 +126,13 @@ class InventoryTableView(QWidget):
         :return:
         """
 
-    def add_new_row(self):
+    def add_new_row(self, **kwargs):
         """
         Common
         This is called from a Button
         :return:
         """
-        self.source_model.append_new_row()
+        self.source_model.append_new_row(**kwargs)
 
 
     def change_rows_by_delegate(self, indexes: List[QModelIndex]):

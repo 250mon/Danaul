@@ -24,11 +24,7 @@ class ItemModel(DataModel):
     def init_params(self):
         self.set_table_name('items')
 
-        column_names = ['item_id', 'active', 'item_name', 'category_name',
-                        'description', 'category_id', 'flag']
-        self.set_column_names(column_names)
-
-        self.column_edit_level = {
+        self.col_edit_lvl = {
             'item_id': EditLevel.NotEditable,
             'active': EditLevel.AdminModifiable,
             'item_name': EditLevel.Creatable,
@@ -37,7 +33,8 @@ class ItemModel(DataModel):
             'category_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
-        self.set_column_index_edit_level(self.column_edit_level)
+        self.set_column_names(list(self.col_edit_lvl.keys()))
+        self.set_column_index_edit_level(self.col_edit_lvl)
 
     def set_add_on_cols(self):
         """
@@ -110,7 +107,7 @@ class ItemModel(DataModel):
 
     def setData(self,
                 index: QModelIndex,
-                value: str,
+                value: object,
                 role=Qt.EditRole):
         """
         Override method from QAbstractTableModel
@@ -124,13 +121,12 @@ class ItemModel(DataModel):
 
         logger.debug(f'setData({index}, {value})')
 
-        ret_value: object = value
-
         if index.column() == self.get_col_number('active'):
             # taking care of converting str type input to bool type
-            ret_value: bool = False
             if value == 'True':
-                ret_value = True
+                value = True
+            else:
+                value = False
         elif index.column() == self.get_col_number('category_name'):
             # if setting category_name, automatically setting category_id accordingly
             cat_id_col = self.get_col_number('category_id')
@@ -140,12 +136,10 @@ class ItemModel(DataModel):
             if not self.model_df[self.model_df.item_name == value].empty:
                 logger.debug(f'setData: item name({value}) is already in use')
                 return False
-        else:
-            pass
 
-        return super().setData(index, ret_value, role)
+        return super().setData(index, value, role)
 
-    def make_a_new_row_df(self, next_new_id):
+    def make_a_new_row_df(self, next_new_id, **kwargs):
         """
         Needs to be implemented in subclasses
         :param next_new_id:

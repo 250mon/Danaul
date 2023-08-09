@@ -22,16 +22,12 @@ class TrModel(DataModel):
     def __init__(self, user_name: str):
         self.init_params()
         self.selected_sku_id = None
-        self.update_items_params()
+        self.update_skus_params()
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
     def init_params(self):
-        self.set_table_name('trs')
-
-        column_names = ['tr_id', 'sku_id', 'tr_type', 'tr_qty', 'before_qty', 'after_qty'
-                        'tr_timestamp', 'description', 'user_id', 'tr_type_id']
-        self.set_column_names(column_names)
+        self.set_table_name('transactions')
 
         self.col_edit_lvl = {
             'tr_id': EditLevel.NotEditable,
@@ -47,10 +43,19 @@ class TrModel(DataModel):
             'user_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
+
+        self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
-    def set_item_id(self, sku_id: int):
+    def set_sku_id(self, sku_id: int):
         self.selected_sku_id = sku_id
+
+    def update_skus_params(self):
+        skus_df = Lab().table_df['skus'].loc[:, ['sku_id', 'active', 'bit_code', 'sku_qty']]
+        skus_df_id_indexed = skus_df.set_index('sku_id')
+        self.sku_active_s: pd.Series = skus_df_id_indexed.iloc[:, 0]
+        self.sku_bitcode_s: pd.Series = skus_df_id_indexed.iloc[:, 1]
+        self.sku_qty_s: pd.Series = skus_df_id_indexed.iloc[:, 2]
 
     async def update(self):
         await super().update()
@@ -62,7 +67,7 @@ class TrModel(DataModel):
         :return:
         """
         # set more columns for the view
-        self.model_df['tr_type'] = self.model_df['tr_type_id'].map(Lab().tr_type_name_s)
+        self.model_df['tr_type'] = self.model_df['tr_type_id'].map(Lab().tr_type_s)
         self.model_df['user_name'] = self.model_df['user_id'].map(Lab().user_name_s)
         self.model_df['flag'] = ''
 
@@ -103,7 +108,7 @@ class TrModel(DataModel):
 
     def setData(self,
                 index: QModelIndex,
-                value: str,
+                value: object,
                 role=Qt.EditRole):
         """
         Override method from QAbstractTableModel
@@ -117,71 +122,43 @@ class TrModel(DataModel):
 
         logger.debug(f'setData({index}, {value})')
 
-        obj_type_value: object = value
-
-        if index.column() == self.get_col_number('active'):
-            # taking care of converting str type input to bool type
-            if value == 'True':
-                obj_type_value = True
-            else:
-                obj_type_value: bool = False
-        elif index.column() == self.get_col_number('sku_id'):
-            if value in self.item_name_s.tolist():
-                id_col = self.get_col_number('item_id')
-                self.model_df.iloc[index.row(), id_col] = self.item_id_s.loc[value]
-            else:
-                logger.debug(f'setData: item_name({value}) is not valid')
-                return False
-        elif index.column() == self.get_col_number('item_size'):
-            id_col = self.get_col_number('item_size_id')
-            self.model_df.iloc[index.row(), id_col] = Lab().item_size_id_s.loc[value]
-        elif index.column() == self.get_col_number('item_side'):
-            id_col = self.get_col_number('item_side_id')
-            self.model_df.iloc[index.row(), id_col] = Lab().item_side_id_s.loc[value]
-        elif index.column() == self.get_col_number('expiration_date'):
+        if index.column() == self.get_col_number('tr_timestamp'):
             # data type is datetime.date
-            if isinstance(value, QDate):
-                obj_type_value = qdate_to_pydate(value)
-        else:
-            pass
+            if isinstance(value, QDateTime):
+                value = qdt_to_pydt(value)
 
-        return super().setData(index, obj_type_value, role)
+        return super().setData(index, value, role)
 
-    def make_a_new_row_df(self, next_new_id) -> pd.DataFrame or None:
+    def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame or None:
         """
         Needs to be implemented in subclasses
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise None
         """
         if self.selected_sku_id is None:
-            logger.error('make_a_new_row_df: item_id is empty')
+            logger.error('make_a_new_row_df: sku_id is empty')
             return None
-        elif not self.active_s[self.selected_sku_id]:
-            logger.error('make_a_new_row_df: item_id is not active')
+        elif not self.sku_active_s[self.selected_sku_id]:
+            logger.error('make_a_new_row_df: sku_id is not active')
             return None
 
-        default_item_id = self.selected_sku_id
-        item_name = self.item_name_s[default_item_id]
-        logger.debug(f'make_a_new_row_df: {default_item_id} {item_name} being created')
-        default_item_size_id = 1
-        iz_name = Lab().item_size_name_s.loc[default_item_size_id]
-        default_item_side_id = 1
-        id_name = Lab().item_side_name_s.loc[default_item_side_id]
+        current_qty = self.sku_qty_s[self.selected_sku_id]
+        tr_type = kwargs['tr_type']
+        tr_type_id = Lab().tr_type_id_s.loc[tr_type]
+        user_id = Lab().user_id_s[self.user_name]
 
         new_model_df = pd.DataFrame([{
             'tr_id': next_new_id,
             'sku_id': self.selected_sku_id,
-            'active': True,
+            'tr_type': tr_type,
             'tr_qty': 0,
-            'min_qty': 2,
-            'item_size': iz_name,
-            'item_side': id_name,
-            'expiration_date': 'DEFAULT',
+            'before_qty': current_qty,
+            'after_qty': current_qty,
+            'tr_timestamp': 'DEFAULT',
             'description': "",
-            'bit_code': 'A11',
-            'item_id': default_item_id,
-            'item_size_id': default_item_size_id,
-            'item_side_id': default_item_side_id,
+            'user_name': self.user_name,
+            'user_id': user_id,
+            'tr_type_id': tr_type_id,
             'flag': 'new'
         }])
         return new_model_df

@@ -134,8 +134,8 @@ class ItemWidget(InventoryTableView):
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        An item being double clicked in item view automatically makes
-        the sku view to do filtering to show the skus of the item only.
+        An item being double clicked in the item view automatically makes
+        the sku view to do filtering to show the skus of the selected item.
         :param index:
         :return:
         """
@@ -147,8 +147,8 @@ class ItemWidget(InventoryTableView):
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
-        self.return_ = """
-        While changing items, activating other items would make changing
+        """
+        While changing rows, activating other rows would make the change
         to stop.
         :param index:
         :return:
