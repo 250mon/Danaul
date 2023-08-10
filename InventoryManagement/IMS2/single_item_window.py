@@ -151,9 +151,10 @@ class SingleItemWindow(QWidget):
         gridbox.addWidget(self.categoryComboBox, 1, 1, 1, 1)
         gridbox.addWidget(self.descriptionLabel, 3, 0, 1, 1, Qt.AlignTop)
         gridbox.addWidget(self.descriptionTextEdit, 3, 1, 1, 1)
-        gridbox.addLayout(vbox1, 3, 2, 1, 1)
         gridbox.addWidget(self.activeLabel, 4, 0, 1, 1)
         gridbox.addWidget(self.activeComboBox, 4, 1, 1, 1)
+
+        gridbox.addLayout(vbox1, 3, 2, 1, 1)
         gridbox.addLayout(hbox1, 5, 1, 1, 1)
 
         self.setLayout(gridbox)

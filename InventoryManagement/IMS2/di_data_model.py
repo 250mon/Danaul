@@ -3,7 +3,7 @@ import pandas as pd
 import asyncpg.exceptions
 from typing import Dict, Tuple, List
 from abc import abstractmethod
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, Qt
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -180,6 +180,20 @@ class DataModel(PandasModel):
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
+    def setData(self,
+                index: QModelIndex,
+                value: object,
+                role=Qt.EditRole):
+        """
+        Override method from QAbstractTableModel
+        :param index:
+        :param value:
+        :param role:
+        :return:
+        """
+        self.set_chg_flag(index)
+        super().setData(index, value, role)
+
     def set_chg_flag(self, index: QModelIndex):
         """
         Sets a 'changed' flag in the flag column of the row of index
@@ -258,6 +272,7 @@ class DataModel(PandasModel):
             total_results['삭제'] = results_del
             logger.debug(f'update_db: result of deleting = {results_del}')
             self.model_df.drop(del_df.index, inplace=True)
+            self.clear_uneditable_rows()
 
         new_df = self.model_df.loc[self.model_df.flag.str.contains('new'), :]
         if not new_df.empty:

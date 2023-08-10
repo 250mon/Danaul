@@ -106,18 +106,25 @@ class PandasModel(QAbstractTableModel):
     def set_edit_level(self, level: EditLevel):
         self.edit_level = level
 
-    def set_column_index_edit_level(self,
-                                    col_idx_edit_level: Dict[int, EditLevel]):
+    def set_column_index_edit_level(self, col_idx_edit_level: Dict[int, EditLevel]):
         self.col_idx_edit_lvl = col_idx_edit_level
 
     def set_editable_row(self, row: int):
+        logger.debug(f'set_editable_row: row{row} => '
+                     f'editable_rows_set {self.editable_rows_set}')
         self.editable_rows_set.add(row)
 
     def unset_editable_row(self, row: int):
+        logger.debug(f'unset_editable_row: row{row} from '
+                     f'editable_rows_set {self.editable_rows_set}')
         if row in self.editable_rows_set:
             self.editable_rows_set.remove(row)
+        else:
+            logger.warn(f'unset_editable_row: cannot find row {row} int the set')
 
     def clear_editable_rows(self):
+        logger.debug(f'clear_editable_rows: '
+                     f'remove all rows from {self.editable_rows_set}')
         self.editable_rows_set.clear()
 
     def set_editable_new_row(self, row: int):
@@ -126,8 +133,9 @@ class PandasModel(QAbstractTableModel):
         :param row:
         :return:
         """
+        logger.debug(f'set_editable_new_row: row{row} => '
+                     f'new_row_set{self.new_rows_set}')
         self.new_rows_set.add(row)
-        logger.debug(f'set_editable_new_row : row {row}')
 
     def clear_editable_new_rows(self):
         self.new_rows_set.clear()
@@ -139,21 +147,22 @@ class PandasModel(QAbstractTableModel):
         :param row:
         :return:
         """
+        logger.debug(f'set_uneditable_row: row{row} => '
+                     f'uneditable_rows_set {self.uneditable_rows_set}')
         self.uneditable_rows_set.add(row)
-        logger.debug(f'set_uneditable_row: row {row}')
 
     def unset_uneditable_row(self, row: int):
-        if row == -1:
-            logger.debug(f'unset_uneditable_row: '
-                         f'remove all rows from {self.uneditable_rows_set}')
-            self.uneditable_rows_set.clear()
+        logger.debug(f'unset_uneditable_row: '
+                     f'remove row {row} from {self.uneditable_rows_set}')
+        if row in self.uneditable_rows_set:
+            self.uneditable_rows_set.remove(row)
         else:
-            logger.debug(f'unset_uneditable_row: '
-                         f'remove row {row} from {self.uneditable_rows_set}')
-            if row in self.uneditable_rows_set:
-                self.uneditable_rows_set.remove(row)
-            else:
-                logger.warn(f'unset_uneditable_row: cannot find row {row} int he set')
+            logger.warn(f'unset_uneditable_row: cannot find row {row} int the set')
+
+    def clear_uneditable_rows(self):
+        logger.debug(f'clear_uneditable_row: '
+                     f'remove all rows from {self.uneditable_rows_set}')
+        self.uneditable_rows_set.clear()
 
 
 if __name__ == "__main__":

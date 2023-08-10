@@ -109,9 +109,10 @@ class SkuWidget(InventoryTableView):
         """
         if index.isValid():
             src_idx = self.proxy_model.mapToSource(index)
-            sku_id = int(src_idx.siblingAtColumn(0).data())
+            sku_id = int(src_idx.siblingAtColumn(self.source_model.get_col_number('sku_id')).data())
+            sku_name = src_idx.siblingAtColumn(self.source_model.get_col_number('sku_name')).data()
             if hasattr(self.parent, 'sku_selected'):
-                self.parent.sku_selected(sku_id)
+                self.parent.sku_selected(sku_id, sku_name)
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):

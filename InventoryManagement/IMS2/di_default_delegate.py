@@ -9,7 +9,7 @@ class DefaultDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.p_model = None
 
-    def set_model(self, model):
+    def set_model(self, model: PandasModel):
         self.p_model = model
 
     def initStyleOption(self,

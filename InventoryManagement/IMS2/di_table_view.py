@@ -79,11 +79,12 @@ class InventoryTableView(QWidget):
 
     def setup_delegate_for_columns(self):
         """
-        Needs to be implemented
+        Sets up appropriate delegates for columns
         :return:
         """
         for col_idx in self.source_model.get_default_delegate_info():
-            default_delegate = DefaultDelegate(self.source_model)
+            default_delegate = DefaultDelegate(self)
+            default_delegate.set_model(self.source_model)
             self.table_view.setItemDelegateForColumn(col_idx, default_delegate)
 
         for col_idx, val_list in self.source_model.get_combobox_delegate_info().items():
@@ -144,14 +145,12 @@ class InventoryTableView(QWidget):
         :param indexes:
         :return:
         """
-        chg_rows = set()
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
-                self.source_model.set_chg_flag(src_idx)
-                chg_rows.add(src_idx.row())
+                # self.source_model.set_chg_flag(src_idx)
 
-        logger.debug(f'change_rows_by_delegate: rows {chg_rows} being changed')
+        logger.debug(f'change_rows_by_delegate: rows {src_idx.row()} being changed')
 
     def delete_rows(self, indexes: List[QModelIndex]):
         """

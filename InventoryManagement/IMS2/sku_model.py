@@ -40,6 +40,7 @@ class SkuModel(DataModel):
             'expiration_date': EditLevel.Creatable,
             'description': EditLevel.UserModifiable,
             'bit_code': EditLevel.AdminModifiable,
+            'sku_name': EditLevel.NotEditable,
             'item_id': EditLevel.NotEditable,
             'item_size_id': EditLevel.NotEditable,
             'item_side_id': EditLevel.NotEditable,
@@ -68,9 +69,11 @@ class SkuModel(DataModel):
         :return:
         """
         # set more columns for the view
-        self.model_df['item_size'] = self.model_df['item_size_id'].map(Lab().item_size_name_s)
-        self.model_df['item_side'] = self.model_df['item_side_id'].map(Lab().item_side_name_s)
+        self.model_df['item_size'] = self.model_df['item_size_id'].map(Lab().item_size_name_s).str.replace("None", "")
+        self.model_df['item_side'] = self.model_df['item_side_id'].map(Lab().item_side_name_s).str.replace("None", "")
         self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
+        self.model_df['sku_name'] = self.model_df['item_name'].str.cat(
+            self.model_df.loc[:, ['item_size', 'item_side']], na_rep="-", sep=" ").str.replace("None", "")
         self.model_df['flag'] = ''
 
     def get_default_delegate_info(self) -> List[int]:
@@ -78,7 +81,8 @@ class SkuModel(DataModel):
         Returns a list of column indexes for default delegate
         :return:
         """
-        default_info_list = [self.get_col_number(c) for c in ['description']]
+        default_info_list = [self.get_col_number(c) for c in
+                             ['description', 'bit_code']]
         return default_info_list
 
     def get_combobox_delegate_info(self) -> Dict[int, List]:
@@ -129,21 +133,22 @@ class SkuModel(DataModel):
                 # otherwise, string type
                 return str(data_to_display)
 
-        elif role == Qt.BackgroundRole:
-            if self.is_row_type(index, 'deleted'):
-                return QBrush(Qt.darkGray)
-            elif not self.is_active_row(index):
-                return QBrush(Qt.lightGray)
-            elif self.is_row_type(index, 'new'):
-                if self.col_edit_lvl[col_name] <= EditLevel.Creatable:
-                    return QBrush(Qt.yellow)
-                else:
-                    return QBrush(Qt.darkYellow)
-            elif self.is_row_type(index, 'changed'):
-                if self.col_edit_lvl[col_name] <= self.edit_level:
-                    return QBrush(Qt.green)
-                else:
-                    return QBrush(Qt.darkGreen)
+        # elif role == Qt.BackgroundRole:
+        #     if self.is_row_type(index, 'deleted'):
+        #         return QBrush(Qt.darkGray)
+        #     elif not self.is_active_row(index):
+        #         return QBrush(Qt.lightGray)
+        #     elif self.is_row_type(index, 'new'):
+        #         if self.col_edit_lvl[col_name] <= EditLevel.Creatable:
+        #             return QBrush(Qt.yellow)
+        #         else:
+        #             return QBrush(Qt.darkYellow)
+        #     elif self.is_row_type(index, 'changed'):
+        #         if self.col_edit_lvl[col_name] <= self.edit_level:
+        #             return QBrush(Qt.green)
+        #         else:
+        #             return QBrush(Qt.darkGreen)
+
         else:
             return None
 
@@ -209,6 +214,7 @@ class SkuModel(DataModel):
         iz_name = Lab().item_size_name_s.loc[default_item_size_id]
         default_item_side_id = 1
         id_name = Lab().item_side_name_s.loc[default_item_side_id]
+        exp_date = date(9999, 1, 1)
 
         new_model_df = pd.DataFrame([{
             'sku_id': next_new_id,
@@ -218,7 +224,7 @@ class SkuModel(DataModel):
             'min_qty': 2,
             'item_size': iz_name,
             'item_side': id_name,
-            'expiration_date': 'DEFAULT',
+            'expiration_date': exp_date,
             'description': "",
             'bit_code': 'A11',
             'item_id': default_item_id,

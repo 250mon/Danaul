@@ -43,7 +43,6 @@ class TrWidget(InventoryTableView):
         """
         super().setup_delegate_for_columns()
 
-
     def _setup_ui(self):
         """
         Needs to be implemented
@@ -87,12 +86,34 @@ class TrWidget(InventoryTableView):
         """
         logger.debug(f'do_action: {action}')
         if action == "buy":
-            logger.debug('buying ...')
+            logger.debug('do_actions: buying ...')
             self.add_new_row(tr_type='Buy')
-
+            self.tr_window = SingleTrWindow(self.proxy_model, self)
         elif action == "sell":
-            logger.debug('selling ...')
+            logger.debug('do_actions: selling ...')
             self.add_new_row(tr_type='Sell')
+            self.tr_window = SingleTrWindow(self.proxy_model, self)
+        elif action == "adj+":
+            logger.debug('do_actions: adjusting plus ...')
+            self.add_new_row(tr_type='Sell')
+            self.tr_window = SingleTrWindow(self.proxy_model, self)
+        elif action == "adj-":
+            logger.debug('do_actions: adjusting minus ...')
+            self.add_new_row(tr_type='Sell')
+            self.tr_window = SingleTrWindow(self.proxy_model, self)
+
+    @Slot(object)
+    def added_new_tr_by_single_tr_window(self, index: QModelIndex):
+        """
+        This is called when SingleTrWindow emits a signal
+        It validates the newly added item(the last index)
+        If it fails to pass the validation, remove it.
+        :return:
+        """
+        logger.debug(f'added_new_tr_by_single_tr_window: tr {index.row()} added')
+
+        if not self.source_model.validate_new_row(index):
+            self.source_model.drop_rows([index])
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):

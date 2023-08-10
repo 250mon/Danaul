@@ -133,14 +133,14 @@ class InventoryWindow(QMainWindow):
         self.sku_widget.filter_selected_item(item_id)
         self.sku_model.set_item_id(item_id)
 
-    def sku_selected(self, sku_id: int):
+    def sku_selected(self, sku_id: int, sku_name: str):
         """
         A double-click event in the sku view triggers this method,
         and this method consequently calls transaction view to display
         the sku selected
         """
         self.tr_widget.filter_selected_sku(sku_id)
-        self.tr_model.set_sku_id(sku_id)
+        self.tr_model.set_sku_id_and_name(sku_id, sku_name)
 
 
 if __name__ == '__main__':
