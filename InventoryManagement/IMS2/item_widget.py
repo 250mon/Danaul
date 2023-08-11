@@ -142,8 +142,7 @@ class ItemWidget(InventoryTableView):
         if index.isValid():
             src_idx = self.proxy_model.mapToSource(index)
             if hasattr(self.parent, 'item_selected'):
-                item_id = int(src_idx.siblingAtColumn(0).data())
-                self.parent.item_selected(item_id)
+                self.parent.item_selected(src_idx)
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):

@@ -135,7 +135,6 @@ class InventoryTableView(QWidget):
         """
         self.source_model.append_new_row(**kwargs)
 
-
     def change_rows_by_delegate(self, indexes: List[QModelIndex]):
         """
         Common
@@ -148,7 +147,7 @@ class InventoryTableView(QWidget):
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
-                # self.source_model.set_chg_flag(src_idx)
+                self.source_model.set_chg_flag(src_idx)
 
         logger.debug(f'change_rows_by_delegate: rows {src_idx.row()} being changed')
 
@@ -179,3 +178,21 @@ class InventoryTableView(QWidget):
                                     result_str,
                                     QMessageBox.Close)
         return result_str
+
+    def filter_selection(self, upper_index: QModelIndex):
+        """
+        A double-click event in the view triggers the parent's
+        item_selected method which in turn calls this method
+        :param item_id:
+        :return:
+        """
+        # let sku model learn item model index for new row creation
+        self.source_model.set_upper_model_index(upper_index)
+
+        # filtering in the sku view
+        self.proxy_model.setFilterRegularExpression(
+            f"^{self.source_model.selected_upper_id}$")
+
+    def filter_no_selection(self):
+        self.proxy_model.setFilterRegularExpression("^\\d*$")
+        self.source_model.set_upper_model_index(None)

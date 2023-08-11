@@ -1,7 +1,7 @@
 import sys, os
 from typing import List
 from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import Qt, Signal, Slot, QModelIndex
 from login_widget import LoginWidget
 from async_helper import AsyncHelper
 from di_lab import Lab
@@ -45,8 +45,8 @@ class InventoryWindow(QMainWindow):
         self.setWindowTitle("다나을 재고관리")
 
         self.item_model = ItemModel(self.user_name)
-        self.sku_model = SkuModel(self.user_name)
-        self.tr_model = TrModel(self.user_name)
+        self.sku_model = SkuModel(self.user_name, self.item_model)
+        self.tr_model = TrModel(self.user_name, self.sku_model)
 
         self.setUpMainWindow()
         self.async_helper = AsyncHelper(self, self.save_to_db)
@@ -109,7 +109,9 @@ class InventoryWindow(QMainWindow):
             await self.update_models(['skus'])
         elif action == "tr_save":
             logger.debug('Saving transactions ...')
+            result_str = await self.sku_widget.save_to_db()
             result_str = await self.tr_widget.save_to_db()
+            await self.update_models(['skus'])
             await self.update_models(['transactions'])
         self.done_signal.emit(action)
 
@@ -124,23 +126,21 @@ class InventoryWindow(QMainWindow):
             await self.tr_model.update()
             pass
 
-    def item_selected(self, item_id: int):
+    def item_selected(self, item_index: QModelIndex):
         """
         A double-click event in the item view triggers this method,
         and this method consequently calls the sku view to display
         the item selected
         """
-        self.sku_widget.filter_selected_item(item_id)
-        self.sku_model.set_item_id(item_id)
+        self.sku_widget.filter_selection(item_index)
 
-    def sku_selected(self, sku_id: int, sku_name: str):
+    def sku_selected(self, sku_index: QModelIndex):
         """
         A double-click event in the sku view triggers this method,
         and this method consequently calls transaction view to display
         the sku selected
         """
-        self.tr_widget.filter_selected_sku(sku_id)
-        self.tr_model.set_sku_id_and_name(sku_id, sku_name)
+        self.tr_widget.filter_selection(sku_index)
 
 
 if __name__ == '__main__':

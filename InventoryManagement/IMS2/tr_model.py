@@ -20,16 +20,13 @@ Also, converting model data(dataframe) back into a data class to update db
 
 
 class TrModel(DataModel):
-    def __init__(self, user_name: str):
+    def __init__(self, user_name: str, sku_model: SkuModel):
+        self.sku_model = sku_model
         self.init_params()
-        self.selected_sku_id = None
-        self.selected_sku_name = None
+        self.selected_upper_name = None
         self.update_skus_params()
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
-
-    def set_sku_model(self, sku_model: SkuModel):
-        self.sku_model = sku_model
 
     def init_params(self):
         self.set_table_name('transactions')
@@ -52,9 +49,17 @@ class TrModel(DataModel):
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
-    def set_sku_id_and_name(self, sku_id: int, sku_name: int):
-        self.selected_sku_id = sku_id
-        self.selected_sku_name = sku_name
+    def set_upper_model_index(self, sku_model_index: QModelIndex):
+        self.selected_upper_index = sku_model_index
+
+        if sku_model_index is not None:
+            self.selected_upper_id = sku_model_index.siblingAtColumn(
+                self.sku_model.get_col_number('sku_id')).data()
+            self.selected_upper_name = sku_model_index.siblingAtColumn(
+                self.sku_model.get_col_number('sku_name')).data()
+        else:
+            self.selected_upper_id = None
+            self.selected_upper_name = None
 
     def update_skus_params(self):
         skus_df = Lab().table_df['skus'].loc[:, ['sku_id', 'active', 'bit_code', 'sku_qty']]
@@ -144,25 +149,29 @@ class TrModel(DataModel):
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise None
         """
-        if self.selected_sku_id is None:
-            logger.error('make_a_new_row_df: sku_id is empty')
+        if not self.selected_upper_index.isValid():
+            logger.error('make_a_new_row_df: sku_index is not valid')
             return None
-        elif not self.sku_active_s[self.selected_sku_id]:
+        elif not self.selected_upper_index.siblingAtColumn(
+                self.sku_model.get_col_number('active')).data():
             logger.error('make_a_new_row_df: sku_id is not active')
             return None
 
-        current_qty = self.sku_qty_s[self.selected_sku_id]
+        sku_id =  self.selected_upper_index.siblingAtColumn(
+                self.sku_model.get_col_number('sku_id')).data()
+        sku_qty = self.selected_upper_index.siblingAtColumn(
+                self.sku_model.get_col_number('sku_qty')).data()
         tr_type = kwargs['tr_type']
         tr_type_id = Lab().tr_type_id_s.loc[tr_type]
         user_id = Lab().user_id_s[self.user_name]
 
         new_model_df = pd.DataFrame([{
             'tr_id': next_new_id,
-            'sku_id': self.selected_sku_id,
+            'sku_id': sku_id,
             'tr_type': tr_type,
             'tr_qty': 0,
-            'before_qty': current_qty,
-            'after_qty': current_qty,
+            'before_qty': sku_qty,
+            'after_qty': sku_qty,
             'tr_timestamp': datetime.now(),
             'description': "",
             'user_name': self.user_name,
@@ -190,6 +199,7 @@ class TrModel(DataModel):
         if tr_type == "Buy":
             after_qty = before_qty + tr_qty
             self.setData(after_qty_idx, after_qty)
+            self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, after_qty)
             logger.debug(f'validate_new_row: before_qty {before_qty}, tr_qty {tr_qty} => after_qty {after_qty}')
         elif tr_type == "Sell":
             if tr_qty > before_qty:

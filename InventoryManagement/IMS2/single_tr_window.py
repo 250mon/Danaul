@@ -24,7 +24,7 @@ class SingleTrWindow(QWidget):
         self.source_model: TrModel = self.proxy_model.sourceModel()
 
         self.nameLabel = QLabel("제품명:")
-        self.nameBox = QLabel(self.source_model.selected_sku_name)
+        self.nameBox = QLabel(self.source_model.selected_upper_name)
         self.trTypeLabel = QLabel("거래구분:")
         self.trTypeLE = QLineEdit()
         self.trTypeLE.setEnabled(False)

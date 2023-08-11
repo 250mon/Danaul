@@ -111,21 +111,23 @@ class PandasModel(QAbstractTableModel):
 
     def set_editable_row(self, row: int):
         logger.debug(f'set_editable_row: row{row} => '
-                     f'editable_rows_set {self.editable_rows_set}')
+                     f'editable_rows_{self.editable_rows_set}')
         self.editable_rows_set.add(row)
 
     def unset_editable_row(self, row: int):
         logger.debug(f'unset_editable_row: row{row} from '
-                     f'editable_rows_set {self.editable_rows_set}')
+                     f'editable_rows_{self.editable_rows_set}')
         if row in self.editable_rows_set:
             self.editable_rows_set.remove(row)
         else:
-            logger.warn(f'unset_editable_row: cannot find row {row} int the set')
+            logger.warn(f'unset_editable_row: cannot find '
+                        f'row {row} int the set')
 
     def clear_editable_rows(self):
-        logger.debug(f'clear_editable_rows: '
-                     f'remove all rows from {self.editable_rows_set}')
-        self.editable_rows_set.clear()
+        if any(self.editable_rows_set):
+            logger.debug(f'clear_editable_rows: remove all rows from '
+                         f'editable_rows_{self.editable_rows_set}')
+            self.editable_rows_set.clear()
 
     def set_editable_new_row(self, row: int):
         """
@@ -134,12 +136,13 @@ class PandasModel(QAbstractTableModel):
         :return:
         """
         logger.debug(f'set_editable_new_row: row{row} => '
-                     f'new_row_set{self.new_rows_set}')
+                     f'new_row_{self.new_rows_set}')
         self.new_rows_set.add(row)
 
     def clear_editable_new_rows(self):
-        self.new_rows_set.clear()
-        logger.debug(f'set_editable_new_row : clearing')
+        if any(self.new_rows_set):
+            self.new_rows_set.clear()
+            logger.debug(f'set_editable_new_row : clearing')
 
     def set_uneditable_row(self, row: int):
         """
@@ -148,21 +151,22 @@ class PandasModel(QAbstractTableModel):
         :return:
         """
         logger.debug(f'set_uneditable_row: row{row} => '
-                     f'uneditable_rows_set {self.uneditable_rows_set}')
+                     f'uneditable_rows_{self.uneditable_rows_set}')
         self.uneditable_rows_set.add(row)
 
     def unset_uneditable_row(self, row: int):
-        logger.debug(f'unset_uneditable_row: '
-                     f'remove row {row} from {self.uneditable_rows_set}')
+        logger.debug(f'unset_uneditable_row: remove row {row} from '
+                     f'uneditable_rows_{self.uneditable_rows_set}')
         if row in self.uneditable_rows_set:
             self.uneditable_rows_set.remove(row)
         else:
             logger.warn(f'unset_uneditable_row: cannot find row {row} int the set')
 
     def clear_uneditable_rows(self):
-        logger.debug(f'clear_uneditable_row: '
-                     f'remove all rows from {self.uneditable_rows_set}')
-        self.uneditable_rows_set.clear()
+        if any(self.uneditable_rows_set):
+            logger.debug(f'clear_uneditable_row: remove all rows from '
+                         f'uneditable_rows_{self.uneditable_rows_set}')
+            self.uneditable_rows_set.clear()
 
 
 if __name__ == "__main__":

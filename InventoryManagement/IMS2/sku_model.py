@@ -8,6 +8,7 @@ from di_lab import Lab
 from di_logger import Logs, logging
 from constants import EditLevel
 from datetime_utils import *
+from item_model import ItemModel
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -19,9 +20,9 @@ Also, converting model data(dataframe) back into a data class to update db
 
 
 class SkuModel(DataModel):
-    def __init__(self, user_name: str):
+    def __init__(self, user_name: str, item_model: ItemModel):
+        self.item_model = item_model
         self.init_params()
-        self.selected_item_id = None
         self.update_items_params()
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
@@ -49,8 +50,14 @@ class SkuModel(DataModel):
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
-    def set_item_id(self, item_id: int):
-        self.selected_item_id = item_id
+    def set_upper_model_index(self, item_model_index: QModelIndex):
+        self.selected_upper_index = item_model_index
+
+        if item_model_index is not None:
+            self.selected_upper_id = item_model_index.siblingAtColumn(
+                self.item_model.get_col_number('item_id')).data()
+        else:
+            self.selected_upper_id = None
 
     def update_items_params(self):
         items_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name', 'active']]
@@ -200,14 +207,14 @@ class SkuModel(DataModel):
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise None
         """
-        if self.selected_item_id is None:
+        if self.selected_upper_id is None:
             logger.error('make_a_new_row_df: item_id is empty')
             return None
-        elif not self.item_active_s[self.selected_item_id]:
+        elif not self.item_active_s[self.selected_upper_id]:
             logger.error('make_a_new_row_df: item_id is not active')
             return None
 
-        default_item_id = self.selected_item_id
+        default_item_id = self.selected_upper_id
         item_name = self.item_name_s[default_item_id]
         logger.debug(f'make_a_new_row_df: {default_item_id} {item_name} being created')
         default_item_size_id = 1
@@ -233,3 +240,8 @@ class SkuModel(DataModel):
             'flag': 'new'
         }])
         return new_model_df
+
+    def update_sku_qty_after_transaction(self, index: QModelIndex, qty: int):
+        self.set_chg_flag(index)
+        self.setData(index.siblingAtColumn(self.get_col_number('sku_qty')), qty)
+        self.clear_editable_rows()

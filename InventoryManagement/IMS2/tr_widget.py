@@ -1,6 +1,6 @@
 import os
 from PySide6.QtWidgets import (
-    QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
+    QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
@@ -52,7 +52,8 @@ class TrWidget(InventoryTableView):
         # search_bar.setPlaceholderText('매입/매출 입력')
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         view_all_btn = QPushButton('전체조회')
-        view_all_btn.clicked.connect(lambda : self.filter_selected_sku(None))
+        view_all_btn.clicked.connect(lambda : self.filter_selection(None))
+        self.sku_name_label = QLabel()
         buy_btn = QPushButton('매입')
         buy_btn.clicked.connect(lambda: self.do_actions("buy"))
         sell_btn = QPushButton('매출')
@@ -64,8 +65,11 @@ class TrWidget(InventoryTableView):
         save_sku_btn = QPushButton('저장')
         if hasattr(self.parent, "async_start"):
             save_sku_btn.clicked.connect(lambda: self.parent.async_start("tr_save"))
+
         sku_hbox = QHBoxLayout()
         sku_hbox.addWidget(view_all_btn)
+        sku_hbox.addStretch(1)
+        sku_hbox.addWidget(self.sku_name_label)
         sku_hbox.addStretch(1)
         sku_hbox.addWidget(buy_btn)
         sku_hbox.addWidget(sell_btn)
@@ -127,15 +131,15 @@ class TrWidget(InventoryTableView):
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
 
-    def filter_selected_sku(self, sku_id: int or None):
+    def filter_selection(self, sku_index: QModelIndex):
         """
         A double-click event in the sku view triggers the parent's
         sku_selected method which in turn calls this method
         :param sku_id:
         :return:
         """
-        if sku_id is None:
-            self.proxy_model.setFilterRegularExpression("^\\d*$")
-        else:
-            self.proxy_model.setFilterRegularExpression(f"^{sku_id}$")
-        # self.proxy_model.setFilterFixedString(item_id)
+        super().filter_selection(sku_index)
+
+        # displaying the sku name in the tr view
+        if hasattr(self.source_model, 'selected_upper_name'):
+            self.sku_name_label.setText(self.source_model.selected_upper_name)

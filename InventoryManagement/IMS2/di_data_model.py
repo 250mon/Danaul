@@ -33,6 +33,9 @@ class DataModel(PandasModel):
         # set model df
         self._set_model_df()
 
+        self.selected_upper_index = None
+        self.selected_upper_id = None
+
     def set_table_name(self, table_name: str):
         self.table_name = table_name
 
@@ -51,6 +54,15 @@ class DataModel(PandasModel):
             col_idx = self.column_names.index(col_name)
             col_idx_edit_lvl[col_idx] = lvl
         super().set_column_index_edit_level(col_idx_edit_lvl)
+
+    def set_upper_model_index(self, index: QModelIndex):
+        """
+        Needs to be implemented if necessary
+        upper model index is used for filtering
+        :param index:
+        :return:
+        """
+        pass
 
     def get_col_number(self, col_name: str) -> int:
         return self.model_df.columns.get_loc(col_name)
@@ -180,26 +192,15 @@ class DataModel(PandasModel):
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
-    def setData(self,
-                index: QModelIndex,
-                value: object,
-                role=Qt.EditRole):
-        """
-        Override method from QAbstractTableModel
-        :param index:
-        :param value:
-        :param role:
-        :return:
-        """
-        self.set_chg_flag(index)
-        super().setData(index, value, role)
-
     def set_chg_flag(self, index: QModelIndex):
         """
         Sets a 'changed' flag in the flag column of the row of index
         :param index:
         :return:
         """
+        # handles model flags
+        self.set_editable_row(index.row())
+
         flag_col_num = self.get_col_number('flag')
         if index.column() != flag_col_num:
             index: QModelIndex = index.siblingAtColumn(flag_col_num)
@@ -208,9 +209,6 @@ class DataModel(PandasModel):
         if 'changed' not in current_msg:
             flag = current_msg + ' changed'
             super().setData(index, flag)
-
-        # handles model flags
-        self.set_editable_row(index.row())
 
     def set_del_flag(self, index: QModelIndex):
         """
