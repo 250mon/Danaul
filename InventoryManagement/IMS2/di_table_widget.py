@@ -1,14 +1,8 @@
 import os
-import pandas as pd
 from typing import List
 from abc import abstractmethod
-from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QMessageBox, QPushButton, QLineEdit,
-    QTableView, QHBoxLayout, QVBoxLayout
-)
-from PySide6.QtCore import (
-    Qt, Signal, Slot, QSortFilterProxyModel, QModelIndex
-)
+from PySide6.QtWidgets import QMainWindow, QWidget, QMessageBox, QTableView
+from PySide6.QtCore import Slot, QSortFilterProxyModel, QModelIndex
 from di_data_model import DataModel
 from di_default_delegate import DefaultDelegate
 from combobox_delegate import ComboBoxDelegate
@@ -205,5 +199,9 @@ class InventoryTableWidget(QWidget):
         left_most_col_num = self.source_model.get_col_number(left_most_hidden)
         last_col_num = len(self.source_model.column_names)
         for c in range(left_most_col_num, last_col_num):
-            self.table_view.setColumnHidden(c, True)
-
+            self.table_view.setColumnWidth(c, 0)
+            # The following methods don't allow the hidden col
+            # to be accessible
+            # self.table_view.horizontalHeader().hideSection(c)
+            # self.table_view.setColumnHidden(c, True)
+            # filterAcceptsColumn..

@@ -46,7 +46,6 @@ class SkuWidget(InventoryTableWidget):
         super()._setup_initial_table_view()
         self.table_view.doubleClicked.connect(self.row_double_clicked)
         self.table_view.activated.connect(self.row_activated)
-        self.set_col_hidden('item_id')
 
     def _setup_delegate_for_columns(self):
         """
@@ -61,6 +60,8 @@ class SkuWidget(InventoryTableWidget):
         Needs to be implemented
         :return:
         """
+        self.set_col_hidden('item_id')
+
         # search_bar = QLineEdit(self)
         # search_bar.setPlaceholderText('품목명 입력')
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)

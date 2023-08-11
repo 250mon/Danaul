@@ -54,13 +54,14 @@ class TrWidget(InventoryTableWidget):
         :return:
         """
         super()._setup_delegate_for_columns()
-        self.set_col_hidden('user_id')
 
     def _setup_ui(self):
         """
         Needs to be implemented
         :return:
         """
+        self.set_col_hidden('tr_type_id')
+
         # search_bar = QLineEdit(self)
         # search_bar.setPlaceholderText('매입/매출 입력')
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)

@@ -114,6 +114,13 @@ class TrModel(DataModel):
                 # otherwise, string type
                 return str(data_to_display)
 
+        elif role == Qt.TextAlignmentRole:
+            left_aligned = ['description']
+            if col_name in left_aligned:
+                return Qt.AlignLeft
+            else:
+                return Qt.AlignCenter
+
         else:
             return None
 

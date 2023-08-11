@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
 from di_table_widget import InventoryTableWidget
+from item_model import ItemModel
 from single_item_window import SingleItemWindow
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -17,6 +18,15 @@ class ItemWidget(InventoryTableWidget):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.delegate_mode = True
+
+    def set_source_model(self, model: ItemModel):
+        """
+        Common
+        :param model:
+        :return:
+        """
+        self.source_model = model
+        self._apply_model()
 
     def _setup_proxy_model(self):
         """
@@ -48,13 +58,14 @@ class ItemWidget(InventoryTableWidget):
 
     def _setup_delegate_for_columns(self):
         super()._setup_delegate_for_columns()
-        self.set_col_hidden('category_id')
 
     def _setup_ui(self):
         """
         Needs to be implemented
         :return:
         """
+        self.set_col_hidden('category_id')
+
         search_bar = QLineEdit(self)
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
