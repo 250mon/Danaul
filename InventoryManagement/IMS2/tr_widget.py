@@ -3,19 +3,31 @@ from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtGui import QFont
 from di_logger import Logs, logging
-from di_table_view import InventoryTableView
+from di_table_widget import InventoryTableWidget
+from tr_model import TrModel
 from single_tr_window import SingleTrWindow
+from constants import ADMIN_GROUP
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 
-class TrWidget(InventoryTableView):
+class TrWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
+
+    def set_source_model(self, model: TrModel):
+        """
+        Common
+        :param model:
+        :return:
+        """
+        self.source_model = model
+        self._apply_model()
 
     def _setup_proxy_model(self):
         """
@@ -33,15 +45,16 @@ class TrWidget(InventoryTableView):
         initial_sort_col_num = self.source_model.get_col_number('tr_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
-    def _setup_table_view(self):
-        super()._setup_table_view()
+    def _setup_initial_table_view(self):
+        super()._setup_initial_table_view()
         self.table_view.activated.connect(self.row_activated)
 
-    def setup_delegate_for_columns(self):
+    def _setup_delegate_for_columns(self):
         """
         :return:
         """
-        super().setup_delegate_for_columns()
+        super()._setup_delegate_for_columns()
+        self.set_col_hidden('user_id')
 
     def _setup_ui(self):
         """
@@ -51,9 +64,13 @@ class TrWidget(InventoryTableView):
         # search_bar = QLineEdit(self)
         # search_bar.setPlaceholderText('매입/매출 입력')
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
-        view_all_btn = QPushButton('전체조회')
-        view_all_btn.clicked.connect(lambda : self.filter_selection(None))
+        search_all_btn = QPushButton('전체조회')
+        search_all_btn.clicked.connect(self.filter_no_selection)
+
         self.sku_name_label = QLabel()
+        font = QFont("Arial", 12, QFont.Bold)
+        self.sku_name_label.setFont(font)
+
         buy_btn = QPushButton('매입')
         buy_btn.clicked.connect(lambda: self.do_actions("buy"))
         sell_btn = QPushButton('매출')
@@ -62,12 +79,16 @@ class TrWidget(InventoryTableView):
         adj_plus_btn.clicked.connect(lambda: self.do_actions("adj+"))
         adj_minus_btn = QPushButton('조정-')
         adj_minus_btn.clicked.connect(lambda: self.do_actions("adj-"))
-        save_sku_btn = QPushButton('저장')
+        save_tr_btn = QPushButton('저장')
         if hasattr(self.parent, "async_start"):
-            save_sku_btn.clicked.connect(lambda: self.parent.async_start("tr_save"))
+            save_tr_btn.clicked.connect(lambda: self.parent.async_start("tr_save"))
+        del_tr_btn = QPushButton('관리자 삭제/해제')
+        del_tr_btn.clicked.connect(lambda: self.do_actions("del_tr"))
+        if self.source_model.user_name not in ADMIN_GROUP:
+            del_tr_btn.setEnabled(False)
 
         sku_hbox = QHBoxLayout()
-        sku_hbox.addWidget(view_all_btn)
+        sku_hbox.addWidget(search_all_btn)
         sku_hbox.addStretch(1)
         sku_hbox.addWidget(self.sku_name_label)
         sku_hbox.addStretch(1)
@@ -75,10 +96,17 @@ class TrWidget(InventoryTableView):
         sku_hbox.addWidget(sell_btn)
         sku_hbox.addWidget(adj_plus_btn)
         sku_hbox.addWidget(adj_minus_btn)
-        sku_hbox.addWidget(save_sku_btn)
+        sku_hbox.addWidget(save_tr_btn)
+
+        del_hbox = QHBoxLayout()
+        del_hbox.addStretch(1)
+        del_hbox.addWidget(del_tr_btn)
+
         sku_vbox = QVBoxLayout()
         sku_vbox.addLayout(sku_hbox)
         sku_vbox.addWidget(self.table_view)
+        sku_vbox.addLayout(del_hbox)
+
         self.setLayout(sku_vbox)
 
     @Slot(str)
@@ -105,6 +133,10 @@ class TrWidget(InventoryTableView):
             logger.debug('do_actions: adjusting minus ...')
             self.add_new_row(tr_type='Sell')
             self.tr_window = SingleTrWindow(self.proxy_model, self)
+        elif action == "del_tr":
+            logger.debug('Deleting tr ...')
+            if selected_indexes := self._get_selected_indexes():
+                self.delete_rows(selected_indexes)
 
     @Slot(object)
     def added_new_tr_by_single_tr_window(self, index: QModelIndex):
@@ -139,7 +171,14 @@ class TrWidget(InventoryTableView):
         :return:
         """
         super().filter_selection(sku_index)
-
         # displaying the sku name in the tr view
-        if hasattr(self.source_model, 'selected_upper_name'):
-            self.sku_name_label.setText(self.source_model.selected_upper_name)
+        self.sku_name_label.setText(self.source_model.selected_upper_name)
+
+    def filter_no_selection(self):
+        """
+        Connected to search all button
+        :return:
+        """
+        super().filter_no_selection()
+        # displaying the sku name in the tr view
+        self.sku_name_label.setText("")

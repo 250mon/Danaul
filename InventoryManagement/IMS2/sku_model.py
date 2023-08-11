@@ -32,25 +32,23 @@ class SkuModel(DataModel):
 
         self.col_edit_lvl = {
             'sku_id': EditLevel.NotEditable,
+            'representative': EditLevel.UserModifiable,
             'item_name': EditLevel.NotEditable,
+            'sub_name': EditLevel.UserModifiable,
             'active': EditLevel.AdminModifiable,
             'sku_qty': EditLevel.Creatable,
             'min_qty': EditLevel.UserModifiable,
-            'item_size': EditLevel.Creatable,
-            'item_side': EditLevel.Creatable,
             'expiration_date': EditLevel.Creatable,
             'description': EditLevel.UserModifiable,
             'bit_code': EditLevel.AdminModifiable,
             'sku_name': EditLevel.NotEditable,
             'item_id': EditLevel.NotEditable,
-            'item_size_id': EditLevel.NotEditable,
-            'item_side_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
-    def set_upper_model_index(self, item_model_index: QModelIndex):
+    def set_upper_model_index(self, item_model_index: QModelIndex or None):
         self.selected_upper_index = item_model_index
 
         if item_model_index is not None:
@@ -76,11 +74,9 @@ class SkuModel(DataModel):
         :return:
         """
         # set more columns for the view
-        self.model_df['item_size'] = self.model_df['item_size_id'].map(Lab().item_size_name_s).str.replace("None", "")
-        self.model_df['item_side'] = self.model_df['item_side_id'].map(Lab().item_side_name_s).str.replace("None", "")
         self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
         self.model_df['sku_name'] = self.model_df['item_name'].str.cat(
-            self.model_df.loc[:, ['item_size', 'item_side']], na_rep="-", sep=" ").str.replace("None", "")
+            self.model_df.loc[:, 'sub_name'], na_rep="-", sep=" ").str.replace("None", "")
         self.model_df['flag'] = ''
 
     def get_default_delegate_info(self) -> List[int]:
@@ -99,9 +95,7 @@ class SkuModel(DataModel):
         :return:
         """
         combo_info_dict = {
-            self.get_col_number('active'): ['True', 'False'],
-            self.get_col_number('item_size'): Lab().item_size_name_s.to_list(),
-            self.get_col_number('item_side'): Lab().item_side_name_s.to_list(),
+            self.get_col_number('active'): ['Y', 'N'],
         }
         return combo_info_dict
 
@@ -128,17 +122,31 @@ class SkuModel(DataModel):
         col_name = self.get_col_name(index.column())
         data_to_display = self.model_df.iloc[index.row(), index.column()]
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = ['sku_id', 'item_id', 'item_size_id',
-                                'item_side_id', 'sku_qty', 'min_qty']
+            int_type_columns = ['sku_id', 'item_id', 'sku_qty', 'min_qty']
             if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
+
             elif col_name == 'expiration_date':
                 # data type is datetime.date
                 return pydate_to_qdate(data_to_display)
+
+            elif col_name == 'active' or col_name == 'representative':
+                if data_to_display:
+                    return 'Y'
+                else:
+                    return 'N'
+
             else:
                 # otherwise, string type
                 return str(data_to_display)
+
+        elif role == Qt.TextAlignmentRole:
+            left_aligned = ['description']
+            if col_name in left_aligned:
+                return Qt.AlignLeft
+            else:
+                return Qt.AlignCenter
 
         # elif role == Qt.BackgroundRole:
         #     if self.is_row_type(index, 'deleted'):
@@ -175,26 +183,29 @@ class SkuModel(DataModel):
 
         logger.debug(f'setData({index}, {value})')
 
-        if index.column() == self.get_col_number('active'):
+        col_name = self.get_col_name(index.column())
+        if col_name == 'active' or col_name == 'representative':
             # taking care of converting str type input to bool type
-            if value == 'True':
+            if value == 'Y':
                 value = True
             else:
                 value = False
-        elif index.column() == self.get_col_number('item_name'):
+
+        elif col_name == 'item_name':
             if value in self.item_name_s.tolist():
                 id_col = self.get_col_number('item_id')
                 self.model_df.iloc[index.row(), id_col] = self.item_id_s.loc[value]
             else:
                 logger.debug(f'setData: item_name({value}) is not valid')
                 return False
-        elif index.column() == self.get_col_number('item_size'):
-            id_col = self.get_col_number('item_size_id')
-            self.model_df.iloc[index.row(), id_col] = Lab().item_size_id_s.loc[value]
-        elif index.column() == self.get_col_number('item_side'):
-            id_col = self.get_col_number('item_side_id')
-            self.model_df.iloc[index.row(), id_col] = Lab().item_side_id_s.loc[value]
-        elif index.column() == self.get_col_number('expiration_date'):
+
+        elif col_name == 'sub_name':
+            item_name_col = self.get_col_number('item_name')
+            sku_name_col = self.get_col_number('sku_name')
+            self.model_df.iloc[index.row(), sku_name_col] = ' '.join(
+                [self.model_df.iloc[index.row(), item_name_col], value])
+
+        elif col_name == 'expiration_date':
             # data type is datetime.date
             if isinstance(value, QDate):
                 value = qdate_to_pydate(value)
@@ -217,31 +228,26 @@ class SkuModel(DataModel):
         default_item_id = self.selected_upper_id
         item_name = self.item_name_s[default_item_id]
         logger.debug(f'make_a_new_row_df: {default_item_id} {item_name} being created')
-        default_item_size_id = 1
-        iz_name = Lab().item_size_name_s.loc[default_item_size_id]
-        default_item_side_id = 1
-        id_name = Lab().item_side_name_s.loc[default_item_side_id]
         exp_date = date(9999, 1, 1)
 
         new_model_df = pd.DataFrame([{
             'sku_id': next_new_id,
+            'representative': True,
             'item_name': item_name,
+            'sub_name': "",
             'active': True,
             'sku_qty': 0,
             'min_qty': 2,
-            'item_size': iz_name,
-            'item_side': id_name,
             'expiration_date': exp_date,
             'description': "",
-            'bit_code': 'A11',
+            'bit_code': "",
             'item_id': default_item_id,
-            'item_size_id': default_item_size_id,
-            'item_side_id': default_item_side_id,
             'flag': 'new'
         }])
         return new_model_df
 
     def update_sku_qty_after_transaction(self, index: QModelIndex, qty: int):
+        logger.debug(f'update_sku_qty_after_transaction: {qty}')
         self.set_chg_flag(index)
         self.setData(index.siblingAtColumn(self.get_col_number('sku_qty')), qty)
         self.clear_editable_rows()

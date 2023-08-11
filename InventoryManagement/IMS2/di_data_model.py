@@ -55,7 +55,7 @@ class DataModel(PandasModel):
             col_idx_edit_lvl[col_idx] = lvl
         super().set_column_index_edit_level(col_idx_edit_lvl)
 
-    def set_upper_model_index(self, index: QModelIndex):
+    def set_upper_model_index(self, index: QModelIndex or None):
         """
         Needs to be implemented if necessary
         upper model index is used for filtering
@@ -176,7 +176,7 @@ class DataModel(PandasModel):
         """
 
     def drop_rows(self, indexes: List[QModelIndex]):
-        id_col = self.get_col_number('item_id')
+        id_col = 0
         ids = []
         for idx in indexes:
             if idx.column() != id_col:
@@ -187,7 +187,7 @@ class DataModel(PandasModel):
 
         if len(ids) > 0:
             self.model_df.drop(self.model_df[self.model_df.iloc[:, 0].isin(ids)].index, inplace=True)
-            logger.debug(f'drop_items: model_df dropped item_id {ids}')
+            logger.debug(f'drop_rows: model_df dropped ids {ids}')
 
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()

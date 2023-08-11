@@ -4,9 +4,9 @@ from typing import List
 from PySide6.QtWidgets import (
     QApplication, QWidget, QSpinBox,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
-    QPushButton, QDataWidgetMapper, QGridLayout
+    QPushButton, QDataWidgetMapper, QGridLayout, QSizePolicy
 )
-from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel, QModelIndex
+from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel
 from tr_model import TrModel
 from di_logger import Logs, logging
 
@@ -30,6 +30,8 @@ class SingleTrWindow(QWidget):
         self.trTypeLE.setEnabled(False)
         self.qtyLabel = QLabel("수량:")
         self.qtySpinBox = QSpinBox()
+        policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.qtySpinBox.setSizePolicy(policy)
         self.qtySpinBox.setMaximum(1000)
         self.qtySpinBox.setMinimum(0)
 
@@ -87,10 +89,10 @@ class SingleTrWindow(QWidget):
         gridbox.addWidget(self.nameBox, 0, 1, 1, 1)
         gridbox.addWidget(self.trTypeLabel, 1, 0, 1, 1)
         gridbox.addWidget(self.trTypeLE, 1, 1, 1, 1)
-        gridbox.addWidget(self.qtyLabel, 2, 0, 1, 1)
-        gridbox.addWidget(self.qtySpinBox, 2, 1, 1, 1)
-        gridbox.addWidget(self.descriptionLabel, 3, 0, 1, 1, Qt.AlignTop)
-        gridbox.addWidget(self.descriptionTextEdit, 3, 1, 1, 1)
+        gridbox.addWidget(self.qtyLabel, 2, 0, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.qtySpinBox, 2, 1, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.descriptionLabel, 4, 0, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.descriptionTextEdit, 4, 1, 1, 1)
 
         gridbox.addLayout(vbox, 2, 2, 1, 1)
 

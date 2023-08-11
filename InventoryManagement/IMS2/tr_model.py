@@ -49,7 +49,7 @@ class TrModel(DataModel):
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
-    def set_upper_model_index(self, sku_model_index: QModelIndex):
+    def set_upper_model_index(self, sku_model_index: QModelIndex or None):
         self.selected_upper_index = sku_model_index
 
         if sku_model_index is not None:
@@ -133,10 +133,11 @@ class TrModel(DataModel):
 
         logger.debug(f'setData({index}, {value})')
 
-        if index.column() == self.get_col_number('tr_type'):
+        col_name = self.get_col_name(index.column())
+        if col_name == 'tr_type':
             id_col = self.get_col_number('tr_type_id')
             self.model_df.iloc[index.row(), id_col] = Lab().tr_type_id_s.loc[value]
-        elif index.column() == self.get_col_number('tr_timestamp'):
+        elif col_name == 'tr_timestamp':
             # data type is datetime.date
             if isinstance(value, QDateTime):
                 value = qdt_to_pydt(value)
@@ -198,26 +199,29 @@ class TrModel(DataModel):
         result = True
         if tr_type == "Buy":
             after_qty = before_qty + tr_qty
-            self.setData(after_qty_idx, after_qty)
-            self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, after_qty)
-            logger.debug(f'validate_new_row: before_qty {before_qty}, tr_qty {tr_qty} => after_qty {after_qty}')
+            self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
         elif tr_type == "Sell":
             if tr_qty > before_qty:
                 result = False
             else:
                 after_qty = before_qty - tr_qty
-                self.setData(after_qty_idx, after_qty)
+                self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
         elif tr_type == "AdjustmentPlus":
             after_qty = before_qty + tr_qty
-            self.setData(after_qty_idx, after_qty)
+            self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
         elif tr_type == "AdjustmentMinus":
             if tr_qty > before_qty:
                 result = False
             else:
                 after_qty = before_qty - tr_qty
-                self.setData(after_qty_idx, after_qty)
+                self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
 
         debug_msg = "valid" if result is True else "not valid"
         logger.debug(f"validate_new_tr: Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
 
         return result
+
+    def method_name(self, before_qty, tr_qty, after_qty, after_qty_idx):
+        self.setData(after_qty_idx, after_qty)
+        self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, after_qty)
+        logger.debug(f'validate_new_row: before_qty {before_qty}, tr_qty {tr_qty} => after_qty {after_qty}')

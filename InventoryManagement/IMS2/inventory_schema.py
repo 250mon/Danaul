@@ -18,39 +18,21 @@ CREATE_ITEM_TABLE = \
         UNIQUE(item_name)
     );"""
 
-CREATE_ITEM_SIZE_TABLE = \
-    """
-    CREATE TABLE IF NOT EXISTS item_size(
-        item_size_id SERIAL PRIMARY KEY,
-        item_size VARCHAR(20) NOT NULL,
-        UNIQUE(item_size)
-    );"""
-
-CREATE_ITEM_SIDE_TABLE = \
-    """
-    CREATE TABLE IF NOT EXISTS item_side(
-        item_side_id SERIAL PRIMARY KEY,
-        item_side VARCHAR(20) NOT NULL,
-        UNIQUE(item_side)
-    );"""
-
 CREATE_SKU_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS skus(
         sku_id SERIAL PRIMARY KEY,
         active BOOL NOT NULL DEFAULT TRUE,
+        representative BOOL NOT NULL DEFAULT TRUE,
+        sub_name VARCHAR(50),
         bit_code VARCHAR(20),
         sku_qty INT NOT NULL,
         min_qty INT NOT NULL DEFAULT 2,
         item_id INT NOT NULL,
-        item_size_id INT NOT NULL DEFAULT 1,
-        item_side_id INT NOT NULL DEFAULT 1,
         expiration_date DATE NOT NULL DEFAULT '9999-01-01',
         description TEXT,
         FOREIGN KEY (item_id) REFERENCES items(item_id),
-        FOREIGN KEY (item_size_id) REFERENCES item_size(item_size_id),
-        FOREIGN KEY (item_side_id) REFERENCES item_side(item_side_id),
-        UNIQUE(item_id, item_size_id, item_side_id, expiration_date)
+        UNIQUE(item_id, sub_name, expiration_date)
     );"""
 
 CREATE_USER_TABLE = \

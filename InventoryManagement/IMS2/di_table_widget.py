@@ -20,7 +20,7 @@ logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 
-class InventoryTableView(QWidget):
+class InventoryTableWidget(QWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
@@ -44,9 +44,9 @@ class InventoryTableView(QWidget):
         self.proxy_model.setSourceModel(self.source_model)
         self._setup_proxy_model()
 
-        self._setup_table_view()
+        self._setup_initial_table_view()
         self.table_view.setModel(self.proxy_model)
-        self.setup_delegate_for_columns()
+        self._setup_delegate_for_columns()
 
         self._setup_ui()
 
@@ -57,9 +57,9 @@ class InventoryTableView(QWidget):
         :return:
         """
 
-    def _setup_table_view(self):
+    def _setup_initial_table_view(self):
         """
-        Common
+        Carried out before the model is set to the table view
         :return:
         """
         # table view
@@ -77,7 +77,7 @@ class InventoryTableView(QWidget):
             "}"
         )
 
-    def setup_delegate_for_columns(self):
+    def _setup_delegate_for_columns(self):
         """
         Sets up appropriate delegates for columns
         :return:
@@ -194,5 +194,16 @@ class InventoryTableView(QWidget):
             f"^{self.source_model.selected_upper_id}$")
 
     def filter_no_selection(self):
+        """
+        Connected to search all button
+        :return:
+        """
         self.proxy_model.setFilterRegularExpression("^\\d*$")
         self.source_model.set_upper_model_index(None)
+
+    def set_col_hidden(self, left_most_hidden: str):
+        left_most_col_num = self.source_model.get_col_number(left_most_hidden)
+        last_col_num = len(self.source_model.column_names)
+        for c in range(left_most_col_num, last_col_num):
+            self.table_view.setColumnHidden(c, True)
+

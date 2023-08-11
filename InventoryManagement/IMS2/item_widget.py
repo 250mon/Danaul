@@ -5,14 +5,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
-from di_table_view import InventoryTableView
+from di_table_widget import InventoryTableWidget
 from single_item_window import SingleItemWindow
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 
-class ItemWidget(InventoryTableView):
+class ItemWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
@@ -24,8 +24,11 @@ class ItemWidget(InventoryTableView):
         :return:
         """
         # Filtering is performed on item_name column
-        search_col_num = self.source_model.get_col_number('item_name')
-        self.proxy_model.setFilterKeyColumn(search_col_num)
+        # search_col_num = self.source_model.get_col_number('item_name')
+        # self.proxy_model.setFilterKeyColumn(search_col_num)
+
+        # -1 means searching every column
+        self.proxy_model.setFilterKeyColumn(-1)
 
         # Sorting
         # For sorting, model data needs to be read in certain deterministic order
@@ -34,13 +37,18 @@ class ItemWidget(InventoryTableView):
         initial_sort_col_num = self.source_model.get_col_number('item_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
-    def _setup_table_view(self):
-        super()._setup_table_view()
+    def _setup_initial_table_view(self):
+        """
+        Carried out before the model is set to the table view
+        :return:
+        """
+        super()._setup_initial_table_view()
         self.table_view.doubleClicked.connect(self.row_double_clicked)
         self.table_view.activated.connect(self.row_activated)
 
-    def setup_delegate_for_columns(self):
-        super().setup_delegate_for_columns()
+    def _setup_delegate_for_columns(self):
+        super()._setup_delegate_for_columns()
+        self.set_col_hidden('category_id')
 
     def _setup_ui(self):
         """
@@ -48,7 +56,7 @@ class ItemWidget(InventoryTableView):
         :return:
         """
         search_bar = QLineEdit(self)
-        search_bar.setPlaceholderText('품목명 입력')
+        search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_item_btn = QPushButton('추가')
         add_item_btn.clicked.connect(lambda: self.do_actions("add_item"))

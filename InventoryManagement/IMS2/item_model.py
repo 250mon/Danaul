@@ -61,7 +61,7 @@ class ItemModel(DataModel):
         :return:
         """
         combo_info_dict = {
-            self.get_col_number('active'): ['True', 'False'],
+            self.get_col_number('active'): ['Y', 'N'],
             self.get_col_number('category_name'): Lab().category_name_s.to_list()
         }
         return combo_info_dict
@@ -82,9 +82,23 @@ class ItemModel(DataModel):
             if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
+
+            elif col_name == 'active':
+                if data_to_display:
+                    return 'Y'
+                else:
+                    return 'N'
+
             else:
                 # otherwise, string type
                 return str(data_to_display)
+
+        elif role == Qt.TextAlignmentRole:
+            left_aligned = ['description']
+            if col_name in left_aligned:
+                return Qt.AlignLeft
+            else:
+                return Qt.AlignCenter
 
         # elif role == Qt.BackgroundRole:
         #     if self.is_row_type(index, 'deleted'):
@@ -121,17 +135,20 @@ class ItemModel(DataModel):
 
         logger.debug(f'setData({index}, {value})')
 
-        if index.column() == self.get_col_number('active'):
+        col_name = self.get_col_name(index.column())
+        if col_name == 'active':
             # taking care of converting str type input to bool type
-            if value == 'True':
+            if value == 'Y':
                 value = True
             else:
                 value = False
-        elif index.column() == self.get_col_number('category_name'):
+
+        elif col_name == 'category_name':
             # if setting category_name, automatically setting category_id accordingly
             cat_id_col = self.get_col_number('category_id')
             self.model_df.iloc[index.row(), cat_id_col] = Lab().category_id_s[value]
-        elif index.column() == self.get_col_number('item_name'):
+
+        elif col_name == 'item_name':
             # when a new row is added, item_name needs to be checked if any duplicate
             if not self.model_df[self.model_df.item_name == value].empty:
                 logger.debug(f'setData: item name({value}) is already in use')

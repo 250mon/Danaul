@@ -4,17 +4,27 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from di_logger import Logs, logging
-from di_table_view import InventoryTableView
+from di_table_widget import InventoryTableWidget
+from sku_model import SkuModel
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 
-class SkuWidget(InventoryTableView):
+class SkuWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
+
+    def set_source_model(self, model: SkuModel):
+        """
+        Common
+        :param model:
+        :return:
+        """
+        self.source_model = model
+        self._apply_model()
 
     def _setup_proxy_model(self):
         """
@@ -32,16 +42,18 @@ class SkuWidget(InventoryTableView):
         initial_sort_col_num = self.source_model.get_col_number('sku_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
-    def _setup_table_view(self):
-        super()._setup_table_view()
+    def _setup_initial_table_view(self):
+        super()._setup_initial_table_view()
         self.table_view.doubleClicked.connect(self.row_double_clicked)
         self.table_view.activated.connect(self.row_activated)
+        self.set_col_hidden('item_id')
 
-    def setup_delegate_for_columns(self):
+    def _setup_delegate_for_columns(self):
         """
         :return:
         """
-        super().setup_delegate_for_columns()
+        super()._setup_delegate_for_columns()
+        self.set_col_hidden('sku_name')
 
 
     def _setup_ui(self):
@@ -52,8 +64,8 @@ class SkuWidget(InventoryTableView):
         # search_bar = QLineEdit(self)
         # search_bar.setPlaceholderText('품목명 입력')
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
-        view_all_btn = QPushButton('전체조회')
-        view_all_btn.clicked.connect(lambda : self.filter_selection(None))
+        search_all_btn = QPushButton('전체조회')
+        search_all_btn.clicked.connect(self.filter_no_selection)
         add_sku_btn = QPushButton('추가')
         add_sku_btn.clicked.connect(lambda: self.do_actions("add_sku"))
         chg_sku_btn = QPushButton('수정')
@@ -64,7 +76,7 @@ class SkuWidget(InventoryTableView):
         if hasattr(self.parent, "async_start"):
             save_sku_btn.clicked.connect(lambda: self.parent.async_start("sku_save"))
         sku_hbox = QHBoxLayout()
-        sku_hbox.addWidget(view_all_btn)
+        sku_hbox.addWidget(search_all_btn)
         sku_hbox.addStretch(1)
         sku_hbox.addWidget(add_sku_btn)
         sku_hbox.addWidget(chg_sku_btn)

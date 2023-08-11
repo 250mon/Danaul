@@ -7,8 +7,6 @@ from db_utils import DbUtil
 from inventory_schema import (
     CREATE_CATEGORY_TABLE,
     CREATE_ITEM_TABLE,
-    CREATE_ITEM_SIZE_TABLE,
-    CREATE_ITEM_SIDE_TABLE,
     CREATE_SKU_TABLE,
     CREATE_USER_TABLE,
     CREATE_TRANSACTION_TYPE_TABLE,
@@ -28,8 +26,6 @@ class InventoryDb:
     async def create_tables(self):
         statements = [CREATE_CATEGORY_TABLE,
                       CREATE_ITEM_TABLE,
-                      CREATE_ITEM_SIZE_TABLE,
-                      CREATE_ITEM_SIDE_TABLE,
                       CREATE_SKU_TABLE,
                       CREATE_USER_TABLE,
                       CREATE_TRANSACTION_TYPE_TABLE,
@@ -37,7 +33,7 @@ class InventoryDb:
         return await self.db_util.create_tables(statements)
 
     async def drop_tables(self):
-        table_names = ['category', 'items', 'item_size', 'item_side', 'skus', 'users',
+        table_names = ['category', 'items', 'skus', 'users',
                        'transactions', 'transaction_type']
         # dropping is always in a reverse order from creating
         return await self.db_util.drop_tables(table_names[::-1])
@@ -117,17 +113,17 @@ class InventoryDb:
         :return:
         """
         stmt = """UPDATE skus SET active = $2,
-                                  bit_code = $3,
-                                  sku_qty = $4,
-                                  min_qty = $5,
-                                  item_id = $6,
-                                  item_size_id = $7,
-                                  item_side_id = $8,
+                                  representative = $3,
+                                  sub_name = $4,
+                                  bit_code = $5,
+                                  sku_qty = $6,
+                                  min_qty = $7,
+                                  item_id = $8,
                                   expiration_date = $9,
                                   description = $10
                               WHERE sku_id = $1"""
-        args = [(sku.sku_id, sku.active, sku.bit_code, sku.sku_qty,
-                 sku.min_qty, sku.item_id, sku.item_size_id, sku.item_side_id,
+        args = [(sku.sku_id, sku.active, sku.representative, sku.sub_name,
+                 sku.bit_code, sku.sku_qty, sku.min_qty, sku.item_id,
                  sku.expiration_date, sku.description)
                 for sku in skus_df.itertuples()]
         logger.debug("Update Skus ...")
@@ -183,16 +179,6 @@ async def main():
             'name': ['외용제', '수액제', '보조기', '기타']
         })
 
-        extra_data['item_side'] = pd.DataFrame({
-            'id': [1, 2, 3],
-            'name': ['None', 'Rt', 'Lt']
-        })
-
-        extra_data['item_size'] = pd.DataFrame({
-            'id': [1, 2, 3, 4, 5, 6],
-            'name': ['None', 'Small', 'Medium', 'Large', '40cc', '120cc']
-        })
-
         extra_data['transaction_type'] = pd.DataFrame({
             'id': [1, 2, 3, 4],
             'name': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus']
@@ -217,9 +203,9 @@ async def main():
     async def insert_items():
         items_df = pd.DataFrame({
             'item_id':       ['DEFAULT', 'DEFAULT', 'DEFAULT'],
-            'active':    [True, True, True],
-            'item_name':     ['써지겔', '아토베리어', 'test1'],
-            'category_id':   [1, 1, 1],
+            'active':        [True, True, True],
+            'item_name':     ['노시셉톨', '써지겔', 'Qplint'],
+            'category_id':   [1, 1, 3],
             'description':   ['', '', '']
         })
         print(await danaul_db.insert_df('items', items_df))
@@ -227,13 +213,13 @@ async def main():
     async def insert_skus():
         skus_df = pd.DataFrame({
             'sku_id':           ['DEFAULT', 'DEFAULT', 'DEFAULT'],
-            'active':        [True, True, True],
-            'bit_code':         ['bb', 'cc', 'aa'],
-            'sku_qty':          [1, 3, 9],
-            'min_qty':          [2, 2, 2],
-            'item_id':          [2, 2, 3],
-            'item_size_id':     [3, 2, 2],
-            'item_side_id':     [1, 1, 1],
+            'active':           [True, True, True],
+            'representative':   [True, True, True],
+            'sub_name':         ['40ml', '120ml', ''],
+            'bit_code':         ['noci40', 'noci120', 'surgigel'],
+            'sku_qty':          [0, 0, 0],
+            'min_qty':          [2, 2, 1],
+            'item_id':          [1, 1, 2],
             'expiration_date':  ['DEFAULT', 'DEFAULT', 'DEFAULT'],
             'description':      ['', '', '']
         })
@@ -242,15 +228,15 @@ async def main():
     async def insert_trs():
         # Inserting transactions
         trs_df = pd.DataFrame({
-            'tr_id': ['DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT'],
-            'user_id':[1, 2, 1, 1, 1, 2],
-            'sku_id': [1, 3, 2, 1, 1, 3],
-            'tr_type_id': [1, 1, 1, 2, 1, 2],
-            'tr_qty': [10, 10, 10, 10, 10, 5],
-            'before_qty': [0, 0, 0, 10, 0, 10],
-            'after_qty': [10, 10, 10, 0, 10, 5],
-            'tr_timestamp': ['DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT', 'DEFAULT'],
-            'description': ['', '', '', '', '', '']
+            'tr_id': ['DEFAULT'],
+            'user_id': [1],
+            'sku_id': [1],
+            'tr_type_id': [1],
+            'tr_qty': [0],
+            'before_qty': [0],
+            'after_qty': [0],
+            'tr_timestamp': ['DEFAULT'],
+            'description': ['']
         })
         print(await danaul_db.insert_df('transactions', trs_df))
 
@@ -272,14 +258,10 @@ async def main():
                 s.active,
                 s.sku_qty,
                 s.min_qty,
-                isz.item_size,
-                isd.item_side,
                 s.expiration_date,
                 c.category_name
             FROM items as i
             JOIN skus as s using(item_id)
-            JOIN item_size as isz using(item_size_id)
-            JOIN item_side as isd using(item_side_id)
             JOIN category as c using(category_id)
                """
         print(await danaul_db.db_util.select_query(stmt))
@@ -293,14 +275,10 @@ async def main():
     #         s.sku_id,
     #         s.sku_qty,
     #         s.min_qty,
-    #         isz.item_size,
-    #         isd.item_side_name,
     #         s.expiration_date,
     #         c.category_name
     #     FROM item as i
     #     JOIN skus as s on s.item_id = i.item_id
-    #     JOIN item_size as isz on isz.item_size_id = s.item_size_id
-    #     JOIN item_side as isd on isd.item_side_id = s.item_side_id
     #     JOIN category as c on c.category_id = i.category_id
     #     WHERE i.item_id = 1
     #     """
