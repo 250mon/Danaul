@@ -1,6 +1,9 @@
 import sys, os
 from typing import List
-from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
+    QVBoxLayout
+)
 from PySide6.QtCore import Qt, Signal, Slot, QModelIndex
 from login_widget import LoginWidget
 from async_helper import AsyncHelper
@@ -57,29 +60,44 @@ class InventoryWindow(QMainWindow):
         self.item_widget.set_source_model(self.item_model)
         self.item_widget.setMaximumWidth(500)
 
-        item_dock_widget = QDockWidget('품목', self)
-        item_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
-                                         Qt.LeftDockWidgetArea)
-        item_dock_widget.setWidget(self.item_widget)
-        self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
-
         self.sku_widget = SkuWidget(self)
         self.sku_widget.set_source_model(self.sku_model)
         self.sku_widget.setMaximumWidth(1000)
-
-        sku_dock_widget = QDockWidget('세부품목', self)
-        sku_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
-                                        Qt.RightDockWidgetArea)
-        sku_dock_widget.setWidget(self.sku_widget)
-        self.addDockWidget(Qt.TopDockWidgetArea, sku_dock_widget)
 
         self.tr_widget = TrWidget(self)
         self.tr_widget.set_source_model(self.tr_model)
         self.tr_widget.setMaximumWidth(1500)
 
+        # self.setup_dock_widgets()
+        self.setup_central_widget()
+
+    def setup_central_widget(self):
+        central_widget = QWidget(self)
+        hbox1 = QHBoxLayout(self)
+        hbox1.addWidget(self.item_widget)
+        hbox1.addWidget(self.sku_widget)
+        hbox2 = QHBoxLayout(self)
+        hbox2.addWidget(self.tr_widget)
+        vbox = QVBoxLayout(self)
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
+        central_widget.setLayout(vbox)
+        self.setCentralWidget(central_widget)
+
+    def setup_dock_widgets(self):
+        item_dock_widget = QDockWidget('품목', self)
+        item_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
+                                         Qt.LeftDockWidgetArea)
+        item_dock_widget.setWidget(self.item_widget)
+        self.addDockWidget(Qt.TopDockWidgetArea, item_dock_widget)
+        sku_dock_widget = QDockWidget('세부품목', self)
+        sku_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
+                                        Qt.RightDockWidgetArea)
+        sku_dock_widget.setWidget(self.sku_widget)
+        self.addDockWidget(Qt.TopDockWidgetArea, sku_dock_widget)
         tr_dock_widget = QDockWidget('거래내역', self)
         tr_dock_widget.setAllowedAreas(Qt.BottomDockWidgetArea |
-                                        Qt.LeftDockWidgetArea)
+                                       Qt.LeftDockWidgetArea)
         tr_dock_widget.setWidget(self.tr_widget)
         self.addDockWidget(Qt.BottomDockWidgetArea, tr_dock_widget)
 
