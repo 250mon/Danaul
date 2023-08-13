@@ -15,6 +15,8 @@ logger.setLevel(logging.DEBUG)
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
+
+
 class ItemModel(DataModel):
     def __init__(self, user_name):
         self.init_params()
@@ -153,9 +155,7 @@ class ItemModel(DataModel):
                 logger.debug(f'setData: item name({value}) is already in use')
                 return False
 
-        result = super().setData(index, value, role)
-        self.set_chg_flag(index)
-        return result
+        return super().setData(index, value, role)
 
     def make_a_new_row_df(self, next_new_id, **kwargs):
         """

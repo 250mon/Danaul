@@ -1,7 +1,7 @@
 import os
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
-    QMessageBox
+    QMessageBox, QGroupBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
@@ -69,34 +69,52 @@ class SkuWidget(InventoryTableWidget):
         hbox1.addWidget(title_label)
         hbox1.stretch(1)
 
-        # search_bar = QLineEdit(self)
-        # search_bar.setPlaceholderText('품목명 입력')
-        # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         search_all_btn = QPushButton('전체조회')
         search_all_btn.clicked.connect(self.filter_no_selection)
-        add_sku_btn = QPushButton('추가')
-        add_sku_btn.clicked.connect(lambda: self.do_actions("add_sku"))
-        chg_sku_btn = QPushButton('수정')
-        chg_sku_btn.clicked.connect(lambda: self.do_actions("chg_sku"))
-        del_sku_btn = QPushButton('삭제/해제')
-        del_sku_btn.clicked.connect(lambda: self.do_actions("del_sku"))
-        save_sku_btn = QPushButton('저장')
-        if hasattr(self.parent, "async_start"):
-            save_sku_btn.clicked.connect(lambda: self.parent.async_start("sku_save"))
+        add_btn = QPushButton('추가')
+        add_btn.clicked.connect(lambda: self.do_actions("add_sku"))
+        del_btn = QPushButton('삭제/해제')
+        del_btn.clicked.connect(lambda: self.do_actions("del_sku"))
+        save_btn = QPushButton('저장')
+        save_btn.clicked.connect(self.save_model_to_db)
+
+        self.edit_mode = QGroupBox("편집 모드")
+        self.edit_mode.setCheckable(True)
+        self.edit_mode.setChecked(False)
+        edit_hbox = QHBoxLayout()
+        edit_hbox.addWidget(add_btn)
+        edit_hbox.addWidget(del_btn)
+        edit_hbox.addWidget(save_btn)
+        self.edit_mode.setLayout(edit_hbox)
+        self.edit_mode.clicked.connect(self.edit_mode_clicked)
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(search_all_btn)
         hbox2.addStretch(1)
-        hbox2.addWidget(add_sku_btn)
-        hbox2.addWidget(chg_sku_btn)
-        hbox2.addWidget(del_sku_btn)
-        hbox2.addWidget(save_sku_btn)
+        hbox2.addWidget(self.edit_mode)
 
         vbox = QVBoxLayout(self)
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
         vbox.addWidget(self.table_view)
         self.setLayout(vbox)
+
+    @ Slot()
+    def edit_mode_clicked(self):
+        if self.edit_mode.isChecked():
+            logger.debug('edit_mode_clicked: Now enter into edit mode')
+            self.source_model.set_editable(True)
+        elif self.source_model.is_model_editing():
+            logger.debug('edit_mode_clicked: The model is in the middle of editing.'
+                         ' Should save before exit the mode')
+            QMessageBox.information(self,
+                                    '편집모드 중 종료',
+                                    '편집모드를 종료하려면 수정부분에 대해 먼저 저장하시거나 삭제해주세요',
+                                    QMessageBox.Close)
+            self.edit_mode.setChecked(True)
+        else:
+            logger.debug('edit_mode_clicked: Now edit mode ends')
+            self.source_model.set_editable(False)
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -114,16 +132,22 @@ class SkuWidget(InventoryTableWidget):
                                         "품목을 먼저 선택하세요.",
                                         QMessageBox.Close)
 
-        elif action == "chg_sku":
-            logger.debug('Changing sku ...')
-            if selected_indexes := self._get_selected_indexes():
-                self.change_rows_by_delegate(selected_indexes)
-
         elif action == "del_sku":
             logger.debug('Deleting sku ...')
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
 
+    def save_model_to_db(self):
+        """
+        Save the model to DB
+        It calls the inventory view's async_start() which calls back the model's
+        save_to_db()
+        :return:
+        """
+        if hasattr(self.parent, "async_start"):
+            self.parent.async_start("sku_save")
+        self.edit_mode.setChecked(False)
+        self.source_model.set_editable(False)
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
@@ -134,17 +158,10 @@ class SkuWidget(InventoryTableWidget):
         :param index:
         :return:
         """
-        if (flag := self.source_model.get_flag(index)) != '':
-            logger.debug(f'row_doble_clicked: row cannot be selected because flag is set({flag})')
-            QMessageBox.information(self,
-                                    "품목 선택 오류",
-                                    "선택된 품목은 새로 추가 되었거나 편집 중으로 저장 한 후 선택해 주세요",
-                                    QMessageBox.Close)
-
-        if index.isValid():
+        if not self.edit_mode.isChecked() and index.isValid():
             src_idx = self.proxy_model.mapToSource(index)
-            if hasattr(self.parent, 'sku_selected'):
-                self.parent.sku_selected(src_idx)
+            if hasattr(self.parent, 'item_selected'):
+                self.parent.item_selected(src_idx)
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):

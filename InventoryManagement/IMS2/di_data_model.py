@@ -170,11 +170,18 @@ class DataModel(PandasModel):
                 value: object,
                 role=Qt.EditRole):
 
-        if self.get_flag(index) == 'deleted':
+        # Unless it is a deleted row, proceed to set the data
+        if self.get_flag(index) & RowFlags.DeletedRow > 0:
             logger.debug(f'setData: Cannot change data in the deleted row')
             return
 
-        return super().setData(index, value, role)
+        result = super().setData(index, value, role)
+
+        # Unless it is a new row, set the change flag
+        if self.get_flag(index) & RowFlags.NewRow == 0:
+            self.set_chg_flag(index)
+
+        return result
 
     def append_new_row(self, **kwargs) -> bool:
         """
@@ -228,6 +235,11 @@ class DataModel(PandasModel):
         :param index:
         :return: True if any difference or False if same
         """
+        original_row_count = Lab().table_df[self.table_name].shape[0]
+        if index.row() >= original_row_count:
+            logger.error(f'diff_row: index.row({index.row()} is out of '
+                         f'range of model_df row count {original_row_count} ')
+            exit(1)
         original_row = Lab().table_df[self.table_name].iloc[[index.row()], :]
         current_row = self.model_df.loc[self.model_df.index[[index.row()]],
                                          original_row.columns]

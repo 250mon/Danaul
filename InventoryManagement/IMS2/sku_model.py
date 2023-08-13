@@ -5,9 +5,9 @@ from PySide6.QtCore import Qt, QModelIndex
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import EditLevel
 from datetime_utils import *
 from item_model import ItemModel
+from constants import RowFlags, EditLevel
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -76,7 +76,7 @@ class SkuModel(DataModel):
         self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
         self.model_df['sku_name'] = self.model_df['item_name'].str.cat(
             self.model_df.loc[:, 'sub_name'], na_rep="-", sep=" ").str.replace("None", "")
-        self.model_df['flag'] = ''
+        self.model_df['flag'] = RowFlags.OriginalRow
 
     def get_default_delegate_info(self) -> List[int]:
         """
@@ -241,7 +241,7 @@ class SkuModel(DataModel):
             'description': "",
             'bit_code': "",
             'item_id': default_item_id,
-            'flag': 'new'
+            'flag': RowFlags.NewRow
         }])
         return new_model_df
 
