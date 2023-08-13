@@ -121,13 +121,13 @@ class InventoryTableWidget(QWidget):
         :return:
         """
 
-    def add_new_row(self, **kwargs):
+    def add_new_row(self, **kwargs) -> bool:
         """
         Common
         This is called from a Button
-        :return:
+        :return: True if succeeded or False
         """
-        self.source_model.append_new_row(**kwargs)
+        return self.source_model.append_new_row(**kwargs)
 
     def change_rows_by_delegate(self, indexes: List[QModelIndex]):
         """
@@ -168,7 +168,7 @@ class InventoryTableWidget(QWidget):
         result_str = await self.source_model.save_to_db()
         if result_str is not None:
             QMessageBox.information(self,
-                                    'Save Results',
+                                    '저장결과',
                                     result_str,
                                     QMessageBox.Close)
         return result_str
@@ -180,7 +180,7 @@ class InventoryTableWidget(QWidget):
         :param item_id:
         :return:
         """
-        # let sku model learn item model index for new row creation
+        # let the model learn the upper model index for a new row creation
         self.source_model.set_upper_model_index(upper_index)
 
         # filtering in the sku view
@@ -199,7 +199,7 @@ class InventoryTableWidget(QWidget):
         left_most_col_num = self.source_model.get_col_number(left_most_hidden)
         last_col_num = len(self.source_model.column_names)
         for c in range(left_most_col_num, last_col_num):
-            self.table_view.setColumnWidth(c, 0)
+            self.table_view.setColumnWidth(c, 2)
             # The following methods don't allow the hidden col
             # to be accessible
             # self.table_view.horizontalHeader().hideSection(c)

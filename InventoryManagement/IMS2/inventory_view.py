@@ -73,6 +73,7 @@ class InventoryWindow(QMainWindow):
 
     def setup_central_widget(self):
         central_widget = QWidget(self)
+
         hbox1 = QHBoxLayout(self)
         hbox1.addWidget(self.item_widget)
         hbox1.addWidget(self.sku_widget)

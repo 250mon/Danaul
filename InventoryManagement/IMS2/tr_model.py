@@ -2,7 +2,6 @@ import os
 import pandas as pd
 from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex
-from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -157,25 +156,21 @@ class TrModel(DataModel):
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise None
         """
-        if not self.selected_upper_index.isValid():
-            logger.error('make_a_new_row_df: sku_index is not valid')
+        if self.selected_upper_id is None:
+            logger.error('make_a_new_row_df: sku_id is empty')
             return None
-        elif not self.selected_upper_index.siblingAtColumn(
-                self.sku_model.get_col_number('active')).data():
+        elif not self.sku_active_s[self.selected_upper_id]:
             logger.error('make_a_new_row_df: sku_id is not active')
             return None
 
-        sku_id =  self.selected_upper_index.siblingAtColumn(
-                self.sku_model.get_col_number('sku_id')).data()
-        sku_qty = self.selected_upper_index.siblingAtColumn(
-                self.sku_model.get_col_number('sku_qty')).data()
+        sku_qty = self.sku_qty_s.loc[self.selected_upper_id]
         tr_type = kwargs['tr_type']
         tr_type_id = Lab().tr_type_id_s.loc[tr_type]
-        user_id = Lab().user_id_s[self.user_name]
+        user_id = Lab().user_id_s.loc[self.user_name]
 
         new_model_df = pd.DataFrame([{
             'tr_id': next_new_id,
-            'sku_id': sku_id,
+            'sku_id': self.selected_upper_id,
             'tr_type': tr_type,
             'tr_qty': 0,
             'before_qty': sku_qty,
@@ -206,29 +201,29 @@ class TrModel(DataModel):
         result = True
         if tr_type == "Buy":
             after_qty = before_qty + tr_qty
-            self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
+            self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
         elif tr_type == "Sell":
             if tr_qty > before_qty:
                 result = False
             else:
                 after_qty = before_qty - tr_qty
-                self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
+                self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
         elif tr_type == "AdjustmentPlus":
             after_qty = before_qty + tr_qty
-            self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
+            self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
         elif tr_type == "AdjustmentMinus":
             if tr_qty > before_qty:
                 result = False
             else:
                 after_qty = before_qty - tr_qty
-                self.method_name(before_qty, tr_qty, after_qty, after_qty_idx)
+                self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
 
         debug_msg = "valid" if result is True else "not valid"
         logger.debug(f"validate_new_tr: Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
 
         return result
 
-    def method_name(self, before_qty, tr_qty, after_qty, after_qty_idx):
+    def set_qty_to_models(self, before_qty, tr_qty, after_qty, after_qty_idx):
         self.setData(after_qty_idx, after_qty)
         self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, after_qty)
         logger.debug(f'validate_new_row: before_qty {before_qty}, tr_qty {tr_qty} => after_qty {after_qty}')

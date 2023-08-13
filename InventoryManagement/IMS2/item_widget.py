@@ -1,9 +1,11 @@
 import os
 from typing import List
 from PySide6.QtWidgets import (
-    QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout
+    QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
+    QLabel, QRadioButton, QGroupBox, QMessageBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtGui import QFont
 from di_logger import Logs, logging
 from di_table_widget import InventoryTableWidget
 from item_model import ItemModel
@@ -66,6 +68,14 @@ class ItemWidget(InventoryTableWidget):
         """
         self.set_col_hidden('category_id')
 
+        title_label = QLabel('품목')
+        font = QFont("Arial", 12, QFont.Bold)
+        title_label.setFont(font)
+
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(title_label)
+        hbox1.stretch(1)
+
         search_bar = QLineEdit(self)
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
@@ -76,19 +86,42 @@ class ItemWidget(InventoryTableWidget):
         del_item_btn = QPushButton('삭제/해제')
         del_item_btn.clicked.connect(lambda: self.do_actions("del_item"))
         save_item_btn = QPushButton('저장')
-        if hasattr(self.parent, "async_start"):
-            save_item_btn.clicked.connect(lambda: self.parent.async_start("item_save"))
-        item_hbox = QHBoxLayout()
-        item_hbox.addWidget(search_bar)
-        item_hbox.addStretch(1)
-        item_hbox.addWidget(add_item_btn)
-        item_hbox.addWidget(chg_item_btn)
-        item_hbox.addWidget(del_item_btn)
-        item_hbox.addWidget(save_item_btn)
-        item_vbox = QVBoxLayout()
-        item_vbox.addLayout(item_hbox)
-        item_vbox.addWidget(self.table_view)
-        self.setLayout(item_vbox)
+        save_item_btn.clicked.connect(self.save_model_to_db)
+
+        self.edit_mode = QGroupBox("편집 모드")
+        self.edit_mode.setCheckable(True)
+        self.edit_mode.setChecked(False)
+        edit_hbox = QHBoxLayout()
+        edit_hbox.addWidget(add_item_btn)
+        edit_hbox.addWidget(chg_item_btn)
+        edit_hbox.addWidget(del_item_btn)
+        edit_hbox.addWidget(save_item_btn)
+        self.edit_mode.setLayout(edit_hbox)
+        self.edit_mode.clicked.connect(self.edit_mode_clicked)
+
+        hbox2 = QHBoxLayout()
+        hbox2.addWidget(search_bar)
+        hbox2.addStretch(1)
+        hbox2.addWidget(self.edit_mode)
+
+        vbox = QVBoxLayout(self)
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
+        vbox.addWidget(self.table_view)
+        self.setLayout(vbox)
+
+    @ Slot()
+    def edit_mode_clicked(self):
+        if self.edit_mode.isChecked():
+            logger.debug('edit_mode_clicked: Now enter into edit mode')
+        elif self.source_model.is_model_editing():
+            logger.debug('edit_mode_clicked: The model is in the middle of editing.'
+                         ' Should save before exit the mode')
+            QMessageBox.information(self,
+                                    '편집모드 중 종료',
+                                    '편집모드를 종료하려면 수정부분에 대해 먼저 저장하시거나 삭제해주세요',
+                                    QMessageBox.Close)
+            self.edit_mode.setChecked(True)
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -122,6 +155,17 @@ class ItemWidget(InventoryTableWidget):
             if selected_indexes := self._get_selected_indexes():
                 logger.debug(f'do_actions: del_item {selected_indexes}')
                 self.delete_rows(selected_indexes)
+
+    def save_model_to_db(self):
+        """
+        Save the model to DB
+        It calls the inventory view's async_start() which calls back the model's
+        save_to_db()
+        :return:
+        """
+        if hasattr(self.parent, "async_start"):
+            self.parent.async_start("item_save")
+        self.edit_mode.setChecked(False)
 
     @Slot(object)
     def added_new_item_by_single_item_window(self, index: QModelIndex):
@@ -158,7 +202,7 @@ class ItemWidget(InventoryTableWidget):
         :param index:
         :return:
         """
-        if index.isValid():
+        if not self.edit_mode.isChecked() and index.isValid():
             src_idx = self.proxy_model.mapToSource(index)
             if hasattr(self.parent, 'item_selected'):
                 self.parent.item_selected(src_idx)

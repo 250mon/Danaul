@@ -1,8 +1,10 @@
 import os
 from PySide6.QtWidgets import (
-    QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
+    QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
+    QMessageBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtGui import QFont
 from di_logger import Logs, logging
 from di_table_widget import InventoryTableWidget
 from sku_model import SkuModel
@@ -52,8 +54,6 @@ class SkuWidget(InventoryTableWidget):
         :return:
         """
         super()._setup_delegate_for_columns()
-        self.set_col_hidden('sku_name')
-
 
     def _setup_ui(self):
         """
@@ -61,6 +61,13 @@ class SkuWidget(InventoryTableWidget):
         :return:
         """
         self.set_col_hidden('item_id')
+
+        title_label = QLabel('세부품목')
+        font = QFont("Arial", 12, QFont.Bold)
+        title_label.setFont(font)
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(title_label)
+        hbox1.stretch(1)
 
         # search_bar = QLineEdit(self)
         # search_bar.setPlaceholderText('품목명 입력')
@@ -76,17 +83,20 @@ class SkuWidget(InventoryTableWidget):
         save_sku_btn = QPushButton('저장')
         if hasattr(self.parent, "async_start"):
             save_sku_btn.clicked.connect(lambda: self.parent.async_start("sku_save"))
-        sku_hbox = QHBoxLayout()
-        sku_hbox.addWidget(search_all_btn)
-        sku_hbox.addStretch(1)
-        sku_hbox.addWidget(add_sku_btn)
-        sku_hbox.addWidget(chg_sku_btn)
-        sku_hbox.addWidget(del_sku_btn)
-        sku_hbox.addWidget(save_sku_btn)
-        sku_vbox = QVBoxLayout()
-        sku_vbox.addLayout(sku_hbox)
-        sku_vbox.addWidget(self.table_view)
-        self.setLayout(sku_vbox)
+
+        hbox2 = QHBoxLayout()
+        hbox2.addWidget(search_all_btn)
+        hbox2.addStretch(1)
+        hbox2.addWidget(add_sku_btn)
+        hbox2.addWidget(chg_sku_btn)
+        hbox2.addWidget(del_sku_btn)
+        hbox2.addWidget(save_sku_btn)
+
+        vbox = QVBoxLayout(self)
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
+        vbox.addWidget(self.table_view)
+        self.setLayout(vbox)
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -98,7 +108,11 @@ class SkuWidget(InventoryTableWidget):
         logger.debug(f'do_action: {action}')
         if action == "add_sku":
             logger.debug('Adding sku ...')
-            self.add_new_row()
+            if not self.add_new_row():
+                QMessageBox.information(self,
+                                        "Failed New Sku",
+                                        "품목을 먼저 선택하세요.",
+                                        QMessageBox.Close)
 
         elif action == "chg_sku":
             logger.debug('Changing sku ...')
@@ -120,6 +134,13 @@ class SkuWidget(InventoryTableWidget):
         :param index:
         :return:
         """
+        if (flag := self.source_model.get_flag(index)) != '':
+            logger.debug(f'row_doble_clicked: row cannot be selected because flag is set({flag})')
+            QMessageBox.information(self,
+                                    "품목 선택 오류",
+                                    "선택된 품목은 새로 추가 되었거나 편집 중으로 저장 한 후 선택해 주세요",
+                                    QMessageBox.Close)
+
         if index.isValid():
             src_idx = self.proxy_model.mapToSource(index)
             if hasattr(self.parent, 'sku_selected'):

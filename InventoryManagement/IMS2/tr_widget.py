@@ -1,6 +1,7 @@
 import os
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
+    QMessageBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
@@ -62,6 +63,13 @@ class TrWidget(InventoryTableWidget):
         """
         self.set_col_hidden('tr_type_id')
 
+        title_label = QLabel('거래내역')
+        font = QFont("Arial", 12, QFont.Bold)
+        title_label.setFont(font)
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(title_label)
+        hbox1.stretch(1)
+
         # search_bar = QLineEdit(self)
         # search_bar.setPlaceholderText('매입/매출 입력')
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
@@ -88,27 +96,28 @@ class TrWidget(InventoryTableWidget):
         if self.source_model.user_name not in ADMIN_GROUP:
             del_tr_btn.setEnabled(False)
 
-        sku_hbox = QHBoxLayout()
-        sku_hbox.addWidget(search_all_btn)
-        sku_hbox.addStretch(1)
-        sku_hbox.addWidget(self.sku_name_label)
-        sku_hbox.addStretch(1)
-        sku_hbox.addWidget(buy_btn)
-        sku_hbox.addWidget(sell_btn)
-        sku_hbox.addWidget(adj_plus_btn)
-        sku_hbox.addWidget(adj_minus_btn)
-        sku_hbox.addWidget(save_tr_btn)
+        hbox2 = QHBoxLayout()
+        hbox2.addWidget(search_all_btn)
+        hbox2.addStretch(1)
+        hbox2.addWidget(self.sku_name_label)
+        hbox2.addStretch(1)
+        hbox2.addWidget(buy_btn)
+        hbox2.addWidget(sell_btn)
+        hbox2.addWidget(adj_plus_btn)
+        hbox2.addWidget(adj_minus_btn)
+        hbox2.addWidget(save_tr_btn)
 
         del_hbox = QHBoxLayout()
         del_hbox.addStretch(1)
         del_hbox.addWidget(del_tr_btn)
 
-        sku_vbox = QVBoxLayout()
-        sku_vbox.addLayout(sku_hbox)
-        sku_vbox.addWidget(self.table_view)
-        sku_vbox.addLayout(del_hbox)
+        vbox = QVBoxLayout()
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
+        vbox.addWidget(self.table_view)
+        vbox.addLayout(del_hbox)
 
-        self.setLayout(sku_vbox)
+        self.setLayout(vbox)
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -118,26 +127,34 @@ class TrWidget(InventoryTableWidget):
         :return:
         """
         logger.debug(f'do_action: {action}')
+
         if action == "buy":
             logger.debug('do_actions: buying ...')
-            self.add_new_row(tr_type='Buy')
-            self.tr_window = SingleTrWindow(self.proxy_model, self)
+            self.add_new_tr('Buy')
         elif action == "sell":
             logger.debug('do_actions: selling ...')
-            self.add_new_row(tr_type='Sell')
-            self.tr_window = SingleTrWindow(self.proxy_model, self)
+            self.add_new_tr('Sell')
         elif action == "adj+":
             logger.debug('do_actions: adjusting plus ...')
-            self.add_new_row(tr_type='Sell')
-            self.tr_window = SingleTrWindow(self.proxy_model, self)
+            self.add_new_tr(tr_type='AdjustmentPlus')
         elif action == "adj-":
             logger.debug('do_actions: adjusting minus ...')
-            self.add_new_row(tr_type='Sell')
-            self.tr_window = SingleTrWindow(self.proxy_model, self)
+            self.add_new_tr(tr_type='AdjustmentMinus')
         elif action == "del_tr":
             logger.debug('Deleting tr ...')
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
+
+    def add_new_tr(self, tr_type) -> bool:
+        if self.add_new_row(tr_type=tr_type):
+            self.tr_window = SingleTrWindow(self.proxy_model, self)
+            return True
+        else:
+            QMessageBox.information(self,
+                                    "Failed New Sku",
+                                    "세부품목을 먼저 선택하세요.",
+                                    QMessageBox.Close)
+            return False
 
     @Slot(object)
     def added_new_tr_by_single_tr_window(self, index: QModelIndex):

@@ -2,7 +2,6 @@ import os
 import pandas as pd
 from typing import Dict, List, Tuple
 from PySide6.QtCore import Qt, QModelIndex
-from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging

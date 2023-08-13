@@ -2,7 +2,6 @@ import os
 import pandas as pd
 from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex
-from PySide6.QtGui import QBrush, QFont
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -85,7 +84,7 @@ class SkuModel(DataModel):
         :return:
         """
         default_info_list = [self.get_col_number(c) for c in
-                             ['description', 'bit_code']]
+                             ['representative', 'sub_name', 'description', 'bit_code']]
         return default_info_list
 
     def get_combobox_delegate_info(self) -> Dict[int, List]:

@@ -3,7 +3,7 @@ import pandas as pd
 import asyncpg.exceptions
 from typing import Dict, Tuple, List
 from abc import abstractmethod
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -150,22 +150,25 @@ class DataModel(PandasModel):
         """
         await self.update_model_df_from_db()
 
-    def append_new_row(self, **kwargs):
+    def append_new_row(self, **kwargs) -> bool:
         """
         Appends a new row to the end of the model
-        :return:
+        :return: True if succeeded or False
         """
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
 
         next_new_id = self.model_df.iloc[:, 0].max() + 1
         logger.debug(f'append_new_row: New model_df_row id is {next_new_id}')
         new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
+        if new_row_df is None:
+            return False
         self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
 
         self.endInsertRows()
 
         # handles model flags
         self.set_editable_new_row(self.rowCount() - 1)
+        return True
 
     @abstractmethod
     def make_a_new_row_df(self, next_new_id, **kwargs):
@@ -191,6 +194,15 @@ class DataModel(PandasModel):
 
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
+
+    def get_flag(self, index: QModelIndex):
+        """
+        Returns flag of the row where index belongs to
+        :param index:
+        :return:
+        """
+        return index.siblingAtColumn(self.get_col_number('flag')).data()
+
 
     def set_chg_flag(self, index: QModelIndex):
         """
@@ -289,8 +301,15 @@ class DataModel(PandasModel):
             df_to_upload = chg_df.loc[:, self.db_column_names]
             results_chg = await Lab().update_df(self.table_name, df_to_upload)
             total_results['수정'] = results_chg
+            self.clear_editable_rows()
             logger.debug(f'update_db: result of changing = {results_chg}')
 
         return_msg = make_return_msg(total_results)
         return return_msg
 
+    def is_model_editing(self) -> bool:
+        """
+        Returns if any rows has flag column set
+        :return:
+        """
+        return not self.model_df.loc[self.model_df['flag'] != '', 'flag'].empty
