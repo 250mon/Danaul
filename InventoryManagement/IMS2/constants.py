@@ -5,9 +5,16 @@ DB_SETTING_FILE = 'db_settings'
 ADMIN_GROUP = ['admin', 'jye']
 
 
+class RowFlags:
+    OriginalRow = 0
+    NewRow = 1
+    ChangedRow = 2
+    DeletedRow = 4
+
+
 @total_ordering
 class EditLevel(Enum):
-    UserModifiable = 0
+    UserModifiable = 1
     AdminModifiable = 2
     Creatable = 3
     NotEditable = 5

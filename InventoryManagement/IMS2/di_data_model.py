@@ -1,13 +1,13 @@
 import os
 import pandas as pd
 import asyncpg.exceptions
-from typing import Dict, Tuple, List
+from typing import Dict, List
 from abc import abstractmethod
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, Qt
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import EditLevel, ADMIN_GROUP
+from constants import EditLevel, RowFlags, ADMIN_GROUP
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -23,10 +23,10 @@ class DataModel(PandasModel):
         # for access control
         self.user_name = user_name
         if self.user_name in ADMIN_GROUP:
-            self.modifiable = EditLevel.AdminModifiable
+            self.usr_edit_lvl = EditLevel.AdminModifiable
         else:
-            self.modifiable = EditLevel.UserModifiable
-        self.set_edit_level(self.modifiable)
+            self.usr_edit_lvl = EditLevel.UserModifiable
+        self.set_edit_level(self.usr_edit_lvl)
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
@@ -74,8 +74,23 @@ class DataModel(PandasModel):
         flag_col = self.get_col_number('flag')
         return index.column() == flag_col
 
-    def is_row_type(self, index: QModelIndex, rtype: str) -> bool:
-        return rtype in self.model_df.iloc[index.row(), self.get_col_number('flag')]
+    def get_flag(self, index: QModelIndex) -> int:
+        """
+        Returns the flag of the row where the index belongs to
+        :param index:
+        :return: flag
+        """
+        flag = self.model_df.iloc[index.row(), self.get_col_number('flag')]
+        return flag
+
+    def set_flag(self, index: QModelIndex, flag: int):
+        """
+        Set the flag to the row where the index belongs to
+        :param index:
+        :param flag:
+        :return:
+        """
+        self.model_df.iloc[index.row(), self.get_col_number('flag')] = flag
 
     def is_active_row(self, index: QModelIndex) -> bool:
         return self.model_df.iloc[index.row(), self.get_col_number('active')]
@@ -150,6 +165,17 @@ class DataModel(PandasModel):
         """
         await self.update_model_df_from_db()
 
+    def setData(self,
+                index: QModelIndex,
+                value: object,
+                role=Qt.EditRole):
+
+        if self.get_flag(index) == 'deleted':
+            logger.debug(f'setData: Cannot change data in the deleted row')
+            return
+
+        return super().setData(index, value, role)
+
     def append_new_row(self, **kwargs) -> bool:
         """
         Appends a new row to the end of the model
@@ -195,14 +221,20 @@ class DataModel(PandasModel):
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
-    def get_flag(self, index: QModelIndex):
+    def diff_row(self, index: QModelIndex) -> bool:
         """
-        Returns flag of the row where index belongs to
+        Compare the df against the original data which is stored
+        in the Lab
         :param index:
-        :return:
+        :return: True if any difference or False if same
         """
-        return index.siblingAtColumn(self.get_col_number('flag')).data()
-
+        original_row = Lab().table_df[self.table_name].iloc[[index.row()], :]
+        current_row = self.model_df.loc[self.model_df.index[[index.row()]],
+                                         original_row.columns]
+        if original_row.compare(current_row).empty:
+            return False
+        else:
+            return True
 
     def set_chg_flag(self, index: QModelIndex):
         """
@@ -210,17 +242,10 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        # handles model flags
-        self.set_editable_row(index.row())
-
-        flag_col_num = self.get_col_number('flag')
-        if index.column() != flag_col_num:
-            index: QModelIndex = index.siblingAtColumn(flag_col_num)
-
-        current_msg = self.data(index)
-        if 'changed' not in current_msg:
-            flag = current_msg + ' changed'
-            super().setData(index, flag)
+        curr_flag = self.get_flag(index)
+        curr_flag |= RowFlags.ChangedRow
+        if self.diff_row(index):
+            self.set_flag(index, curr_flag)
 
     def set_del_flag(self, index: QModelIndex):
         """
@@ -228,19 +253,24 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flag_col_num = self.get_col_number('flag')
-        if index.column() != flag_col_num:
-            index: QModelIndex = index.siblingAtColumn(flag_col_num)
+        curr_flag = self.get_flag(index)
+        # exclusive or op with deleted flag
+        curr_flag ^= RowFlags.DeletedRow
+        self.set_flag(index, curr_flag)
 
-        current_msg: str = self.data(index)
-        if 'deleted' in current_msg:
-            flag = current_msg.replace(' deleted', '')
-            self.unset_uneditable_row(index.row())
+        if curr_flag & RowFlags.DeletedRow:
+            self.set_uneditable_row(index.row())
         else:
-            flag = current_msg + ' deleted'
             self.set_uneditable_row(index.row())
 
-        super().setData(index, flag)
+    def get_new_df(self) -> pd.DataFrame:
+        return self.model_df.loc[self.model_df['flag'] & RowFlags.NewRow > 0, :]
+
+    def get_deleted_df(self) -> pd.DataFrame:
+        return self.model_df.loc[self.model_df['flag'] & RowFlags.DeletedRow > 0, :]
+
+    def get_changed_df(self) -> pd.DataFrame:
+        return self.model_df.loc[self.model_df['flag'] & RowFlags.ChangedRow > 0, :]
 
     async def save_to_db(self):
         """
@@ -272,11 +302,12 @@ class DataModel(PandasModel):
 
         total_results = {}
 
-        del_df = self.model_df.loc[self.model_df.flag.str.contains('deleted'), :]
+        del_df = self.get_deleted_df()
+        logger.debug(f'update_db: del_df: \n{del_df}')
         if not del_df.empty:
             logger.debug(f'{del_df}')
             # if flag contains 'new', just drop it
-            del_df.drop(del_df[del_df.flag.str.contains('new')].index)
+            del_df.drop(del_df[del_df.flag & RowFlags.NewRow > 0].index)
             df_to_upload = del_df.loc[:, self.db_column_names]
             results_del = await Lab().delete_df(self.table_name, df_to_upload)
             total_results['삭제'] = results_del
@@ -284,7 +315,8 @@ class DataModel(PandasModel):
             self.model_df.drop(del_df.index, inplace=True)
             self.clear_uneditable_rows()
 
-        new_df = self.model_df.loc[self.model_df.flag.str.contains('new'), :]
+        new_df = self.get_new_df()
+        logger.debug(f'update_db: new_df: \n{new_df}')
         if not new_df.empty:
             logger.debug(f'{new_df}')
             df_to_upload = new_df.loc[:, self.db_column_names]
@@ -295,7 +327,8 @@ class DataModel(PandasModel):
             self.clear_editable_new_rows()
             logger.debug(f'update_db: result of inserting new rows = {results_new}')
 
-        chg_df = self.model_df.loc[self.model_df.flag.str.contains('changed'), :]
+        chg_df = self.get_changed_df()
+        logger.debug(f'update_db: chg_df: \n{chg_df}')
         if not chg_df.empty:
             logger.debug(f'{chg_df}')
             df_to_upload = chg_df.loc[:, self.db_column_names]
@@ -312,4 +345,6 @@ class DataModel(PandasModel):
         Returns if any rows has flag column set
         :return:
         """
-        return not self.model_df.loc[self.model_df['flag'] != '', 'flag'].empty
+        return not self.model_df.loc[
+            self.model_df['flag'] != RowFlags.OriginalRow,
+            'flag'].empty

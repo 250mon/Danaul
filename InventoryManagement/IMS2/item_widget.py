@@ -10,6 +10,7 @@ from di_logger import Logs, logging
 from di_table_widget import InventoryTableWidget
 from item_model import ItemModel
 from single_item_window import SingleItemWindow
+from constants import EditLevel
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -114,6 +115,7 @@ class ItemWidget(InventoryTableWidget):
     def edit_mode_clicked(self):
         if self.edit_mode.isChecked():
             logger.debug('edit_mode_clicked: Now enter into edit mode')
+            self.source_model.set_editable(True)
         elif self.source_model.is_model_editing():
             logger.debug('edit_mode_clicked: The model is in the middle of editing.'
                          ' Should save before exit the mode')
@@ -122,6 +124,9 @@ class ItemWidget(InventoryTableWidget):
                                     '편집모드를 종료하려면 수정부분에 대해 먼저 저장하시거나 삭제해주세요',
                                     QMessageBox.Close)
             self.edit_mode.setChecked(True)
+        else:
+            logger.debug('edit_mode_clicked: Now edit mode ends')
+            self.source_model.set_editable(False)
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -144,9 +149,9 @@ class ItemWidget(InventoryTableWidget):
             logger.debug('Changing item ...')
             if selected_indexes := self._get_selected_indexes():
                 logger.debug(f'do_actions: chg_item {selected_indexes}')
-                if self.delegate_mode:
-                    self.change_rows_by_delegate(selected_indexes)
-                else:
+                # if self.delegate_mode:
+                #     self.change_rows_by_delegate(selected_indexes)
+                if not self.delegate_mode:
                     self.item_window = SingleItemWindow(self.proxy_model,
                                                         selected_indexes, self)
 
@@ -166,6 +171,7 @@ class ItemWidget(InventoryTableWidget):
         if hasattr(self.parent, "async_start"):
             self.parent.async_start("item_save")
         self.edit_mode.setChecked(False)
+        self.source_model.set_editable(False)
 
     @Slot(object)
     def added_new_item_by_single_item_window(self, index: QModelIndex):

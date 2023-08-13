@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QModelIndex
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import ADMIN_GROUP, EditLevel
+from constants import RowFlags, EditLevel
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -43,7 +43,7 @@ class ItemModel(DataModel):
         """
         # set more columns for the view
         self.model_df['category_name'] = self.model_df['category_id'].map(Lab().category_name_s)
-        self.model_df['flag'] = ''
+        self.model_df['flag'] = RowFlags.OriginalRow
 
     def get_default_delegate_info(self) -> List[int]:
         """
@@ -153,7 +153,9 @@ class ItemModel(DataModel):
                 logger.debug(f'setData: item name({value}) is already in use')
                 return False
 
-        return super().setData(index, value, role)
+        result = super().setData(index, value, role)
+        self.set_chg_flag(index)
+        return result
 
     def make_a_new_row_df(self, next_new_id, **kwargs):
         """
@@ -170,7 +172,7 @@ class ItemModel(DataModel):
             'category_name': cat_name,
             'description': "",
             'category_id': default_cat_id,
-            'flag': 'new'
+            'flag': RowFlags.NewRow
         }])
         return new_model_df
 

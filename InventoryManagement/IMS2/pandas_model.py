@@ -21,6 +21,7 @@ class PandasModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
         self.edit_level = EditLevel.UserModifiable
+        self.is_editable = False
         self.new_rows_set = set()
         self.editable_rows_set = set()
         self.uneditable_rows_set = set()
@@ -91,13 +92,15 @@ class PandasModel(QAbstractTableModel):
             return False
 
     def flags(self, index: QModelIndex):
+        if not self.is_editable:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         if index.row() in self.uneditable_rows_set:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         elif (index.row() in self.new_rows_set and
               self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable):
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
-        elif (index.row() in self.editable_rows_set and
-                self.col_idx_edit_lvl[index.column()] <= self.edit_level):
+        # elif (index.row() in self.editable_rows_set and
+        elif self.col_idx_edit_lvl[index.column()] <= self.edit_level:
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -108,6 +111,9 @@ class PandasModel(QAbstractTableModel):
 
     def set_column_index_edit_level(self, col_idx_edit_level: Dict[int, EditLevel]):
         self.col_idx_edit_lvl = col_idx_edit_level
+
+    def set_editable(self, is_editable: bool):
+        self.is_editable= is_editable
 
     def set_editable_row(self, row: int):
         logger.debug(f'set_editable_row: row{row} => '
