@@ -47,7 +47,6 @@ class SkuWidget(InventoryTableWidget):
     def _setup_initial_table_view(self):
         super()._setup_initial_table_view()
         self.table_view.doubleClicked.connect(self.row_double_clicked)
-        self.table_view.activated.connect(self.row_activated)
 
     def _setup_delegate_for_columns(self):
         """
@@ -129,7 +128,7 @@ class SkuWidget(InventoryTableWidget):
             if not self.add_new_row():
                 QMessageBox.information(self,
                                         "Failed New Sku",
-                                        "품목을 먼저 선택하세요.",
+                                        "품목을 선택되지 않았거나, 활성화 품목이 아닙니다.",
                                         QMessageBox.Close)
 
         elif action == "del_sku":
@@ -160,17 +159,5 @@ class SkuWidget(InventoryTableWidget):
         """
         if not self.edit_mode.isChecked() and index.isValid():
             src_idx = self.proxy_model.mapToSource(index)
-            if hasattr(self.parent, 'item_selected'):
-                self.parent.item_selected(src_idx)
-
-    @Slot(QModelIndex)
-    def row_activated(self, index: QModelIndex):
-        """
-        While changing rows, activating other rows would make the change
-        to stop.
-        :param index:
-        :return:
-        """
-        src_idx = self.proxy_model.mapToSource(index)
-        if src_idx.row() not in self.source_model.editable_rows_set:
-            self.source_model.clear_editable_rows()
+            if hasattr(self.parent, 'sku_selected'):
+                self.parent.sku_selected(src_idx)

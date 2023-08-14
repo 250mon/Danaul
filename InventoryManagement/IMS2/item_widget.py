@@ -57,7 +57,6 @@ class ItemWidget(InventoryTableWidget):
         """
         super()._setup_initial_table_view()
         self.table_view.doubleClicked.connect(self.row_double_clicked)
-        self.table_view.activated.connect(self.row_activated)
 
     def _setup_delegate_for_columns(self):
         super()._setup_delegate_for_columns()
@@ -208,15 +207,3 @@ class ItemWidget(InventoryTableWidget):
             src_idx = self.proxy_model.mapToSource(index)
             if hasattr(self.parent, 'item_selected'):
                 self.parent.item_selected(src_idx)
-
-    @Slot(QModelIndex)
-    def row_activated(self, index: QModelIndex):
-        """
-        While changing rows, activating other rows would make the change
-        to stop.
-        :param index:
-        :return:
-        """
-        src_idx = self.proxy_model.mapToSource(index)
-        if src_idx.row() not in self.source_model.editable_rows_set:
-            self.rows = self.source_model.clear_editable_rows()

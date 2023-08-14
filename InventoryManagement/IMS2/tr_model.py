@@ -8,6 +8,7 @@ from di_logger import Logs, logging
 from constants import EditLevel
 from datetime_utils import *
 from sku_model import SkuModel
+from constants import RowFlags
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -79,7 +80,7 @@ class TrModel(DataModel):
         # set more columns for the view
         self.model_df['tr_type'] = self.model_df['tr_type_id'].map(Lab().tr_type_s)
         self.model_df['user_name'] = self.model_df['user_id'].map(Lab().user_name_s)
-        self.model_df['flag'] = ''
+        self.model_df['flag'] = RowFlags.OriginalRow
 
     def get_default_delegate_info(self) -> List[int]:
         """
@@ -180,7 +181,7 @@ class TrModel(DataModel):
             'user_name': self.user_name,
             'user_id': user_id,
             'tr_type_id': tr_type_id,
-            'flag': 'new'
+            'flag': RowFlags.NewRow
         }])
         return new_model_df
 
@@ -196,34 +197,36 @@ class TrModel(DataModel):
         tr_qty = index.siblingAtColumn(self.get_col_number('tr_qty')).data()
         before_qty = index.siblingAtColumn(self.get_col_number('before_qty')).data()
 
-        after_qty_idx = index.siblingAtColumn(self.get_col_number('after_qty'))
-
         result = True
         if tr_type == "Buy":
-            after_qty = before_qty + tr_qty
-            self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
+            self.plus_qty_to_models('+', before_qty, tr_qty, index)
         elif tr_type == "Sell":
             if tr_qty > before_qty:
                 result = False
             else:
-                after_qty = before_qty - tr_qty
-                self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
+                self.plus_qty_to_models('-', before_qty, tr_qty, index)
         elif tr_type == "AdjustmentPlus":
-            after_qty = before_qty + tr_qty
-            self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
+            self.plus_qty_to_models('+', before_qty, tr_qty, index)
         elif tr_type == "AdjustmentMinus":
             if tr_qty > before_qty:
                 result = False
             else:
-                after_qty = before_qty - tr_qty
-                self.set_qty_to_models(before_qty, tr_qty, after_qty, after_qty_idx)
+                self.plus_qty_to_models('-', before_qty, tr_qty, index)
 
         debug_msg = "valid" if result is True else "not valid"
         logger.debug(f"validate_new_tr: Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
 
         return result
 
-    def set_qty_to_models(self, before_qty, tr_qty, after_qty, after_qty_idx):
+    def plus_qty_to_models(self, op, before_qty, tr_qty, index):
+        if op == '+':
+            after_qty = before_qty + tr_qty
+        elif op == '-':
+            after_qty = before_qty - tr_qty
+
+        before_qty_idx = index.siblingAtColumn(self.get_col_number('before_qty'))
+        self.setData(before_qty_idx, after_qty)
+        after_qty_idx = index.siblingAtColumn(self.get_col_number('after_qty'))
         self.setData(after_qty_idx, after_qty)
         self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, after_qty)
         logger.debug(f'validate_new_row: before_qty {before_qty}, tr_qty {tr_qty} => after_qty {after_qty}')
