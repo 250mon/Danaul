@@ -165,6 +165,11 @@ class DataModel(PandasModel):
         """
         await self.update_model_df_from_db()
 
+    def get_data_from_id(self, id: int, col: str) -> object:
+        if col not in self.column_names:
+            return None
+        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
+
     def setData(self,
                 index: QModelIndex,
                 value: object,
@@ -211,22 +216,28 @@ class DataModel(PandasModel):
         :return:
         """
 
-    def drop_rows(self, indexes: List[QModelIndex]):
-        id_col = 0
-        ids = []
-        for idx in indexes:
-            if idx.column() != id_col:
-                id = int(idx.siblingAtColumn(id_col).data())
-            else:
-                id = int(idx.data())
-            ids.append(id)
+    def drop_rows(self, indexes: List[QModelIndex or int]):
+        # id_col = 0
+        # ids = []
+        # for idx in indexes:
+        #     if idx.column() != id_col:
+        #         id = int(idx.siblingAtColumn(id_col).data())
+        #     else:
+        #         id = int(idx.data())
+        #     ids.append(id)
+        #
+        # if len(ids) > 0:
+        #     self.model_df.drop(self.model_df[self.model_df.iloc[:, 0].isin(ids)].index, inplace=True)
+        #     logger.debug(f'drop_rows: model_df dropped ids {ids}')
 
-        if len(ids) > 0:
-            self.model_df.drop(self.model_df[self.model_df.iloc[:, 0].isin(ids)].index, inplace=True)
-            logger.debug(f'drop_rows: model_df dropped ids {ids}')
+        if isinstance(indexes[0], QModelIndex):
+            indexes = [i.row() for i in indexes]
 
-        self.layoutAboutToBeChanged.emit()
-        self.layoutChanged.emit()
+        self.beginRemoveRows(QModelIndex(), indexes[0], indexes[-1])
+        self.model_df.drop(pd.Index(indexes), inplace=True)
+        self.endRemoveRows()
+
+        logger.debug(f'drop_rows: model_df dropped rows {indexes}')
 
     def diff_row(self, index: QModelIndex) -> bool:
         """
@@ -310,27 +321,29 @@ class DataModel(PandasModel):
                 return_msg += ('\n' + op_type + ': ' + msg)
             return return_msg
 
-        logger.debug('update_db: Saving to DB ...')
+        logger.debug('save_to_db: Saving to DB ...')
 
         total_results = {}
 
         del_df = self.get_deleted_df()
-        logger.debug(f'update_db: del_df: \n{del_df}')
         if not del_df.empty:
-            logger.debug(f'{del_df}')
-            # if flag contains 'new', just drop it
-            del_df.drop(del_df[del_df.flag & RowFlags.NewRow > 0].index)
-            df_to_upload = del_df.loc[:, self.db_column_names]
-            results_del = await Lab().delete_df(self.table_name, df_to_upload)
-            total_results['삭제'] = results_del
-            logger.debug(f'update_db: result of deleting = {results_del}')
-            self.model_df.drop(del_df.index, inplace=True)
+            self.drop_rows(del_df.index.to_list())
+            # if the row to be deleted contains a 'new' flag, just drop it
+            # otherwise db is to be updated
+            del_db_df = del_df.drop(del_df[del_df.flag & RowFlags.NewRow > 0].index)
+            if not del_db_df.empty:
+                # DB data is to be deleted from here
+                logger.debug(f'update_db: del_db_df: \n{del_db_df}')
+                df_to_upload = del_db_df.loc[:, self.db_column_names]
+                results_del = await Lab().delete_df(self.table_name, df_to_upload)
+                total_results['삭제'] = results_del
+                logger.debug(f'update_db: result of deleting = {results_del}')
+
             self.clear_uneditable_rows()
 
         new_df = self.get_new_df()
-        logger.debug(f'update_db: new_df: \n{new_df}')
         if not new_df.empty:
-            logger.debug(f'{new_df}')
+            logger.debug(f'update_db: new_df: \n{new_df}')
             df_to_upload = new_df.loc[:, self.db_column_names]
             # set id default to let DB assign an id without collision
             df_to_upload.iloc[:, 0] = 'DEFAULT'
@@ -340,9 +353,8 @@ class DataModel(PandasModel):
             logger.debug(f'update_db: result of inserting new rows = {results_new}')
 
         chg_df = self.get_changed_df()
-        logger.debug(f'update_db: chg_df: \n{chg_df}')
         if not chg_df.empty:
-            logger.debug(f'{chg_df}')
+            logger.debug(f'update_db: chg_df: \n{chg_df}')
             df_to_upload = chg_df.loc[:, self.db_column_names]
             results_chg = await Lab().update_df(self.table_name, df_to_upload)
             total_results['수정'] = results_chg

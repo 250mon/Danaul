@@ -92,6 +92,13 @@ class PandasModel(QAbstractTableModel):
             return False
 
     def flags(self, index: QModelIndex):
+        # logger.debug(f"flags: index({index.row()},{index.column()}) "
+        #              f"is_editable({self.is_editable}) "
+        #              f"uneditable_rows_{self.uneditable_rows_set} "
+        #              f"new_rows_{self.new_rows_set} "
+        #              f"Edit_Level({self.edit_level}) "
+        #              f"Col_Edit_Level({self.col_idx_edit_lvl[index.column()]})")
+
         if not self.is_editable:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         if index.row() in self.uneditable_rows_set:

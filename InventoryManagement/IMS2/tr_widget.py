@@ -21,15 +21,6 @@ class TrWidget(InventoryTableWidget):
         super().__init__(parent)
         self.parent: QMainWindow = parent
 
-    def set_source_model(self, model: TrModel):
-        """
-        Common
-        :param model:
-        :return:
-        """
-        self.source_model = model
-        self._apply_model()
-
     def _setup_proxy_model(self):
         """
         Needs to be implemented
@@ -50,18 +41,15 @@ class TrWidget(InventoryTableWidget):
         super()._setup_initial_table_view()
         self.table_view.activated.connect(self.row_activated)
 
-    def _setup_delegate_for_columns(self):
-        """
-        :return:
-        """
-        super()._setup_delegate_for_columns()
-
     def _setup_ui(self):
         """
         Needs to be implemented
         :return:
         """
         self.set_col_hidden('tr_type_id')
+        # Unlike item_widget and sku_widget, tr_widget always allows editing
+        # because there is no select mode
+        self.source_model.set_editable(True)
 
         title_label = QLabel('거래내역')
         font = QFont("Arial", 12, QFont.Bold)

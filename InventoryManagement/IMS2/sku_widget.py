@@ -19,15 +19,6 @@ class SkuWidget(InventoryTableWidget):
         super().__init__(parent)
         self.parent: QMainWindow = parent
 
-    def set_source_model(self, model: SkuModel):
-        """
-        Common
-        :param model:
-        :return:
-        """
-        self.source_model = model
-        self._apply_model()
-
     def _setup_proxy_model(self):
         """
         Needs to be implemented
@@ -47,12 +38,6 @@ class SkuWidget(InventoryTableWidget):
     def _setup_initial_table_view(self):
         super()._setup_initial_table_view()
         self.table_view.doubleClicked.connect(self.row_double_clicked)
-
-    def _setup_delegate_for_columns(self):
-        """
-        :return:
-        """
-        super()._setup_delegate_for_columns()
 
     def _setup_ui(self):
         """

@@ -24,7 +24,6 @@ class TrModel(DataModel):
         self.sku_model = sku_model
         self.init_params()
         self.selected_upper_name = None
-        self.update_skus_params()
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
@@ -38,9 +37,9 @@ class TrModel(DataModel):
             'tr_qty': EditLevel.Creatable,
             'before_qty': EditLevel.NotEditable,
             'after_qty': EditLevel.NotEditable,
-            'tr_timestamp': EditLevel.Creatable,
+            'tr_timestamp': EditLevel.NotEditable,
             'description': EditLevel.UserModifiable,
-            'user_name': EditLevel.Creatable,
+            'user_name': EditLevel.NotEditable,
             'tr_type_id': EditLevel.NotEditable,
             'user_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
@@ -61,16 +60,6 @@ class TrModel(DataModel):
             self.selected_upper_id = None
             self.selected_upper_name = None
 
-    def update_skus_params(self):
-        skus_df = Lab().table_df['skus'].loc[:, ['sku_id', 'active', 'bit_code', 'sku_qty']]
-        skus_df_id_indexed = skus_df.set_index('sku_id')
-        self.sku_active_s: pd.Series = skus_df_id_indexed.iloc[:, 0]
-        self.sku_bitcode_s: pd.Series = skus_df_id_indexed.iloc[:, 1]
-        self.sku_qty_s: pd.Series = skus_df_id_indexed.iloc[:, 2]
-
-    async def update(self):
-        await super().update()
-
     def set_add_on_cols(self):
         """
         Needs to be implemented in the subclasses
@@ -89,6 +78,28 @@ class TrModel(DataModel):
         """
         default_info_list = [self.get_col_number(c) for c in ['description']]
         return default_info_list
+
+    def get_combobox_delegate_info(self) -> Dict[int, List]:
+        """
+        Returns a dictionary of column indexes and val lists of the combobox
+        for combobox delegate
+        :return:
+        """
+        combo_info_dict = {
+            self.get_col_number('tr_type'): Lab().tr_type_s.to_list()
+        }
+        return combo_info_dict
+
+    def get_spinbox_delegate_info(self) -> Dict[int, List]:
+        """
+        Returns a dictionary of column indexes and val lists of the spinbox
+        for spinbox delegate
+        :return:
+        """
+        spin_info_dict = {
+            self.get_col_number('tr_qty'): [0, 1000],
+        }
+        return spin_info_dict
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
@@ -157,14 +168,16 @@ class TrModel(DataModel):
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise None
         """
+        logger.debug(f"make_a_new_row_df: new_id{next_new_id}\n"
+                     f"                   sku\n{self.sku_model.model_df}")
         if self.selected_upper_id is None:
             logger.error('make_a_new_row_df: sku_id is empty')
             return None
-        elif not self.sku_active_s[self.selected_upper_id]:
+        elif not self.sku_model.get_data_from_id(self.selected_upper_id, 'active'):
             logger.error('make_a_new_row_df: sku_id is not active')
             return None
 
-        sku_qty = self.sku_qty_s.loc[self.selected_upper_id]
+        sku_qty = self.sku_model.get_data_from_id(self.selected_upper_id, 'sku_qty')
         tr_type = kwargs['tr_type']
         tr_type_id = Lab().tr_type_id_s.loc[tr_type]
         user_id = Lab().user_id_s.loc[self.user_name]
@@ -197,6 +210,10 @@ class TrModel(DataModel):
         tr_qty = index.siblingAtColumn(self.get_col_number('tr_qty')).data()
         before_qty = index.siblingAtColumn(self.get_col_number('before_qty')).data()
 
+        if tr_qty <= 0:
+            logger.debug(f"validate_new_row: tr_qty is not positive integer {tr_qty}")
+            return False
+
         result = True
         if tr_type == "Buy":
             self.plus_qty_to_models('+', before_qty, tr_qty, index)
@@ -219,13 +236,12 @@ class TrModel(DataModel):
         return result
 
     def plus_qty_to_models(self, op, before_qty, tr_qty, index):
+        after_qty = 0
         if op == '+':
             after_qty = before_qty + tr_qty
         elif op == '-':
             after_qty = before_qty - tr_qty
 
-        before_qty_idx = index.siblingAtColumn(self.get_col_number('before_qty'))
-        self.setData(before_qty_idx, after_qty)
         after_qty_idx = index.siblingAtColumn(self.get_col_number('after_qty'))
         self.setData(after_qty_idx, after_qty)
         self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, after_qty)

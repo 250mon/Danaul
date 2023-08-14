@@ -22,7 +22,6 @@ class SkuModel(DataModel):
     def __init__(self, user_name: str, item_model: ItemModel):
         self.item_model = item_model
         self.init_params()
-        self.update_items_params()
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
@@ -35,7 +34,7 @@ class SkuModel(DataModel):
             'item_name': EditLevel.NotEditable,
             'sub_name': EditLevel.UserModifiable,
             'active': EditLevel.AdminModifiable,
-            'sku_qty': EditLevel.Creatable,
+            'sku_qty': EditLevel.AdminModifiable,
             'min_qty': EditLevel.UserModifiable,
             'expiration_date': EditLevel.Creatable,
             'description': EditLevel.UserModifiable,
@@ -56,16 +55,6 @@ class SkuModel(DataModel):
         else:
             self.selected_upper_id = None
 
-    def update_items_params(self):
-        items_df = Lab().table_df['items'].loc[:, ['item_id', 'item_name', 'active']]
-        self.item_name_s: pd.Series = items_df.set_index('item_id').iloc[:, 0]
-        self.item_id_s: pd.Series = items_df.set_index('item_name').iloc[:, 0]
-        self.item_active_s: pd.Series = items_df.set_index('item_id').iloc[:, 1]
-
-    async def update(self):
-        await super().update()
-        self.update_items_params()
-
     def set_add_on_cols(self):
         """
         Needs to be implemented in the subclasses
@@ -73,7 +62,8 @@ class SkuModel(DataModel):
         :return:
         """
         # set more columns for the view
-        self.model_df['item_name'] = self.model_df['item_id'].map(self.item_name_s)
+        self.model_df['item_name'] = self.model_df['item_id'].map(
+            lambda x: self.item_model.get_data_from_id(x, 'item_name'))
         self.model_df['sku_name'] = self.model_df['item_name'].str.cat(
             self.model_df.loc[:, 'sub_name'], na_rep="-", sep=" ").str.replace("None", "")
         self.model_df['flag'] = RowFlags.OriginalRow
@@ -94,6 +84,7 @@ class SkuModel(DataModel):
         :return:
         """
         combo_info_dict = {
+            self.get_col_number('representative'): ['Y', 'N'],
             self.get_col_number('active'): ['Y', 'N'],
         }
         return combo_info_dict
@@ -190,14 +181,6 @@ class SkuModel(DataModel):
             else:
                 value = False
 
-        elif col_name == 'item_name':
-            if value in self.item_name_s.tolist():
-                id_col = self.get_col_number('item_id')
-                self.model_df.iloc[index.row(), id_col] = self.item_id_s.loc[value]
-            else:
-                logger.debug(f'setData: item_name({value}) is not valid')
-                return False
-
         elif col_name == 'sub_name':
             item_name_col = self.get_col_number('item_name')
             sku_name_col = self.get_col_number('sku_name')
@@ -220,12 +203,12 @@ class SkuModel(DataModel):
         if self.selected_upper_id is None:
             logger.error('make_a_new_row_df: item_id is empty')
             return None
-        elif not self.item_active_s[self.selected_upper_id]:
+        elif not self.item_model.get_data_from_id(self.selected_upper_id, 'active'):
             logger.error('make_a_new_row_df: item_id is not active')
             return None
 
         default_item_id = self.selected_upper_id
-        item_name = self.item_name_s[default_item_id]
+        item_name = self.item_model.get_data_from_id(default_item_id, 'item_name')
         logger.debug(f'make_a_new_row_df: {default_item_id} {item_name} being created')
         exp_date = date(9999, 1, 1)
 

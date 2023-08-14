@@ -129,7 +129,7 @@ class InventoryTableWidget(QWidget):
         """
         return self.source_model.append_new_row(**kwargs)
 
-    def change_rows_by_delegate(self, indexes: List[QModelIndex]):
+    def change_rows(self, indexes: List[QModelIndex]):
         """
         Common
         This is called from a Button

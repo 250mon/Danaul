@@ -53,10 +53,7 @@ class Lab(metaclass=Singleton):
             data_dfs: List = await asyncio.gather(*get_data)
 
             for df in data_dfs:
-                if df.empty:
-                    logger.error(f'async_init: Failed to retrieve DB data {df}')
-                    sys.exit(0)
-                logger.debug(f'async_init: Retrieved DB data {df}\n')
+                logger.debug(f'async_init: Retrieved DB data \n{df}')
 
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data_dfs.pop()
@@ -80,9 +77,10 @@ class Lab(metaclass=Singleton):
         df = self._db_to_df(db_results)
         return df
 
-    def _db_to_df(self, results):
+    def _db_to_df(self, db_records):
         # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
-        list_of_dict = [dict(result) for result in results]
+        print(db_records)
+        list_of_dict = [dict(record) for record in db_records]
         df = pd.DataFrame(list_of_dict)
         df.fillna("", inplace=True)
         return df
