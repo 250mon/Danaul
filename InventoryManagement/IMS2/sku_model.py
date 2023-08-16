@@ -22,6 +22,7 @@ class SkuModel(DataModel):
     def __init__(self, user_name: str, item_model: ItemModel):
         self.item_model = item_model
         self.init_params()
+        self.selected_upper_id = None
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
@@ -46,15 +47,6 @@ class SkuModel(DataModel):
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
-    def set_upper_model_index(self, item_model_index: QModelIndex or None):
-        self.selected_upper_index = item_model_index
-
-        if item_model_index is not None:
-            self.selected_upper_id = item_model_index.siblingAtColumn(
-                self.item_model.get_col_number('item_id')).data()
-        else:
-            self.selected_upper_id = None
-
     def set_add_on_cols(self):
         """
         Needs to be implemented in the subclasses
@@ -67,6 +59,15 @@ class SkuModel(DataModel):
         self.model_df['sku_name'] = self.model_df['item_name'].str.cat(
             self.model_df.loc[:, 'sub_name'], na_rep="-", sep=" ").str.replace("None", "")
         self.model_df['flag'] = RowFlags.OriginalRow
+
+    def set_upper_model_index(self, item_model_index: QModelIndex or None):
+        self.selected_upper_index = item_model_index
+
+        if item_model_index is not None:
+            self.selected_upper_id = item_model_index.siblingAtColumn(
+                self.item_model.get_col_number('item_id')).data()
+        else:
+            self.selected_upper_id = None
 
     def get_default_delegate_info(self) -> List[int]:
         """

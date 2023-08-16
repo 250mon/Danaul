@@ -35,7 +35,7 @@ class TrWidget(InventoryTableWidget):
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
         initial_sort_col_num = self.source_model.get_col_number('tr_id')
-        self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
+        self.proxy_model.sort(initial_sort_col_num, Qt.DescendingOrder)
 
     def _setup_initial_table_view(self):
         super()._setup_initial_table_view()
@@ -176,15 +176,22 @@ class TrWidget(InventoryTableWidget):
         :param sku_id:
         :return:
         """
-        super().filter_selection(sku_index)
+        # set selected_sku_id
+        self.source_model.set_upper_model_index(sku_index)
+        # retrieve the data about the selected sku_id from DB
+        self.parent.async_start('tr_update')
         # displaying the sku name in the tr view
-        self.sku_name_label.setText(self.source_model.selected_upper_name)
+        if hasattr(self.source_model, 'selected_upper_name'):
+            self.sku_name_label.setText(self.source_model.selected_upper_name)
 
     def filter_no_selection(self):
         """
         Connected to search all button
         :return:
         """
-        super().filter_no_selection()
+        # set selected_sku_id to None
+        self.source_model.set_upper_model_index(None)
+        # retrieve the data about no selected sku_id from DB
+        self.parent.async_start('tr_update')
         # displaying the sku name in the tr view
         self.sku_name_label.setText("")

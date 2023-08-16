@@ -18,6 +18,11 @@ from tr_widget import TrWidget
 
 from di_logger import Logs, logging
 
+# TODO
+# 1. excel file import / export
+# 2. skus sum up and assign it to the representative
+# 3. tr filter: period
+
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -131,6 +136,8 @@ class InventoryWindow(QMainWindow):
             result_str = await self.sku_widget.save_to_db()
             result_str = await self.tr_widget.save_to_db()
             await self.update_models(['skus'])
+            await self.update_models(['transactions'])
+        elif action == "tr_update":
             await self.update_models(['transactions'])
         self.done_signal.emit(action)
 

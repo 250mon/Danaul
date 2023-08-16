@@ -120,6 +120,29 @@ class DataModel(PandasModel):
         # fill name columns against ids of each auxiliary data
         self.set_add_on_cols()
 
+    def update_model_df_from_db(self):
+        """
+        Update the model_df and the view
+        :return:
+        """
+        logger.debug(f'update_model_df_from_db: Update the model_df and the view')
+        self._set_model_df()
+        self.layoutAboutToBeChanged.emit()
+        self.layoutChanged.emit()
+
+    async def update(self):
+        """
+        Update the model whenever relevant DB data changes
+        Called by inventory_view
+        If there needs any model specific update, it's implemented in
+        the subclasses
+        :return:
+        """
+        logger.debug(f'update: Downloading data from DB')
+        await Lab().update_lab_df_from_db(self.table_name)
+        logger.debug(f'update: Updating the model and view')
+        self.update_model_df_from_db()
+
     def get_default_delegate_info(self) -> List[int]:
         """
         Returns a list of column indexes for default delegate
@@ -142,28 +165,6 @@ class DataModel(PandasModel):
         :return:
         """
         return {}
-
-    async def update_model_df_from_db(self):
-        """
-        Receives data from DB and converts it to DF
-        :return:
-        """
-        logger.debug(f'update_model_df_from_db: downloading data from DB')
-        await Lab().update_lab_df_from_db(self.table_name)
-        self._set_model_df()
-
-        self.layoutAboutToBeChanged.emit()
-        self.layoutChanged.emit()
-
-    async def update(self):
-        """
-        Update the model whenever relevant DB data changes
-        Called by inventory_view
-        If there needs any model specific update, it's implemented in
-        the subclasses
-        :return:
-        """
-        await self.update_model_df_from_db()
 
     def get_data_from_id(self, id: int, col: str) -> object:
         if col not in self.column_names:

@@ -3,6 +3,7 @@ from functools import total_ordering
 
 DB_SETTING_FILE = 'db_settings'
 ADMIN_GROUP = ['admin', 'jye']
+MAX_TRANSACTION_COUNT = 10
 
 
 class RowFlags:

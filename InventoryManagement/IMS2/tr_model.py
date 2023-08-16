@@ -23,7 +23,10 @@ class TrModel(DataModel):
     def __init__(self, user_name: str, sku_model: SkuModel):
         self.sku_model = sku_model
         self.init_params()
+        self.selected_upper_id = None
         self.selected_upper_name = None
+        self.begin_timestamp = ''
+        self.end_timestamp = ''
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
@@ -48,6 +51,17 @@ class TrModel(DataModel):
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
+    def set_add_on_cols(self):
+        """
+        Needs to be implemented in the subclasses
+        Adds extra columns of each name mapped to ids of supplementary data
+        :return:
+        """
+        # set more columns for the view
+        self.model_df['tr_type'] = self.model_df['tr_type_id'].map(Lab().tr_type_s)
+        self.model_df['user_name'] = self.model_df['user_id'].map(Lab().user_name_s)
+        self.model_df['flag'] = RowFlags.OriginalRow
+
     def set_upper_model_index(self, sku_model_index: QModelIndex or None):
         self.selected_upper_index = sku_model_index
 
@@ -60,16 +74,23 @@ class TrModel(DataModel):
             self.selected_upper_id = None
             self.selected_upper_name = None
 
-    def set_add_on_cols(self):
+        logger.debug(f"set_upper_model_index: sku_id({self.selected_upper_id}) is set")
+
+    async def update(self):
         """
-        Needs to be implemented in the subclasses
-        Adds extra columns of each name mapped to ids of supplementary data
+        Override method to use selected_sku_id and begin_/end_ timestamp
         :return:
         """
-        # set more columns for the view
-        self.model_df['tr_type'] = self.model_df['tr_type_id'].map(Lab().tr_type_s)
-        self.model_df['user_name'] = self.model_df['user_id'].map(Lab().user_name_s)
-        self.model_df['flag'] = RowFlags.OriginalRow
+        logger.debug(f'update_model_df_from_db: downloading data from DB')
+        kwargs = {'sku_id': self.selected_upper_id,
+                  'beg_timestamp': self.begin_timestamp,
+                  'end_timestamp': self.end_timestamp}
+        logger.debug(kwargs)
+        await Lab().update_lab_df_from_db(self.table_name, **kwargs)
+
+        self._set_model_df()
+        self.layoutAboutToBeChanged.emit()
+        self.layoutChanged.emit()
 
     def get_default_delegate_info(self) -> List[int]:
         """

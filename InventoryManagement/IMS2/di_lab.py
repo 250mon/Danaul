@@ -6,6 +6,7 @@ from datetime import date
 from di_db import InventoryDb
 import pandas as pd
 from di_logger import Logs, logging
+from constants import MAX_TRANSACTION_COUNT
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -67,9 +68,26 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
-    async def _get_df_from_db(self, table: str) -> pd.DataFrame:
+    async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f'_get_df_from_db: {table}')
-        query = f"SELECT * FROM {table}"
+        if table == "transactions":
+            sku_id = kwargs.get('sku_id', None)
+            beg_ts = kwargs.get('beg_timestamp', '')
+            end_ts = kwargs.get('end_timestamp', '')
+            if sku_id is None:
+                query = f"SELECT * FROM transactions order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
+            else:
+                if beg_ts != '' and end_ts != '':
+                    query = f"SELECT * FROM transactions where sku_id = {sku_id} " \
+                            f"and tr_timestamp >= {beg_ts} and tr_timestamp <= {end_ts} " \
+                            f"order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
+                else:
+                    # beg_ts == '' or end_ts == '':
+                    query = f"SELECT * FROM transactions where sku_id = {sku_id} " \
+                            f"order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
+        else:
+            query = f"SELECT * FROM {table}"
+
         db_results = await self.di_db_util.select_query(query)
         logger.debug(f'_get_df_from_db: db_results: {db_results}')
         if db_results is None:
@@ -79,7 +97,6 @@ class Lab(metaclass=Singleton):
 
     def _db_to_df(self, db_records):
         # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
-        print(db_records)
         list_of_dict = [dict(record) for record in db_records]
         df = pd.DataFrame(list_of_dict)
         df.fillna("", inplace=True)
@@ -105,9 +122,9 @@ class Lab(metaclass=Singleton):
         self.user_name_s = make_series('users', True)
         self.user_id_s = make_series('users', False)
 
-    async def update_lab_df_from_db(self, table: str):
+    async def update_lab_df_from_db(self, table: str, **kwargs):
         logger.debug(f'update_lab_df_from_db: table {table}')
-        self.table_df[table] = await self._get_df_from_db(table)
+        self.table_df[table] = await self._get_df_from_db(table, **kwargs)
 
     async def insert_df(self, table: str, new_df: pd.DataFrame):
         return await self.di_db.insert_df(table, new_df)
