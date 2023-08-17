@@ -155,6 +155,7 @@ class InventoryTableWidget(QWidget):
         :return:
         """
         for idx in indexes:
+            # do it only once for multiple indexes belonging to the same row
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_del_flag(src_idx)
@@ -175,8 +176,8 @@ class InventoryTableWidget(QWidget):
 
     def filter_selection(self, upper_index: QModelIndex):
         """
-        A double-click event in the view triggers the parent's
-        item_selected method which in turn calls this method
+        A double click event that triggers the upper level widget's
+        row_selected method eventually calls this method
         :param item_id:
         :return:
         """

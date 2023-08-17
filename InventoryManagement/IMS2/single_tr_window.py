@@ -70,9 +70,8 @@ class SingleTrWindow(QWidget):
     def ok_clicked(self):
         logger.debug(f'Created Transaction')
         self.mapper.submit()
-        src_idx = self.proxy_model.mapToSource(
-            self.proxy_model.index(self.mapper.currentIndex(), 0))
-        self.create_tr_signal.emit(src_idx)
+        index = self.proxy_model.index(self.mapper.currentIndex(), 0)
+        self.create_tr_signal.emit(index)
         self.close()
 
     def exit_clicked(self):

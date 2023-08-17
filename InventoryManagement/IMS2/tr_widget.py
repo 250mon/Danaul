@@ -21,6 +21,14 @@ class TrWidget(InventoryTableWidget):
         super().__init__(parent)
         self.parent: QMainWindow = parent
 
+    def set_source_model(self, model: TrModel):
+        """
+        Override method for using tr_model's methods (validate_new_row)
+        :param model:
+        :return:
+        """
+        super().set_source_model(model)
+
     def _setup_proxy_model(self):
         """
         Needs to be implemented
@@ -35,7 +43,10 @@ class TrWidget(InventoryTableWidget):
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
         initial_sort_col_num = self.source_model.get_col_number('tr_id')
-        self.proxy_model.sort(initial_sort_col_num, Qt.DescendingOrder)
+
+        # descending order makes problem with mapToSource index
+        # self.proxy_model.sort(initial_sort_col_num, Qt.DescendingOrder)
+        self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     def _setup_initial_table_view(self):
         super()._setup_initial_table_view()
@@ -76,9 +87,8 @@ class TrWidget(InventoryTableWidget):
         adj_plus_btn.clicked.connect(lambda: self.do_actions("adj+"))
         adj_minus_btn = QPushButton('조정-')
         adj_minus_btn.clicked.connect(lambda: self.do_actions("adj-"))
-        save_tr_btn = QPushButton('저장')
-        if hasattr(self.parent, "async_start"):
-            save_tr_btn.clicked.connect(lambda: self.parent.async_start("tr_save"))
+        save_btn = QPushButton('저장')
+        save_btn.clicked.connect(self.save_model_to_db)
         del_tr_btn = QPushButton('관리자 삭제/해제')
         del_tr_btn.clicked.connect(lambda: self.do_actions("del_tr"))
         if self.source_model.user_name not in ADMIN_GROUP:
@@ -93,7 +103,7 @@ class TrWidget(InventoryTableWidget):
         hbox2.addWidget(sell_btn)
         hbox2.addWidget(adj_plus_btn)
         hbox2.addWidget(adj_minus_btn)
-        hbox2.addWidget(save_tr_btn)
+        hbox2.addWidget(save_btn)
 
         del_hbox = QHBoxLayout()
         del_hbox.addStretch(1)
@@ -133,6 +143,19 @@ class TrWidget(InventoryTableWidget):
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
 
+    def save_model_to_db(self):
+        """
+        Save the model to DB
+        It calls the inventory view's async_start() which calls back the model's
+        save_to_db()
+        :return:
+        """
+        last_index = self.source_model.index(self.source_model.rowCount() - 1, 0)
+        self.source_model.update_sku_qty(last_index)
+
+        if hasattr(self.parent, "async_start"):
+            self.parent.async_start("tr_save")
+
     def add_new_tr(self, tr_type) -> bool:
         if self.add_new_row(tr_type=tr_type):
             self.tr_window = SingleTrWindow(self.proxy_model, self)
@@ -154,8 +177,10 @@ class TrWidget(InventoryTableWidget):
         """
         logger.debug(f'added_new_tr_by_single_tr_window: tr {index.row()} added')
 
-        if not self.source_model.validate_new_row(index):
-            self.source_model.drop_rows([index])
+        src_idx = self.proxy_model.mapToSource(index)
+        if hasattr(self.source_model, "validate_new_row"):
+            if not self.source_model.validate_new_row(src_idx):
+                self.source_model.drop_rows([src_idx])
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
@@ -176,6 +201,7 @@ class TrWidget(InventoryTableWidget):
         :param sku_id:
         :return:
         """
+        # if there is remaining unsaved new rows, drop them
         # set selected_sku_id
         self.source_model.set_upper_model_index(sku_index)
         # retrieve the data about the selected sku_id from DB

@@ -118,7 +118,7 @@ class TrModel(DataModel):
         :return:
         """
         spin_info_dict = {
-            self.get_col_number('tr_qty'): [0, 1000],
+            self.get_col_number('tr_qty'): [1, 1000],
         }
         return spin_info_dict
 
@@ -176,6 +176,7 @@ class TrModel(DataModel):
         if col_name == 'tr_type':
             id_col = self.get_col_number('tr_type_id')
             self.model_df.iloc[index.row(), id_col] = Lab().tr_type_id_s.loc[value]
+
         elif col_name == 'tr_timestamp':
             # data type is datetime.date
             if isinstance(value, QDateTime):
@@ -207,9 +208,9 @@ class TrModel(DataModel):
             'tr_id': next_new_id,
             'sku_id': self.selected_upper_id,
             'tr_type': tr_type,
-            'tr_qty': 0,
+            'tr_qty': 1,
             'before_qty': sku_qty,
-            'after_qty': sku_qty,
+            'after_qty': sku_qty + 1,
             'tr_timestamp': datetime.now(),
             'description': "",
             'user_name': self.user_name,
@@ -226,6 +227,7 @@ class TrModel(DataModel):
         :param index:
         :return:
         """
+        tr_id = index.siblingAtColumn(self.get_col_number('tr_id')).data()
         sku_id = index.siblingAtColumn(self.get_col_number('sku_id')).data()
         tr_type = index.siblingAtColumn(self.get_col_number('tr_type')).data()
         tr_qty = index.siblingAtColumn(self.get_col_number('tr_qty')).data()
@@ -253,6 +255,8 @@ class TrModel(DataModel):
 
         debug_msg = "valid" if result is True else "not valid"
         logger.debug(f"validate_new_tr: Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
+        # not allow a user to change tr_qty after this point
+        self.clear_editable_new_rows()
 
         return result
 
@@ -265,5 +269,7 @@ class TrModel(DataModel):
 
         after_qty_idx = index.siblingAtColumn(self.get_col_number('after_qty'))
         self.setData(after_qty_idx, after_qty)
-        self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, after_qty)
         logger.debug(f'validate_new_row: before_qty {before_qty}, tr_qty {tr_qty} => after_qty {after_qty}')
+
+    def update_sku_qty(self, last_qty):
+        self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, last_qty)

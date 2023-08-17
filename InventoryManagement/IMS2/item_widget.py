@@ -167,8 +167,10 @@ class ItemWidget(InventoryTableWidget):
         if self.source_model.is_flag_column(index):
             logger.debug(f'added_new_item_by_single_item_window: item {index.row()} added')
 
-        if not self.source_model.validate_new_row(index):
-            self.source_model.drop_rows([index])
+        src_idx = self.proxy_model.mapToSource(index)
+        if hasattr(self.source_model, "validate_new_row"):
+            if not self.source_model.validate_new_row(src_idx):
+                self.source_model.drop_rows([src_idx])
 
     @Slot(object)
     def changed_items_by_single_item_window(self, indexes: List[QModelIndex]):
