@@ -23,7 +23,7 @@ CREATE_SKU_TABLE = \
     CREATE TABLE IF NOT EXISTS skus(
         sku_id SERIAL PRIMARY KEY,
         active BOOL NOT NULL DEFAULT TRUE,
-        representative BOOL NOT NULL DEFAULT TRUE,
+        root_sku INT NOT NULL DEFAULT 0,
         sub_name VARCHAR(50),
         bit_code VARCHAR(20),
         sku_qty INT NOT NULL,

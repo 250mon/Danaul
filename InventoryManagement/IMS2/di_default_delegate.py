@@ -16,6 +16,4 @@ class DefaultDelegate(QStyledItemDelegate):
                         option: QStyleOptionViewItem,
                         index: QModelIndex) -> None:
         super().initStyleOption(option, index)
-        if (self.p_model is not None and
-                self.p_model.col_idx_edit_lvl[index.column()] <= self.p_model.edit_level):
-            option.backgroundBrush = QBrush(QColor("#D1F2EB"))
+        option.backgroundBrush = QBrush(self.p_model.delegate_background_color(index))

@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtGui import QColor
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -31,7 +32,7 @@ class SkuModel(DataModel):
 
         self.col_edit_lvl = {
             'sku_id': EditLevel.NotEditable,
-            'representative': EditLevel.UserModifiable,
+            'root_sku': EditLevel.Creatable,
             'item_name': EditLevel.NotEditable,
             'sub_name': EditLevel.UserModifiable,
             'active': EditLevel.AdminModifiable,
@@ -75,7 +76,7 @@ class SkuModel(DataModel):
         :return:
         """
         default_info_list = [self.get_col_number(c) for c in
-                             ['representative', 'sub_name', 'description', 'bit_code']]
+                             ['root_sku', 'sub_name', 'description', 'bit_code']]
         return default_info_list
 
     def get_combobox_delegate_info(self) -> Dict[int, List]:
@@ -85,7 +86,6 @@ class SkuModel(DataModel):
         :return:
         """
         combo_info_dict = {
-            self.get_col_number('representative'): ['Y', 'N'],
             self.get_col_number('active'): ['Y', 'N'],
         }
         return combo_info_dict
@@ -113,7 +113,7 @@ class SkuModel(DataModel):
         col_name = self.get_col_name(index.column())
         data_to_display = self.model_df.iloc[index.row(), index.column()]
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = ['sku_id', 'item_id', 'sku_qty', 'min_qty']
+            int_type_columns = ['sku_id', 'root_sku', 'item_id', 'sku_qty', 'min_qty']
             if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
@@ -122,7 +122,7 @@ class SkuModel(DataModel):
                 # data type is datetime.date
                 return pydate_to_qdate(data_to_display)
 
-            elif col_name == 'active' or col_name == 'representative':
+            elif col_name == 'active':
                 if data_to_display:
                     return 'Y'
                 else:
@@ -175,7 +175,7 @@ class SkuModel(DataModel):
         logger.debug(f'setData({index}, {value})')
 
         col_name = self.get_col_name(index.column())
-        if col_name == 'active' or col_name == 'representative':
+        if col_name == 'active':
             # taking care of converting str type input to bool type
             if value == 'Y':
                 value = True
@@ -194,6 +194,29 @@ class SkuModel(DataModel):
                 value = qdate_to_pydate(value)
 
         return super().setData(index, value, role)
+
+    def check_root_sku_qty(self, root_sku: int) -> bool:
+        """
+        Check if the root_sku qty is equal to the sub skus quantities
+        :param root_sku:
+        :return:
+        """
+        sku_grp = self.model_df.loc[self.model_df['root_sku'] == root_sku, ['sku_id', 'sku_qty']]
+        root_qty = sku_grp.loc[self.model_df['sku_id'] == root_sku, 'sku_qty'].item()
+        sub_sum_qty = sku_grp.loc[self.model_df['sku_id'] != root_sku, 'sku_qty'].sum().item()
+        if root_qty != sub_sum_qty:
+            return False
+        else:
+            return True
+
+    def delegate_background_color(self, index: QModelIndex) -> QColor:
+        col_name = self.get_col_name(index.column())
+        if col_name == 'sku_qty':
+            root_sku = index.siblingAtColumn(self.get_col_number('root_sku')).data()
+            if root_sku != 0 and not self.check_root_sku_qty(root_sku):
+                return QColor(Qt.red)
+        else:
+            return super().delegate_background_color(index)
 
     def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame or None:
         """
@@ -215,7 +238,7 @@ class SkuModel(DataModel):
 
         new_model_df = pd.DataFrame([{
             'sku_id': next_new_id,
-            'representative': True,
+            'root_sku': 0,
             'item_name': item_name,
             'sub_name': "",
             'active': True,

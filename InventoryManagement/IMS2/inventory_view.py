@@ -20,7 +20,7 @@ from di_logger import Logs, logging
 
 # TODO
 # 1. excel file import / export
-# 2. skus sum up and assign it to the representative
+# 2. skus sum up and assign it to the root_sku
 # 3. tr filter: period
 
 

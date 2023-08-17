@@ -113,7 +113,7 @@ class InventoryDb:
         :return:
         """
         stmt = """UPDATE skus SET active = $2,
-                                  representative = $3,
+                                  root_sku = $3,
                                   sub_name = $4,
                                   bit_code = $5,
                                   sku_qty = $6,
@@ -122,7 +122,7 @@ class InventoryDb:
                                   expiration_date = $9,
                                   description = $10
                               WHERE sku_id = $1"""
-        args = [(sku.sku_id, sku.active, sku.representative, sku.sub_name,
+        args = [(sku.sku_id, sku.active, sku.root_sku, sku.sub_name,
                  sku.bit_code, sku.sku_qty, sku.min_qty, sku.item_id,
                  sku.expiration_date, sku.description)
                 for sku in skus_df.itertuples()]
@@ -214,7 +214,7 @@ async def main():
         skus_df = pd.DataFrame({
             'sku_id':           ['DEFAULT', 'DEFAULT', 'DEFAULT'],
             'active':           [True, True, True],
-            'representative':   [True, True, True],
+            'root_sku':         [0, 0, 0],
             'sub_name':         ['40ml', '120ml', ''],
             'bit_code':         ['noci40', 'noci120', 'surgigel'],
             'sku_qty':          [0, 0, 0],

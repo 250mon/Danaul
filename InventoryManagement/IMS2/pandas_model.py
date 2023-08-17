@@ -4,6 +4,7 @@ import pandas as pd
 from typing import Dict
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
+from PySide6.QtGui import QColor
 from constants import EditLevel
 from di_logger import Logs, logging
 
@@ -180,6 +181,12 @@ class PandasModel(QAbstractTableModel):
             logger.debug(f'clear_uneditable_row: remove all rows from '
                          f'uneditable_rows_{self.uneditable_rows_set}')
             self.uneditable_rows_set.clear()
+
+    def delegate_background_color(self, index: QModelIndex) -> QColor:
+        if self.col_idx_edit_lvl[index.column()] <= self.edit_level:
+            return QColor("#D1F2EB")
+        else:
+            return QColor(Qt.transparent)
 
 
 if __name__ == "__main__":

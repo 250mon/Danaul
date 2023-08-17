@@ -4,6 +4,7 @@ import asyncpg.exceptions
 from typing import Dict, List
 from abc import abstractmethod
 from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtGui import QColor
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -188,6 +189,9 @@ class DataModel(PandasModel):
             self.set_chg_flag(index)
 
         return result
+
+    def delegate_background_color(self, index: QModelIndex) -> QColor:
+        return super().delegate_background_color(index)
 
     def append_new_row(self, **kwargs) -> bool:
         """
