@@ -1,9 +1,9 @@
 import os
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
-    QMessageBox
+    QMessageBox, QDateEdit
 )
-from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtCore import Qt, Slot, QModelIndex, QDate
 from PySide6.QtGui import QFont
 from di_logger import Logs, logging
 from di_table_widget import InventoryTableWidget
@@ -78,9 +78,15 @@ class TrWidget(InventoryTableWidget):
         # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         search_all_btn = QPushButton('전체조회')
         search_all_btn.clicked.connect(self.filter_no_selection)
+        beg_dateedit = QDateEdit()
+        beg_dateedit.setDate(self.source_model.beg_timestamp)
+        beg_dateedit.dateChanged.connect(self.source_model.set_beg_timestamp)
+        end_dateedit = QDateEdit()
+        end_dateedit.setDate(self.source_model.end_timestamp)
+        end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
 
         self.sku_name_label = QLabel()
-        font = QFont("Arial", 12, QFont.Bold)
+        font = QFont("Arial", 14, QFont.Bold)
         self.sku_name_label.setFont(font)
 
         buy_btn = QPushButton('매입')
@@ -100,6 +106,8 @@ class TrWidget(InventoryTableWidget):
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(search_all_btn)
+        hbox2.addWidget(beg_dateedit)
+        hbox2.addWidget(end_dateedit)
         hbox2.addStretch(1)
         hbox2.addWidget(self.sku_name_label)
         hbox2.addStretch(1)
@@ -155,7 +163,7 @@ class TrWidget(InventoryTableWidget):
         :return:
         """
         last_index = self.source_model.index(self.source_model.rowCount() - 1, 0)
-        self.source_model.update_sku_qty(last_index)
+        self.source_model.update_sku_qty()
 
         if hasattr(self.parent, "async_start"):
             self.parent.async_start("tr_save")
@@ -205,7 +213,9 @@ class TrWidget(InventoryTableWidget):
         :param sku_id:
         :return:
         """
+        logger.debug(f"filter_selection: sku_index: {sku_index}")
         # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
         # set selected_sku_id
         self.source_model.set_upper_model_index(sku_index)
         # retrieve the data about the selected sku_id from DB

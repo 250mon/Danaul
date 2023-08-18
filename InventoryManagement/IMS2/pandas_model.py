@@ -143,17 +143,24 @@ class PandasModel(QAbstractTableModel):
                          f'editable_rows_{self.editable_rows_set}')
             self.editable_rows_set.clear()
 
-    def set_editable_new_row(self, row: int):
+    def set_new_row(self, row: int):
         """
         Makes every column editable for new rows
         :param row:
         :return:
         """
-        logger.debug(f'set_editable_new_row: row{row} => '
-                     f'new_row_{self.new_rows_set}')
+        logger.debug(f'set_new_row: row{row} => new_rows_{self.new_rows_set}')
         self.new_rows_set.add(row)
 
-    def clear_editable_new_rows(self):
+    def unset_new_row(self, row: int):
+        logger.debug(f'unset_editable_new_row: remove row {row} from '
+                     f'new_rows_{self.new_rows_set}')
+        if row in self.new_rows_set:
+            self.new_rows_set.remove(row)
+        else:
+            logger.warn(f'unset_editable_new_row: cannot find row {row} int the set')
+
+    def clear_new_rows(self):
         if any(self.new_rows_set):
             self.new_rows_set.clear()
             logger.debug(f'set_editable_new_row : clearing')

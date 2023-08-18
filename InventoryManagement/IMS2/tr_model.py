@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from typing import Dict, List
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex, QDate
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -25,8 +25,8 @@ class TrModel(DataModel):
         self.init_params()
         self.selected_upper_id = None
         self.selected_upper_name = None
-        self.begin_timestamp = ''
-        self.end_timestamp = ''
+        self.beg_timestamp = QDate.currentDate().addMonths(-6)
+        self.end_timestamp = QDate.currentDate()
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
@@ -76,16 +76,26 @@ class TrModel(DataModel):
 
         logger.debug(f"set_upper_model_index: sku_id({self.selected_upper_id}) is set")
 
+    def set_beg_timestamp(self, beg: QDate):
+        self.beg_timestamp = beg
+        logger.debug(f"set_beg_timestamp: {self.beg_timestamp}")
+
+    def set_end_timestamp(self, end: QDate):
+        self.end_timestamp = end
+        logger.debug(f"set_end_timestamp: {self.end_timestamp}")
+
     async def update(self):
         """
         Override method to use selected_sku_id and begin_/end_ timestamp
         :return:
         """
-        logger.debug(f'update_model_df_from_db: downloading data from DB')
+        # end day needs to be added 1 day otherwise query results only includes those thata
+        # were created until the day 00h 00mm 00sec
+        logger.debug(f'update: downloading data from DB')
         kwargs = {'sku_id': self.selected_upper_id,
-                  'beg_timestamp': self.begin_timestamp,
-                  'end_timestamp': self.end_timestamp}
-        logger.debug(kwargs)
+                  'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
+                  'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")}
+        logger.debug(f'update: {kwargs}')
         await Lab().update_lab_df_from_db(self.table_name, **kwargs)
 
         self._set_model_df()
@@ -184,14 +194,25 @@ class TrModel(DataModel):
 
         return super().setData(index, value, role)
 
+    def get_last_row_qty(self):
+        if self.model_df.empty:
+            last_row = 0
+            last_row_qty = 0
+        else:
+            grp = self.model_df.groupby('sku_id')[['tr_id', 'after_qty']].get_group(self.selected_upper_id)
+            grp_sorted = grp.sort_values(['tr_id'], ascending=False)
+            last_row = grp_sorted['tr_id'].head(1).item()
+            last_row_qty = grp_sorted['after_qty'].head(1).item()
+        logger.debug(f'get_last_row_qty: last_row {last_row}, last_row_qty {last_row_qty}')
+        return last_row_qty
+
     def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame or None:
         """
         Needs to be implemented in subclasses
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise None
         """
-        logger.debug(f"make_a_new_row_df: new_id{next_new_id}\n"
-                     f"                   sku\n{self.sku_model.model_df}")
+        logger.debug(f"make_a_new_row_df: new_id({next_new_id})\n")
         if self.selected_upper_id is None:
             logger.error('make_a_new_row_df: sku_id is empty')
             return None
@@ -199,7 +220,7 @@ class TrModel(DataModel):
             logger.error('make_a_new_row_df: sku_id is not active')
             return None
 
-        sku_qty = self.sku_model.get_data_from_id(self.selected_upper_id, 'sku_qty')
+        last_qty = self.get_last_row_qty()
         tr_type = kwargs['tr_type']
         tr_type_id = Lab().tr_type_id_s.loc[tr_type]
         user_id = Lab().user_id_s.loc[self.user_name]
@@ -209,8 +230,8 @@ class TrModel(DataModel):
             'sku_id': self.selected_upper_id,
             'tr_type': tr_type,
             'tr_qty': 1,
-            'before_qty': sku_qty,
-            'after_qty': sku_qty + 1,
+            'before_qty': last_qty,
+            'after_qty': last_qty + 1,
             'tr_timestamp': datetime.now(),
             'description': "",
             'user_name': self.user_name,
@@ -227,7 +248,6 @@ class TrModel(DataModel):
         :param index:
         :return:
         """
-        tr_id = index.siblingAtColumn(self.get_col_number('tr_id')).data()
         sku_id = index.siblingAtColumn(self.get_col_number('sku_id')).data()
         tr_type = index.siblingAtColumn(self.get_col_number('tr_type')).data()
         tr_qty = index.siblingAtColumn(self.get_col_number('tr_qty')).data()
@@ -256,7 +276,7 @@ class TrModel(DataModel):
         debug_msg = "valid" if result is True else "not valid"
         logger.debug(f"validate_new_tr: Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
         # not allow a user to change tr_qty after this point
-        self.clear_editable_new_rows()
+        self.clear_new_rows()
 
         return result
 
@@ -271,5 +291,6 @@ class TrModel(DataModel):
         self.setData(after_qty_idx, after_qty)
         logger.debug(f'validate_new_row: before_qty {before_qty}, tr_qty {tr_qty} => after_qty {after_qty}')
 
-    def update_sku_qty(self, last_qty):
+    def update_sku_qty(self):
+        last_qty = self.get_last_row_qty()
         self.sku_model.update_sku_qty_after_transaction(self.selected_upper_index, last_qty)
