@@ -18,6 +18,7 @@ class InventoryTableWidget(QWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
+        self.source_model = None
 
     def set_source_model(self, model: DataModel):
         """
@@ -25,7 +26,7 @@ class InventoryTableWidget(QWidget):
         :param model:
         :return:
         """
-        self.source_model = model
+        self.source_model: DataModel = model
         self._apply_model()
 
     def _apply_model(self):

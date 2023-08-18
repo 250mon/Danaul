@@ -22,6 +22,10 @@ class ItemWidget(InventoryTableWidget):
         self.parent: QMainWindow = parent
         self.delegate_mode = True
 
+    def set_source_model(self, model: ItemModel):
+        self.source_model = model
+        self._apply_model()
+
     def _setup_proxy_model(self):
         """
         Needs to be implemented

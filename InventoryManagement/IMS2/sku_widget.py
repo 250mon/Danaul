@@ -19,6 +19,10 @@ class SkuWidget(InventoryTableWidget):
         super().__init__(parent)
         self.parent: QMainWindow = parent
 
+    def set_source_model(self, model: SkuModel):
+        self.source_model = model
+        self._apply_model()
+
     def _setup_proxy_model(self):
         """
         Needs to be implemented
