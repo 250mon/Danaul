@@ -113,7 +113,7 @@ class DataModel(PandasModel):
         self.model_df = Lab().table_df[self.table_name]
 
         # we store the columns list here for later use of db update
-        self.db_column_names = self.model_df.columns.tolist()
+        self.db_column_names = Lab().table_column_names[self.table_name]
 
         # reindexing in the order of table view
         self.model_df = self.model_df.reindex(self.column_names, axis=1)
@@ -200,7 +200,10 @@ class DataModel(PandasModel):
         """
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
 
-        next_new_id = self.model_df.iloc[:, 0].max() + 1
+        if self.model_df.empty:
+            next_new_id = 1
+        else:
+            next_new_id = self.model_df.iloc[:, 0].max() + 1
         logger.debug(f'append_new_row: New model_df_row id is {next_new_id}')
         new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
         if new_row_df is None:
@@ -210,7 +213,7 @@ class DataModel(PandasModel):
         self.endInsertRows()
 
         # handles model flags
-        self.set_editable_new_row(self.rowCount() - 1)
+        self.set_new_row(self.rowCount() - 1)
         return True
 
     @abstractmethod
@@ -222,18 +225,11 @@ class DataModel(PandasModel):
         """
 
     def drop_rows(self, indexes: List[QModelIndex or int]):
-        # id_col = 0
-        # ids = []
-        # for idx in indexes:
-        #     if idx.column() != id_col:
-        #         id = int(idx.siblingAtColumn(id_col).data())
-        #     else:
-        #         id = int(idx.data())
-        #     ids.append(id)
-        #
-        # if len(ids) > 0:
-        #     self.model_df.drop(self.model_df[self.model_df.iloc[:, 0].isin(ids)].index, inplace=True)
-        #     logger.debug(f'drop_rows: model_df dropped ids {ids}')
+        """
+        Drop rows from model_df
+        :param indexes:
+        :return:
+        """
 
         if isinstance(indexes[0], QModelIndex):
             indexes = [i.row() for i in indexes]
@@ -278,18 +274,39 @@ class DataModel(PandasModel):
     def set_del_flag(self, index: QModelIndex):
         """
         Sets a 'deleted' flag in the flag column of the row of index
+        If it is a new row, just drop it
+        Otherwise, toggle the flag
         :param index:
         :return:
         """
         curr_flag = self.get_flag(index)
+        if curr_flag & RowFlags.NewRow > 0:
+            # if it is a new row, just drop it
+            self.drop_rows([index])
+            self.unset_new_row(index.row())
+            return
+
         # exclusive or op with deleted flag
         curr_flag ^= RowFlags.DeletedRow
         self.set_flag(index, curr_flag)
 
-        if curr_flag & RowFlags.DeletedRow:
+        if curr_flag & RowFlags.DeletedRow > 0:
+            # if it is deleted, make it uneditable
             self.set_uneditable_row(index.row())
         else:
-            self.set_uneditable_row(index.row())
+            self.unset_uneditable_row(index.row())
+
+    def del_new_rows(self) -> int:
+        """
+        Remove new rows (unsaved) by means of set_del_flag
+        :return: the number of deleted new rows
+        """
+        row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
+        logger.debug(f"del_new_rows: row_list {row_list}")
+        for row in row_list:
+            index = self.index(row, 0)
+            self.set_del_flag(index)
+        return len(row_list)
 
     def get_new_df(self) -> pd.DataFrame:
         return self.model_df.loc[self.model_df['flag'] & RowFlags.NewRow > 0, :]
@@ -333,34 +350,35 @@ class DataModel(PandasModel):
         del_df = self.get_deleted_df()
         if not del_df.empty:
             self.drop_rows(del_df.index.to_list())
-            # if the row to be deleted contains a 'new' flag, just drop it
-            # otherwise db is to be updated
-            del_db_df = del_df.drop(del_df[del_df.flag & RowFlags.NewRow > 0].index)
-            if not del_db_df.empty:
-                # DB data is to be deleted from here
-                logger.debug(f'update_db: del_db_df: \n{del_db_df}')
-                df_to_upload = del_db_df.loc[:, self.db_column_names]
-                results_del = await Lab().delete_df(self.table_name, df_to_upload)
-                total_results['삭제'] = results_del
-                logger.debug(f'update_db: result of deleting = {results_del}')
+            logger.debug(f'update_db: del_df: \n{del_df}')
+            # DB data is to be deleted from here
+            df_to_upload = del_df.loc[:, self.db_column_names]
+            logger.debug(f'update_db: del_df_to_upload: \n{df_to_upload}')
+            results_del = await Lab().delete_df(self.table_name, df_to_upload)
+            total_results['삭제'] = results_del
+            logger.debug(f'update_db: result of deleting = {results_del}')
 
             self.clear_uneditable_rows()
 
         new_df = self.get_new_df()
         if not new_df.empty:
+            new_df.loc[:, self.get_col_name(0)] = 'DEFAULT'
             logger.debug(f'update_db: new_df: \n{new_df}')
+            print(self.db_column_names)
             df_to_upload = new_df.loc[:, self.db_column_names]
             # set id default to let DB assign an id without collision
-            df_to_upload.iloc[:, 0] = 'DEFAULT'
+            # df_to_upload.loc[:, self.get_col_name(0)] = 'DEFAULT'
+            logger.debug(f'update_db: new_df_to_upload: \n{df_to_upload}')
             results_new = await Lab().insert_df(self.table_name, df_to_upload)
             total_results['추가'] = results_new
-            self.clear_editable_new_rows()
+            self.clear_new_rows()
             logger.debug(f'update_db: result of inserting new rows = {results_new}')
 
         chg_df = self.get_changed_df()
         if not chg_df.empty:
             logger.debug(f'update_db: chg_df: \n{chg_df}')
             df_to_upload = chg_df.loc[:, self.db_column_names]
+            logger.debug(f'update_db: chg_df_to_upload: \n{df_to_upload}')
             results_chg = await Lab().update_df(self.table_name, df_to_upload)
             total_results['수정'] = results_chg
             self.clear_editable_rows()

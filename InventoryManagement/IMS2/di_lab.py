@@ -38,6 +38,12 @@ class Lab(metaclass=Singleton):
             'transactions': None
         }
 
+        self.table_column_names = {
+            'items': None,
+            'skus': None,
+            'transactions': None
+        }
+
         self.bool_initialized = False
         if not self.bool_initialized:
             loop = asyncio.new_event_loop()
@@ -48,14 +54,19 @@ class Lab(metaclass=Singleton):
 
     async def async_init(self):
         if self.bool_initialized is False:
-            # get etc dfs
+            # getting column names
+            get_data = [self._get_col_names_from_db(table) for table
+                        in self.table_column_names.keys()]
+            col_names: List = await asyncio.gather(*get_data)
+            for table in reversed(self.table_column_names.keys()):
+                self.table_column_names[table] = col_names.pop()
+
+            # getting dfs
             get_data = [self._get_df_from_db(table) for table
                         in self.table_df.keys()]
             data_dfs: List = await asyncio.gather(*get_data)
-
             for df in data_dfs:
                 logger.debug(f'async_init: Retrieved DB data \n{df}')
-
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data_dfs.pop()
 
@@ -68,6 +79,19 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
+    async def _get_col_names_from_db(self, table: str, **kwargs) -> List:
+        logger.debug(f'_get_col_names_from_db: {table}')
+        query = f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = $1"
+        db_results = await self.di_db_util.select_query(query, [table])
+        logger.debug(f'_get_col_names_from_db: db_results: {db_results}')
+        col_name_list = self._db_to_list(db_results)
+        return col_name_list
+
+    def _db_to_list(self, db_records):
+        # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
+        col_name_list = [record['column_name'] for record in db_records]
+        return col_name_list
+
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f'_get_df_from_db: {table}')
         if table == "transactions":
@@ -79,7 +103,7 @@ class Lab(metaclass=Singleton):
             else:
                 if beg_ts != '' and end_ts != '':
                     query = f"SELECT * FROM transactions where sku_id = {sku_id} " \
-                            f"and tr_timestamp >= {beg_ts} and tr_timestamp <= {end_ts} " \
+                            f"and tr_timestamp >= '{beg_ts}' and tr_timestamp <= '{end_ts}' " \
                             f"order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
                 else:
                     # beg_ts == '' or end_ts == '':
@@ -87,6 +111,7 @@ class Lab(metaclass=Singleton):
                             f"order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
         else:
             query = f"SELECT * FROM {table}"
+        logger.debug(f'_get_df_from_db: query: {query}')
 
         db_results = await self.di_db_util.select_query(query)
         logger.debug(f'_get_df_from_db: db_results: {db_results}')
