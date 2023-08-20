@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout
 )
 from PySide6.QtCore import Qt, Signal, Slot, QModelIndex
+from PySide6.QtGui import QAction, QIcon
 from login_widget import LoginWidget
 from async_helper import AsyncHelper
 from di_lab import Lab
@@ -51,6 +52,7 @@ class InventoryWindow(QMainWindow):
         self.user_name = user_name
         self.setMinimumSize(1500, 800)
         self.setWindowTitle("다나을 재고관리")
+        self.setup_menu()
 
         self.item_model = ItemModel(self.user_name)
         self.sku_model = SkuModel(self.user_name, self.item_model)
@@ -59,6 +61,19 @@ class InventoryWindow(QMainWindow):
         self.setUpMainWindow()
         self.async_helper = AsyncHelper(self, self.save_to_db)
         self.show()
+
+    def setup_menu(self):
+        exit_action = QAction(QIcon('../assets/exit.png'), 'Exit', self)
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.setStatusTip('Exit application')
+        exit_action.triggered.connect(QApplication.instance().quit)
+
+        self.statusBar()
+
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
+        filemenu = menubar.addMenu('&File')
+        filemenu.addAction(exit_action)
 
     def setUpMainWindow(self):
         self.item_widget = ItemWidget(self)

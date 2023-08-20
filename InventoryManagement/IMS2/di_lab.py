@@ -1,5 +1,4 @@
 import os
-import sys
 import asyncio
 from typing import List
 from datetime import date
@@ -24,6 +23,7 @@ class Lab(metaclass=Singleton):
     def __init__(self, di_db: InventoryDb):
         self.di_db = di_db
         self.di_db_util = self.di_db.db_util
+        self.max_transaction_count = MAX_TRANSACTION_COUNT
 
         self.items = {}
         self.skus = {}
@@ -79,6 +79,13 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
+    def set_max_transaction_count(self, count: int):
+        if count > 0:
+            self.max_transaction_count = count
+        else:
+            logger.warn(f"set_max_transaction_count: "
+                        f"count({count}) is not a positive integer")
+
     async def _get_col_names_from_db(self, table: str, **kwargs) -> List:
         logger.debug(f'_get_col_names_from_db: {table}')
         query = f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = $1"
@@ -99,16 +106,17 @@ class Lab(metaclass=Singleton):
             beg_ts = kwargs.get('beg_timestamp', '')
             end_ts = kwargs.get('end_timestamp', '')
             if sku_id is None:
-                query = f"SELECT * FROM transactions order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
+                query = f"SELECT * FROM transactions order by tr_id desc limit " \
+                        f"{self.max_transaction_count}"
             else:
                 if beg_ts != '' and end_ts != '':
                     query = f"SELECT * FROM transactions where sku_id = {sku_id} " \
                             f"and tr_timestamp >= '{beg_ts}' and tr_timestamp <= '{end_ts}' " \
-                            f"order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
+                            f"order by tr_id desc limit {self.max_transaction_count}"
                 else:
                     # beg_ts == '' or end_ts == '':
                     query = f"SELECT * FROM transactions where sku_id = {sku_id} " \
-                            f"order by tr_id desc limit {MAX_TRANSACTION_COUNT}"
+                            f"order by tr_id desc limit {self.max_transaction_count}"
         else:
             query = f"SELECT * FROM {table}"
         logger.debug(f'_get_df_from_db: query: {query}')

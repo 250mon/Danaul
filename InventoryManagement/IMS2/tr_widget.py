@@ -6,10 +6,11 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot, QModelIndex, QDate
 from PySide6.QtGui import QFont
 from di_logger import Logs, logging
+from di_lab import Lab
 from di_table_widget import InventoryTableWidget
 from tr_model import TrModel
 from single_tr_window import SingleTrWindow
-from constants import ADMIN_GROUP
+from constants import ADMIN_GROUP, UserPrivilege
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -84,6 +85,17 @@ class TrWidget(InventoryTableWidget):
         end_dateedit = QDateEdit()
         end_dateedit.setDate(self.source_model.end_timestamp)
         end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
+        date_search_btn = QPushButton('조회')
+        date_search_btn.clicked.connect(lambda: self.filter_selection(
+            self.source_model.selected_upper_index))
+        two_search_btn = QPushButton('2')
+        two_search_btn.clicked.connect(lambda: self.set_max_search_count(2))
+        five_search_btn = QPushButton('5')
+        five_search_btn.clicked.connect(lambda: self.set_max_search_count(5))
+        ten_search_btn = QPushButton('10')
+        ten_search_btn.clicked.connect(lambda: self.set_max_search_count(10))
+        twenty_search_btn = QPushButton('20')
+        twenty_search_btn.clicked.connect(lambda: self.set_max_search_count(20))
 
         self.sku_name_label = QLabel()
         font = QFont("Arial", 14, QFont.Bold)
@@ -99,16 +111,18 @@ class TrWidget(InventoryTableWidget):
         adj_minus_btn.clicked.connect(lambda: self.do_actions("adj-"))
         save_btn = QPushButton('저장')
         save_btn.clicked.connect(self.save_model_to_db)
-        del_tr_btn = QPushButton('관리자 삭제/해제')
-        del_tr_btn.clicked.connect(lambda: self.do_actions("del_tr"))
-        if self.source_model.user_name not in ADMIN_GROUP:
-            del_tr_btn.setEnabled(False)
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(search_all_btn)
         hbox2.addWidget(beg_dateedit)
         hbox2.addWidget(end_dateedit)
+        hbox2.addWidget(date_search_btn)
+        hbox2.addWidget(two_search_btn)
+        hbox2.addWidget(five_search_btn)
+        hbox2.addWidget(ten_search_btn)
+        hbox2.addWidget(twenty_search_btn)
         hbox2.addStretch(1)
+
         hbox2.addWidget(self.sku_name_label)
         hbox2.addStretch(1)
         hbox2.addWidget(buy_btn)
@@ -117,15 +131,18 @@ class TrWidget(InventoryTableWidget):
         hbox2.addWidget(adj_minus_btn)
         hbox2.addWidget(save_btn)
 
-        del_hbox = QHBoxLayout()
-        del_hbox.addStretch(1)
-        del_hbox.addWidget(del_tr_btn)
-
         vbox = QVBoxLayout()
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
         vbox.addWidget(self.table_view)
-        vbox.addLayout(del_hbox)
+
+        if self.source_model.get_user_privilege() == UserPrivilege.Admin:
+            del_tr_btn = QPushButton('관리자 삭제/해제')
+            del_tr_btn.clicked.connect(lambda: self.do_actions("del_tr"))
+            del_hbox = QHBoxLayout()
+            del_hbox.addStretch(1)
+            del_hbox.addWidget(del_tr_btn)
+            vbox.addLayout(del_hbox)
 
         self.setLayout(vbox)
 
@@ -235,3 +252,7 @@ class TrWidget(InventoryTableWidget):
         self.parent.async_start('tr_update')
         # displaying the sku name in the tr view
         self.sku_name_label.setText("")
+
+    def set_max_search_count(self, max_count: int):
+        Lab().set_max_transaction_count(max_count)
+        self.filter_selection(self.source_model.selected_upper_index)

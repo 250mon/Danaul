@@ -6,6 +6,11 @@ ADMIN_GROUP = ['admin', 'jye']
 MAX_TRANSACTION_COUNT = 10
 
 
+class UserPrivilege:
+    Admin = 0
+    User = 1
+
+
 class RowFlags:
     OriginalRow = 0
     NewRow = 1

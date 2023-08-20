@@ -8,7 +8,7 @@ from PySide6.QtGui import QColor
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
-from constants import EditLevel, RowFlags, ADMIN_GROUP
+from constants import EditLevel, RowFlags, UserPrivilege, ADMIN_GROUP
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -36,6 +36,12 @@ class DataModel(PandasModel):
 
         self.selected_upper_index = None
         self.selected_upper_id = None
+
+    def get_user_privilege(self):
+        if self.user_name in ADMIN_GROUP:
+            return UserPrivilege.Admin
+        else:
+            return UserPrivilege.User
 
     def set_table_name(self, table_name: str):
         self.table_name = table_name
@@ -338,7 +344,7 @@ class DataModel(PandasModel):
 
                 messages[op_type] = msg
 
-            return_msg = '<RESULTS>'
+            return_msg = f'<{self.table_name} RESULTS>'
             for op_type, msg in messages.items():
                 return_msg += ('\n' + op_type + ': ' + msg)
             return return_msg
@@ -384,8 +390,7 @@ class DataModel(PandasModel):
             self.clear_editable_rows()
             logger.debug(f'update_db: result of changing = {results_chg}')
 
-        return_msg = make_return_msg(total_results)
-        return return_msg
+        return make_return_msg(total_results)
 
     def is_model_editing(self) -> bool:
         """
