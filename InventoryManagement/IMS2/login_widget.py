@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QByteArray, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
-from db_utils import DbConfig
+from db_utils import ConfigReader
 from di_logger import Logs, logging
-from constants import DB_SETTING_FILE
+from constants import CONFIG_FILE
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 class LoginWidget(QWidget):
     start_main = Signal(str)
 
-    def __init__(self, config_file=DB_SETTING_FILE, parent=None):
+    def __init__(self, config_file=CONFIG_FILE, parent=None):
         super().__init__()
         self.parent = parent
         self.db_config_file = config_file
@@ -36,13 +36,13 @@ class LoginWidget(QWidget):
     def createConnection(self):
         """Set up the connection to the database.
         Check for the tables needed."""
-        config_options = DbConfig(self.db_config_file)
+        config = ConfigReader(self.db_config_file)
         database = QSqlDatabase.addDatabase("QPSQL")
-        database.setHostName(config_options.host)
-        database.setPort(int(config_options.port))
-        database.setUserName(config_options.user)
-        database.setPassword(config_options.passwd)
-        database.setDatabaseName(config_options.database)
+        database.setHostName(config.options["Host"])
+        database.setPort(int(config.options["Port"]))
+        database.setUserName(config.options["User"])
+        database.setPassword(config.options["Passwd"])
+        database.setDatabaseName(config.options["Database"])
         if not database.open():
             logger.error("createConnection: Unable to Connect.")
             logger.error(database.lastError())

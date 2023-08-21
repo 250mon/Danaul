@@ -6,48 +6,21 @@ from operator import methodcaller
 from types import TracebackType
 from typing import Optional, Type, List, Tuple
 from di_logger import Logs
+from constants import ConfigReader
 import logging
 
 logger = Logs().get_logger('db_utils')
 logger.setLevel(logging.DEBUG)
 
 
-class DbConfig:
-    def __init__(self, config_file):
-        options = self.get_options(config_file)
-        self.host = options['host']
-        self.port = options['port']
-        self.user = options['user']
-        self.database = options['database']
-        self.passwd = options['password']
-
-    def get_options(self, file_path="config"):
-        try:
-            with open(file_path, 'r') as fd:
-                # strip lines
-                lines = map(methodcaller("strip"), fd.readlines())
-                # filtering lines starting with '#' or blank lines
-                lines_filtered = filter(lambda l: l and not l.startswith("#"), lines)
-                # parsing
-                words_iter = map(methodcaller("split", "="), lines_filtered)
-                # converting map obj to dict
-                options = {k.strip(): v.strip() for k, v in words_iter}
-
-        except Exception as e:
-            print(e)
-            exit(0)
-
-        return options
-
-
 async def connect_pg(db_config_file):
-    config_options = DbConfig(db_config_file)
+    config = ConfigReader(db_config_file)
     try:
-        conn = await asyncpg.connect(host=config_options.host,
-                                     port=config_options.port,
-                                     user=config_options.user,
-                                     database=config_options.database,
-                                     password=config_options.passwd)
+        conn = await asyncpg.connect(host=config.get_options("Host"),
+                                     port=config.get_options("Port"),
+                                     user=config.get_options("User"),
+                                     database=config.get_options("Database"),
+                                     password=config.get_options("Password"))
         return conn
     except Exception as e:
         logger.exception('Error while connecting to DB', e)
@@ -57,24 +30,18 @@ async def connect_pg(db_config_file):
 
 class ConnectPg:
     def __init__(self, db_config_file):
-        config_options = DbConfig(db_config_file)
-        self.host = config_options.host
-        self.port = config_options.port
-        self.user = config_options.user
-        self.database = config_options.database
-        self.passwd = config_options.passwd
-
+        self.config = ConfigReader(db_config_file)
         self._conn = None
 
     async def __aenter__(self):
         logger.debug('Trying to connect to db ...')
         logger.debug('Entering context manager, waiting for connection')
         try:
-            self._conn = await asyncpg.connect(host=self.host,
-                                               port=self.port,
-                                               user=self.user,
-                                               database=self.database,
-                                               password=self.passwd)
+            self._conn = await asyncpg.connect(host=self.config.get_options("Host"),
+                                               port=self.config.get_options("Port"),
+                                               user=self.config.get_options("User"),
+                                               database=self.config.get_options("Database"),
+                                               password=self.config.get_options("Password"))
             logger.debug('Successfully connected!!!')
             return self._conn
         except Exception as e:
@@ -209,12 +176,12 @@ class DbUtil:
                 return await conn.execute(stmt, *arg)
 
         logger.info('pool_execute: Asynchronous executing')
-        config_options = DbConfig(self.db_config_file)
-        async with asyncpg.create_pool(host=config_options.host,
-                                       port=config_options.port,
-                                       user=config_options.user,
-                                       database=config_options.database,
-                                       password=config_options.passwd) as pool:
+        config = ConfigReader(self.db_config_file)
+        async with asyncpg.create_pool(host=config.get_options("Host"),
+                                       port=config.get_options("Port"),
+                                       user=config.get_options("User"),
+                                       database=config.get_options("Database"),
+                                       password=config.get_options("Password")) as pool:
             queries = [execute(statement, arg, pool) for arg in args]
             results = await asyncio.gather(*queries, return_exceptions=True)
             logger.debug(f'pool_execute: results::\n{results}')

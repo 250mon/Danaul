@@ -16,8 +16,8 @@ from tr_model import TrModel
 from item_widget import ItemWidget
 from sku_widget import SkuWidget
 from tr_widget import TrWidget
-
 from di_logger import Logs, logging
+from constants import CONFIG_FILE
 
 # TODO
 # 1. excel file import / export
@@ -28,8 +28,7 @@ from di_logger import Logs, logging
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
-DB_SETTINGS_FILE = 'db_settings'
-Lab(InventoryDb(DB_SETTINGS_FILE))
+Lab(InventoryDb(CONFIG_FILE))
 
 
 class InventoryWindow(QMainWindow):
@@ -43,7 +42,7 @@ class InventoryWindow(QMainWindow):
         self.initUI('admin')
 
     def login(self):
-        self.login_widget = LoginWidget(DB_SETTINGS_FILE, self)
+        self.login_widget = LoginWidget(CONFIG_FILE, self)
         self.login_widget.start_main.connect(self.initUI)
         self.login_widget.show()
 

@@ -1,7 +1,8 @@
 from enum import Enum
 from functools import total_ordering
+from operator import methodcaller
 
-DB_SETTING_FILE = 'db_settings'
+CONFIG_FILE = 'di_config'
 ADMIN_GROUP = ['admin', 'jye']
 MAX_TRANSACTION_COUNT = 10
 
@@ -29,3 +30,29 @@ class EditLevel(Enum):
         if self.__class__ is other.__class__:
             return self.value < other.value
         return NotImplemented
+
+
+class ConfigReader:
+    def __init__(self, config_file):
+        self.options = self.read_config_file(config_file)
+
+    def read_config_file(self, file_path="config"):
+        try:
+            with open(file_path, 'r') as fd:
+                # strip lines
+                lines = map(methodcaller("strip"), fd.readlines())
+                # filtering lines starting with '#' or blank lines
+                lines_filtered = filter(lambda l: l and not l.startswith("#"), lines)
+                # parsing
+                words_iter = map(methodcaller("split", "="), lines_filtered)
+                # converting map obj to dict
+                options = {k.strip(): v.strip() for k, v in words_iter}
+
+        except Exception as e:
+            print(e)
+            exit(0)
+
+        return options
+
+    def get_options(self, option_name: str):
+        return self.options[option_name]

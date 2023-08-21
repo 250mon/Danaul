@@ -6,17 +6,11 @@ from di_db import InventoryDb
 import pandas as pd
 from di_logger import Logs, logging
 from constants import MAX_TRANSACTION_COUNT
+from singleton import Singleton
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
-
-class Singleton(type):
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
 
 
 class Lab(metaclass=Singleton):
@@ -122,7 +116,7 @@ class Lab(metaclass=Singleton):
         logger.debug(f'_get_df_from_db: query: {query}')
 
         db_results = await self.di_db_util.select_query(query)
-        logger.debug(f'_get_df_from_db: db_results: {db_results}')
+        logger.debug(f'_get_df_from_db: db_results: {db_results[:2]}')
         if db_results is None:
             return pd.DataFrame()
         df = self._db_to_df(db_results)
@@ -242,6 +236,6 @@ async def main(lab):
     #     print(tr.tr_id)
 
 if __name__ == '__main__':
-    danaul_db = InventoryDb('db_settings')
+    danaul_db = InventoryDb('di_config')
     lab = Lab(danaul_db)
     asyncio.run(main(lab))

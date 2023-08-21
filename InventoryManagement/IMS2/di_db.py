@@ -164,7 +164,7 @@ class InventoryDb:
         return await self.db_util.delete('transactions', 'tr_id', args)
 
 async def main():
-    danaul_db = InventoryDb('db_settings')
+    danaul_db = InventoryDb('di_config')
 
     # Initialize db by dropping all the tables and then
     # creating them all over again.

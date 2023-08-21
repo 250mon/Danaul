@@ -143,8 +143,7 @@ class InventoryTableWidget(QWidget):
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_chg_flag(src_idx)
-
-        logger.debug(f'change_rows_by_delegate: rows {src_idx.row()} being changed')
+                logger.debug(f'change_rows_by_delegate: rows {src_idx.row()} being changed')
 
     def delete_rows(self, indexes: List[QModelIndex]):
         """
