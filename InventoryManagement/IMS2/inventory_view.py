@@ -192,7 +192,8 @@ class InventoryWindow(QMainWindow):
 
     def import_transactions(self):
         reader = EmrTransactionReader("bit_doc.xlsx")
-        bit_df = reader.read_df_from(['noci40,noci40_fr', 'noci120,noci120_fr'])
+        codes = self.sku_model.get_bit_codes()
+        bit_df = reader.read_df_from(codes)
         if bit_df is None:
             logger.debug("bit_df is None")
         else:
