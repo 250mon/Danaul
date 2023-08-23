@@ -197,7 +197,7 @@ class InventoryWindow(QMainWindow):
             logger.debug("bit_df is None")
         else:
             logger.debug(f"\n{bit_df}")
-            self.tr_widget.filter_no_selection()
+            # self.tr_widget.filter_no_selection()
             self.tr_model.append_new_rows_from_bit(bit_df)
 
 

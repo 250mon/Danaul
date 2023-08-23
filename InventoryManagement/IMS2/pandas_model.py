@@ -99,6 +99,9 @@ class PandasModel(QAbstractTableModel):
         #              f"new_rows_{self.new_rows_set} "
         #              f"Edit_Level({self.edit_level}) "
         #              f"Col_Edit_Level({self.col_idx_edit_lvl[index.column()]})")
+        if not index.isValid():
+            logger.debug(f"CHECK!!! index({index}) is not valid")
+            return False
 
         if not self.is_editable:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable

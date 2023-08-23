@@ -25,9 +25,8 @@ class EmrTransactionReader():
             bit_df = bit_df.rename(columns={"총계": "tr_qty"})
             logger.debug(f"\n{bit_df}")
             return bit_df
-
         except Exception as e:
-
+            logger.error(e)
             return None
 
 

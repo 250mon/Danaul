@@ -145,6 +145,11 @@ class TrModel(DataModel):
                                 'tr_qty', 'before_qty', 'after_qty']
             if col_name in int_type_columns:
                 # if column data is int, return int type
+                try:
+                    ret = int(data_to_display)
+                except Exception as e:
+                    print(e)
+                    print(f"{col_name} {data_to_display}")
                 return int(data_to_display)
             elif col_name == 'tr_timestamp':
                 # data type is datetime.date
@@ -209,13 +214,14 @@ class TrModel(DataModel):
             return None
 
         try:
-            id_s = self.model_df.groupby('sku_id')['tr_id'].get_group(self.selected_upper_id)
+            id_s = self.model_df.groupby("sku_id")["tr_id"].get_group(self.selected_upper_id)
             idx = id_s.idxmax()
             last_qty = self.model_df.iloc[idx, self.get_col_number("after_qty")].item()
         except Exception as e:
-            # key error where tr_id is not present yet
-            last_qty = 0
             logger.debug(e)
+            # key error where tr_id is not present
+            sku_df = self.sku_model.model_df
+            last_qty = sku_df.loc[sku_df["sku_id"] == self.selected_upper_id, "sku_qty"].item()
 
         tr_type = kwargs['tr_type']
         tr_type_id = Lab().tr_type_id_s.loc[tr_type]
@@ -239,9 +245,12 @@ class TrModel(DataModel):
         return new_model_df
 
     def append_new_rows_from_bit(self, bit_df: pd.DataFrame):
+        temp_selected_id = None
         if self.selected_upper_id is not None:
-            logger.error("There exists a selected sku_id.")
-            return
+            temp_selected_id = self.selected_upper_id
+            self.selected_upper_id = None
+            # logger.error("There exists a selected sku_id.")
+            # return
 
         sku_sub_df = self.sku_model.model_df.loc[:, ["sku_id", "bit_code"]]
         sku_sub_df.loc[:, "bit_code"] = sku_sub_df.bit_code.str.replace('\s', '', regex=True)
@@ -264,6 +273,9 @@ class TrModel(DataModel):
                 self.endInsertRows()
                 if not self.validate_new_row(self.index(self.rowCount()-1, 0, QModelIndex())):
                     self.drop_rows([self.rowCount() - 1])
+
+        if temp_selected_id is not None:
+            self.selected_upper_id = temp_selected_id
 
     def validate_new_row(self, index: QModelIndex) -> bool:
         """

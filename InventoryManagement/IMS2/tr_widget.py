@@ -222,8 +222,6 @@ class TrWidget(InventoryTableWidget):
             self.source_model.clear_editable_rows()
 
     def update_tr_view(self):
-        # if there is remaining unsaved new rows, drop them
-        self.source_model.del_new_rows()
         # retrieve the data about the selected sku_id from DB
         self.parent.async_start('tr_update')
         # displaying the sku name in the tr view
@@ -237,6 +235,8 @@ class TrWidget(InventoryTableWidget):
         :return:
         """
         logger.debug(f"sku_id({sku_id})")
+        # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
         # set selected_sku_id
         self.source_model.set_upper_model_id(sku_id)
         self.update_tr_view()
@@ -246,10 +246,12 @@ class TrWidget(InventoryTableWidget):
         Connected to search all button
         :return:
         """
+        # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
         # set selected_sku_id to None
         self.source_model.set_upper_model_id(None)
         self.update_tr_view()
 
     def set_max_search_count(self, max_count: int):
-        Lab().set_max_transaction_count(max_count)
+        Lab()._set_max_transaction_count(max_count)
         self.filter_selection(self.source_model.selected_upper_id)

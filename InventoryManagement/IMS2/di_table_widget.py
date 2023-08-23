@@ -154,12 +154,17 @@ class InventoryTableWidget(QWidget):
         :param indexes:
         :return:
         """
+        del_indexes = []
         for idx in indexes:
             # do it only once for multiple indexes belonging to the same row
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
-                self.source_model.set_del_flag(src_idx)
-                logger.debug(f"rows {src_idx.row()} deleted")
+                del_indexes.append(src_idx)
+
+        if len(del_indexes) > 0:
+            self.source_model.set_del_flag(del_indexes)
+            rows = [idx.row() for idx in del_indexes]
+            logger.debug(f"rows {rows} deleted")
 
     async def save_to_db(self):
         """
@@ -181,6 +186,8 @@ class InventoryTableWidget(QWidget):
         :param item_id:
         :return:
         """
+        # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
         # let the model learn the upper model index for a new row creation
         self.source_model.set_upper_model_id(id)
 
@@ -193,8 +200,10 @@ class InventoryTableWidget(QWidget):
         Connected to search all button
         :return:
         """
-        self.proxy_model.setFilterRegularExpression("^\\d*$")
+        # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
         self.source_model.set_upper_model_id(None)
+        self.proxy_model.setFilterRegularExpression("^\\d*$")
 
     def set_col_hidden(self, left_most_hidden: str):
         left_most_col_num = self.source_model.get_col_number(left_most_hidden)

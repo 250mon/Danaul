@@ -236,7 +236,7 @@ class DataModel(PandasModel):
         :param indexes:
         :return:
         """
-
+        logger.debug(f"dropping... indexes({indexes})")
         if isinstance(indexes[0], QModelIndex):
             indexes = [i.row() for i in indexes]
 
@@ -277,7 +277,7 @@ class DataModel(PandasModel):
         if self.diff_row(index):
             self.set_flag(index, curr_flag)
 
-    def set_del_flag(self, index: QModelIndex):
+    def set_del_flag(self, indexes: List[QModelIndex]):
         """
         Sets a 'deleted' flag in the flag column of the row of index
         If it is a new row, just drop it
@@ -285,22 +285,29 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        curr_flag = self.get_flag(index)
-        if curr_flag & RowFlags.NewRow > 0:
+        flags = [self.get_flag(index) for index in indexes]
+        is_new = [flag & RowFlags.NewRow for flag in flags]
+        new_idxes = [index for index, cond in zip(indexes, is_new)
+                       if cond > 0]
+        other_idxes = [index for index in indexes
+                       if index not in new_idxes]
+        if len(new_idxes) > 0:
             # if it is a new row, just drop it
-            self.drop_rows([index])
-            self.unset_new_row(index.row())
-            return
+            self.drop_rows(new_idxes)
+            for index in new_idxes:
+                self.unset_new_row(index.row())
 
         # exclusive or op with deleted flag
-        curr_flag ^= RowFlags.DeletedRow
-        self.set_flag(index, curr_flag)
+        for index in other_idxes:
+            curr_flag = self.get_flag(index)
+            curr_flag ^= RowFlags.DeletedRow
+            self.set_flag(index, curr_flag)
 
-        if curr_flag & RowFlags.DeletedRow > 0:
-            # if it is deleted, make it uneditable
-            self.set_uneditable_row(index.row())
-        else:
-            self.unset_uneditable_row(index.row())
+            if curr_flag & RowFlags.DeletedRow > 0:
+                # if it is deleted, make it uneditable
+                self.set_uneditable_row(index.row())
+            else:
+                self.unset_uneditable_row(index.row())
 
     def del_new_rows(self) -> int:
         """
@@ -309,9 +316,8 @@ class DataModel(PandasModel):
         """
         row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
         logger.debug(f"row_list {row_list}")
-        for row in row_list:
-            index = self.index(row, 0)
-            self.set_del_flag(index)
+        indexes = [self.index(row, 0) for row in row_list]
+        self.set_del_flag(indexes)
         return len(row_list)
 
     def get_new_df(self) -> pd.DataFrame:
@@ -368,9 +374,8 @@ class DataModel(PandasModel):
 
         new_df = self.get_new_df()
         if not new_df.empty:
-            new_df.loc[:, self.get_col_name(0)] = 'DEFAULT'
+            new_df.loc[:, [self.get_col_name(0)]] = 'DEFAULT'
             logger.debug(f"\n{new_df}")
-            print(self.db_column_names)
             df_to_upload = new_df.loc[:, self.db_column_names]
             # set id default to let DB assign an id without collision
             # df_to_upload.loc[:, self.get_col_name(0)] = 'DEFAULT'

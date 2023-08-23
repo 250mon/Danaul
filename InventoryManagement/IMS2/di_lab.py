@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 from typing import List
 from datetime import date
@@ -7,6 +8,7 @@ import pandas as pd
 from di_logger import Logs, logging
 from constants import MAX_TRANSACTION_COUNT
 from singleton import Singleton
+import inventory_schema
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -31,12 +33,7 @@ class Lab(metaclass=Singleton):
             'skus': None,
             'transactions': None
         }
-
-        self.table_column_names = {
-            'items': None,
-            'skus': None,
-            'transactions': None
-        }
+        self._set_db_column_names()
 
         self.bool_initialized = False
         if not self.bool_initialized:
@@ -48,13 +45,6 @@ class Lab(metaclass=Singleton):
 
     async def async_init(self):
         if self.bool_initialized is False:
-            # getting column names
-            get_data = [self._get_col_names_from_db(table) for table
-                        in self.table_column_names.keys()]
-            col_names: List = await asyncio.gather(*get_data)
-            for table in reversed(self.table_column_names.keys()):
-                self.table_column_names[table] = col_names.pop()
-
             # getting dfs
             get_data = [self._get_df_from_db(table) for table
                         in self.table_df.keys()]
@@ -65,7 +55,7 @@ class Lab(metaclass=Singleton):
                 self.table_df[table] = data_dfs.pop()
 
             # make reference series
-            self.make_ref_series()
+            self._make_ref_series()
 
         self.bool_initialized = True
         return self
@@ -73,25 +63,19 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
-    def set_max_transaction_count(self, count: int):
+    def _set_max_transaction_count(self, count: int):
         if count > 0:
             self.max_transaction_count = count
         else:
             logger.warn(f""
                         f"count({count}) is not a positive integer")
 
-    async def _get_col_names_from_db(self, table: str, **kwargs) -> List:
-        logger.debug(f"{table}")
-        query = f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = $1"
-        db_results = await self.di_db_util.select_query(query, [table])
-        logger.debug(f"{db_results}")
-        col_name_list = self._db_to_list(db_results)
-        return col_name_list
-
-    def _db_to_list(self, db_records):
-        # [{'col1': v11, 'col2': v12}, {'col1': v21, 'col2': v22}, ...]
-        col_name_list = [record['column_name'] for record in db_records]
-        return col_name_list
+    def _set_db_column_names(self):
+        col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
+        self.table_column_names = {}
+        self.table_column_names['items'] = col_name.findall(inventory_schema.CREATE_ITEM_TABLE)
+        self.table_column_names['skus'] = col_name.findall(inventory_schema.CREATE_SKU_TABLE)
+        self.table_column_names['transactions'] = col_name.findall(inventory_schema.CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
@@ -129,7 +113,7 @@ class Lab(metaclass=Singleton):
         df.fillna("", inplace=True)
         return df
 
-    def make_ref_series(self):
+    def _make_ref_series(self):
         def make_series(table, is_name=True):
             ref_df = self.table_df[table]
             if is_name:
