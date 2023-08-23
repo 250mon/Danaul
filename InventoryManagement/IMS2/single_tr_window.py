@@ -68,7 +68,7 @@ class SingleTrWindow(QWidget):
         self.mapper.toLast()
 
     def ok_clicked(self):
-        logger.debug(f'Created Transaction')
+        logger.debug(f"Created Transaction")
         self.mapper.submit()
         index = self.proxy_model.index(self.mapper.currentIndex(), 0)
         self.create_tr_signal.emit(index)

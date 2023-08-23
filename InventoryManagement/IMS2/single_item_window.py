@@ -29,11 +29,11 @@ class SingleItemWindow(QWidget):
         # if the selected index is a single index, it means
         # that we are editing a newly added item here.
         if isinstance(indexes, List):
-            logger.debug("SingleItemWindow: change items mode")
+            logger.debug("change items mode")
             self.new_item_mode = False
             self.model_indexes = indexes
         else:
-            logger.debug("SingleItemWindow: new item mode")
+            logger.debug("new item mode")
             self.new_item_mode = True
             self.model_indexes = [indexes]
 
@@ -117,11 +117,11 @@ class SingleItemWindow(QWidget):
 
     def ok_clicked(self):
         if self.new_item_mode:
-            logger.debug(f'Added Item Index: {self.model_indexes[0]}')
+            logger.debug(f"Added Item Index: {self.model_indexes[0]}")
             self.mapper.submit()
             self.add_item_signal.emit(self.model_indexes[0])
         else:
-            logger.debug(f'Changed Items Indexes: {self.model_indexes}')
+            logger.debug(f"Changed Items Indexes: {self.model_indexes}")
             self.mapper.submit()
             self.chg_item_signal.emit(self.model_indexes)
         # adding a new item

@@ -34,7 +34,7 @@ class DataModel(PandasModel):
         # set model df
         self._set_model_df()
 
-        self.selected_upper_index = None
+        self.selected_upper_id = None
         self.selected_upper_id = None
 
     def get_user_privilege(self):
@@ -62,15 +62,6 @@ class DataModel(PandasModel):
             col_idx_edit_lvl[col_idx] = lvl
         super().set_column_index_edit_level(col_idx_edit_lvl)
 
-    def set_upper_model_index(self, index: QModelIndex or None):
-        """
-        Needs to be implemented if necessary
-        upper model index is used for filtering
-        :param index:
-        :return:
-        """
-        pass
-
     def get_col_number(self, col_name: str) -> int:
         return self.model_df.columns.get_loc(col_name)
 
@@ -81,15 +72,6 @@ class DataModel(PandasModel):
         flag_col = self.get_col_number('flag')
         return index.column() == flag_col
 
-    def get_flag(self, index: QModelIndex) -> int:
-        """
-        Returns the flag of the row where the index belongs to
-        :param index:
-        :return: flag
-        """
-        flag = self.model_df.iloc[index.row(), self.get_col_number('flag')]
-        return flag
-
     def set_flag(self, index: QModelIndex, flag: int):
         """
         Set the flag to the row where the index belongs to
@@ -99,8 +81,26 @@ class DataModel(PandasModel):
         """
         self.model_df.iloc[index.row(), self.get_col_number('flag')] = flag
 
+    def get_flag(self, index: QModelIndex) -> int:
+        """
+        Returns the flag of the row where the index belongs to
+        :param index:
+        :return: flag
+        """
+        flag = self.model_df.iloc[index.row(), self.get_col_number('flag')]
+        return flag
+
     def is_active_row(self, index: QModelIndex) -> bool:
         return self.model_df.iloc[index.row(), self.get_col_number('active')]
+
+    def set_upper_model_id(self, index: QModelIndex or None):
+        """
+        Needs to be implemented if necessary
+        upper model index is used for filtering
+        :param index:
+        :return:
+        """
+        pass
 
     @abstractmethod
     def set_add_on_cols(self) -> None:
@@ -115,7 +115,7 @@ class DataModel(PandasModel):
         Makes DataFrame out of data received from DB
         :return:
         """
-        logger.debug(f'set_model_df: setting the df of Lab to {self.table_name}_model_f')
+        logger.debug(f"setting the df of Lab to {self.table_name}_model_f")
         self.model_df = Lab().table_df[self.table_name]
 
         # we store the columns list here for later use of db update
@@ -132,7 +132,7 @@ class DataModel(PandasModel):
         Update the model_df and the view
         :return:
         """
-        logger.debug(f'update_model_df_from_db: Update the model_df and the view')
+        logger.debug(f"Update the model_df and the view")
         self._set_model_df()
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
@@ -145,9 +145,9 @@ class DataModel(PandasModel):
         the subclasses
         :return:
         """
-        logger.debug(f'update: Downloading data from DB')
+        logger.debug("Downloading data from DB")
         await Lab().update_lab_df_from_db(self.table_name)
-        logger.debug(f'update: Updating the model and view')
+        logger.debug("Updating the model and view")
         self.update_model_df_from_db()
 
     def get_default_delegate_info(self) -> List[int]:
@@ -185,7 +185,7 @@ class DataModel(PandasModel):
 
         # Unless it is a deleted row, proceed to set the data
         if self.get_flag(index) & RowFlags.DeletedRow > 0:
-            logger.debug(f'setData: Cannot change data in the deleted row')
+            logger.debug("Cannot change data in the deleted row")
             return
 
         result = super().setData(index, value, role)
@@ -210,7 +210,7 @@ class DataModel(PandasModel):
             next_new_id = 1
         else:
             next_new_id = self.model_df.iloc[:, 0].max() + 1
-        logger.debug(f'append_new_row: New model_df_row id is {next_new_id}')
+        logger.debug(f"New model_df_row id({next_new_id})")
         new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
         if new_row_df is None:
             return False
@@ -244,7 +244,7 @@ class DataModel(PandasModel):
         self.model_df.drop(pd.Index(indexes), inplace=True)
         self.endRemoveRows()
 
-        logger.debug(f'drop_rows: model_df dropped rows {indexes}')
+        logger.debug(f"model_df dropped rows {indexes}")
 
     def diff_row(self, index: QModelIndex) -> bool:
         """
@@ -255,7 +255,7 @@ class DataModel(PandasModel):
         """
         original_row_count = Lab().table_df[self.table_name].shape[0]
         if index.row() >= original_row_count:
-            logger.error(f'diff_row: index.row({index.row()} is out of '
+            logger.error(f"index.row({index.row()} is out of "
                          f'range of model_df row count {original_row_count} ')
             exit(1)
         original_row = Lab().table_df[self.table_name].iloc[[index.row()], :]
@@ -308,7 +308,7 @@ class DataModel(PandasModel):
         :return: the number of deleted new rows
         """
         row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
-        logger.debug(f"del_new_rows: row_list {row_list}")
+        logger.debug(f"row_list {row_list}")
         for row in row_list:
             index = self.index(row, 0)
             self.set_del_flag(index)
@@ -349,46 +349,46 @@ class DataModel(PandasModel):
                 return_msg += ('\n' + op_type + ': ' + msg)
             return return_msg
 
-        logger.debug('save_to_db: Saving to DB ...')
+        logger.debug("Saving to DB ...")
 
         total_results = {}
 
         del_df = self.get_deleted_df()
         if not del_df.empty:
             self.drop_rows(del_df.index.to_list())
-            logger.debug(f'update_db: del_df: \n{del_df}')
+            logger.debug(f"\n{del_df}")
             # DB data is to be deleted from here
             df_to_upload = del_df.loc[:, self.db_column_names]
-            logger.debug(f'update_db: del_df_to_upload: \n{df_to_upload}')
+            logger.debug(f"\n{df_to_upload}")
             results_del = await Lab().delete_df(self.table_name, df_to_upload)
             total_results['삭제'] = results_del
-            logger.debug(f'update_db: result of deleting = {results_del}')
+            logger.debug(f"result of deleting = {results_del}")
 
             self.clear_uneditable_rows()
 
         new_df = self.get_new_df()
         if not new_df.empty:
             new_df.loc[:, self.get_col_name(0)] = 'DEFAULT'
-            logger.debug(f'update_db: new_df: \n{new_df}')
+            logger.debug(f"\n{new_df}")
             print(self.db_column_names)
             df_to_upload = new_df.loc[:, self.db_column_names]
             # set id default to let DB assign an id without collision
             # df_to_upload.loc[:, self.get_col_name(0)] = 'DEFAULT'
-            logger.debug(f'update_db: new_df_to_upload: \n{df_to_upload}')
+            logger.debug(f"\n{df_to_upload}")
             results_new = await Lab().insert_df(self.table_name, df_to_upload)
             total_results['추가'] = results_new
             self.clear_new_rows()
-            logger.debug(f'update_db: result of inserting new rows = {results_new}')
+            logger.debug(f"result of inserting new rows = {results_new}")
 
         chg_df = self.get_changed_df()
         if not chg_df.empty:
-            logger.debug(f'update_db: chg_df: \n{chg_df}')
+            logger.debug(f"\n{chg_df}")
             df_to_upload = chg_df.loc[:, self.db_column_names]
-            logger.debug(f'update_db: chg_df_to_upload: \n{df_to_upload}')
+            logger.debug(f"\n{df_to_upload}")
             results_chg = await Lab().update_df(self.table_name, df_to_upload)
             total_results['수정'] = results_chg
             self.clear_editable_rows()
-            logger.debug(f'update_db: result of changing = {results_chg}')
+            logger.debug(f"result of changing = {results_chg}")
 
         return make_return_msg(total_results)
 

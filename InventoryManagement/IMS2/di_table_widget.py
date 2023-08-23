@@ -108,10 +108,10 @@ class InventoryTableWidget(QWidget):
         selected_indexes = self.table_view.selectedIndexes()
         check_indexes = [idx.isValid() for idx in selected_indexes]
         if len(selected_indexes) > 0 and False not in check_indexes:
-            logger.debug(f'Indexes selected: {selected_indexes}')
+            logger.debug(f"Indexes selected: {selected_indexes}")
             return selected_indexes
         else:
-            logger.debug(f'Indexes not selected or invalid: {selected_indexes}')
+            logger.debug(f"Indexes not selected or invalid: {selected_indexes}")
             return None
 
     @Slot(str)
@@ -143,7 +143,7 @@ class InventoryTableWidget(QWidget):
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_chg_flag(src_idx)
-                logger.debug(f'change_rows_by_delegate: rows {src_idx.row()} being changed')
+                logger.debug(f"rows {src_idx.row()} being changed")
 
     def delete_rows(self, indexes: List[QModelIndex]):
         """
@@ -159,7 +159,7 @@ class InventoryTableWidget(QWidget):
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_del_flag(src_idx)
-                logger.debug(f'delete_rows: rows {src_idx.row()} deleted')
+                logger.debug(f"rows {src_idx.row()} deleted")
 
     async def save_to_db(self):
         """
@@ -174,7 +174,7 @@ class InventoryTableWidget(QWidget):
                                     QMessageBox.Close)
         return result_str
 
-    def filter_selection(self, upper_index: QModelIndex):
+    def filter_selection(self, id: int):
         """
         A double click event that triggers the upper level widget's
         row_selected method eventually calls this method
@@ -182,7 +182,7 @@ class InventoryTableWidget(QWidget):
         :return:
         """
         # let the model learn the upper model index for a new row creation
-        self.source_model.set_upper_model_index(upper_index)
+        self.source_model.set_upper_model_id(id)
 
         # filtering in the sku view
         self.proxy_model.setFilterRegularExpression(
@@ -194,7 +194,7 @@ class InventoryTableWidget(QWidget):
         :return:
         """
         self.proxy_model.setFilterRegularExpression("^\\d*$")
-        self.source_model.set_upper_model_index(None)
+        self.source_model.set_upper_model_id(None)
 
     def set_col_hidden(self, left_most_hidden: str):
         left_most_col_num = self.source_model.get_col_number(left_most_hidden)

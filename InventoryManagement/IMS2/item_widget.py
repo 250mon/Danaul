@@ -101,10 +101,10 @@ class ItemWidget(InventoryTableWidget):
     @ Slot()
     def edit_mode_clicked(self):
         if self.edit_mode.isChecked():
-            logger.debug('edit_mode_clicked: Now enter into edit mode')
+            logger.debug("Now enter into edit mode")
             self.source_model.set_editable(True)
         elif self.source_model.is_model_editing():
-            logger.debug('edit_mode_clicked: The model is in the middle of editing.'
+            logger.debug("The model is in the middle of editing."
                          ' Should save before exit the mode')
             QMessageBox.information(self,
                                     '편집모드 중 종료',
@@ -112,7 +112,7 @@ class ItemWidget(InventoryTableWidget):
                                     QMessageBox.Close)
             self.edit_mode.setChecked(True)
         else:
-            logger.debug('edit_mode_clicked: Now edit mode ends')
+            logger.debug("Now edit mode ends")
             self.source_model.set_editable(False)
 
     @Slot(str)
@@ -122,9 +122,9 @@ class ItemWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        logger.debug(f'do_action: {action}')
+        logger.debug(f"{action}")
         if action == "add_item":
-            logger.debug('Adding item ...')
+            logger.debug("Adding item ...")
             self.add_new_row()
             if not self.delegate_mode:
                 # Input window mode using DataMapperWidget
@@ -133,9 +133,9 @@ class ItemWidget(InventoryTableWidget):
                                                     new_item_index, self)
 
         elif action == "chg_item":
-            logger.debug('Changing item ...')
+            logger.debug("Changing item ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f'do_actions: chg_item {selected_indexes}')
+                logger.debug(f"chg_item {selected_indexes}")
                 # if self.delegate_mode:
                 #     self.change_rows_by_delegate(selected_indexes)
                 if not self.delegate_mode:
@@ -143,9 +143,9 @@ class ItemWidget(InventoryTableWidget):
                                                         selected_indexes, self)
 
         elif action == "del_item":
-            logger.debug('Deleting item ...')
+            logger.debug("Deleting item ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f'do_actions: del_item {selected_indexes}')
+                logger.debug(f"del_item {selected_indexes}")
                 self.delete_rows(selected_indexes)
 
     def save_model_to_db(self):
@@ -169,7 +169,7 @@ class ItemWidget(InventoryTableWidget):
         :return:
         """
         if self.source_model.is_flag_column(index):
-            logger.debug(f'added_new_item_by_single_item_window: item {index.row()} added')
+            logger.debug(f"item {index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
         if hasattr(self.source_model, "validate_new_row"):
@@ -186,7 +186,7 @@ class ItemWidget(InventoryTableWidget):
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 self.source_model.set_chg_flag(idx)
-                logger.debug(f'changed_items_by_single_item_window: items {idx.row()} changed')
+                logger.debug(f"items {idx.row()} changed")
 
 
     @Slot(QModelIndex)
@@ -197,7 +197,7 @@ class ItemWidget(InventoryTableWidget):
         :param index:
         :return:
         """
-        if not self.edit_mode.isChecked() and index.isValid():
-            src_idx = self.proxy_model.mapToSource(index)
-            if hasattr(self.parent, 'item_selected'):
-                self.parent.item_selected(src_idx)
+        if not self.edit_mode.isChecked() and index.isValid() and hasattr(
+                self.parent, 'item_selected'):
+            item_id = index.siblingAtColumn(self.source_model.get_col_number('item_id')).data()
+            self.parent.item_selected(item_id)

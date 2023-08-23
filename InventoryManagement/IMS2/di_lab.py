@@ -60,7 +60,7 @@ class Lab(metaclass=Singleton):
                         in self.table_df.keys()]
             data_dfs: List = await asyncio.gather(*get_data)
             for df in data_dfs:
-                logger.debug(f'async_init: Retrieved DB data \n{df}')
+                logger.debug(f"Retrieved DB data \n{df}")
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data_dfs.pop()
 
@@ -77,14 +77,14 @@ class Lab(metaclass=Singleton):
         if count > 0:
             self.max_transaction_count = count
         else:
-            logger.warn(f"set_max_transaction_count: "
+            logger.warn(f""
                         f"count({count}) is not a positive integer")
 
     async def _get_col_names_from_db(self, table: str, **kwargs) -> List:
-        logger.debug(f'_get_col_names_from_db: {table}')
+        logger.debug(f"{table}")
         query = f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = $1"
         db_results = await self.di_db_util.select_query(query, [table])
-        logger.debug(f'_get_col_names_from_db: db_results: {db_results}')
+        logger.debug(f"{db_results}")
         col_name_list = self._db_to_list(db_results)
         return col_name_list
 
@@ -94,7 +94,7 @@ class Lab(metaclass=Singleton):
         return col_name_list
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
-        logger.debug(f'_get_df_from_db: {table}')
+        logger.debug(f"{table}")
         if table == "transactions":
             sku_id = kwargs.get('sku_id', None)
             beg_ts = kwargs.get('beg_timestamp', '')
@@ -113,10 +113,10 @@ class Lab(metaclass=Singleton):
                             f"order by tr_id desc limit {self.max_transaction_count}"
         else:
             query = f"SELECT * FROM {table}"
-        logger.debug(f'_get_df_from_db: query: {query}')
+        logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)
-        logger.debug(f'_get_df_from_db: db_results: {db_results[:2]}')
+        logger.debug(f"{db_results[:2]}")
         if db_results is None:
             return pd.DataFrame()
         df = self._db_to_df(db_results)
@@ -150,7 +150,7 @@ class Lab(metaclass=Singleton):
         self.user_id_s = make_series('users', False)
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
-        logger.debug(f'update_lab_df_from_db: table {table}')
+        logger.debug(f"table {table}")
         self.table_df[table] = await self._get_df_from_db(table, **kwargs)
 
     async def insert_df(self, table: str, new_df: pd.DataFrame):

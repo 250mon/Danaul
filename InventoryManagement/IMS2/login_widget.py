@@ -44,11 +44,11 @@ class LoginWidget(QWidget):
         database.setPassword(config.options["Passwd"])
         database.setDatabaseName(config.options["Database"])
         if not database.open():
-            logger.error("createConnection: Unable to Connect.")
+            logger.error("Unable to Connect.")
             logger.error(database.lastError())
             sys.exit(1)  # Error code 1 - signifies error
         else:
-            logger.debug("createConnection: Connected")
+            logger.debug("Connected")
 
         # Check if the tables we need exist in the database
         # tables_needed = {"users"}
@@ -113,16 +113,16 @@ class LoginWidget(QWidget):
         result = None
         if query.next():
             result = query.value(0)
-            logger.debug("query_user_password: Got a password!")
+            logger.debug("Got a password!")
         else:
-            logger.debug("query_user_password: No password found")
+            logger.debug("No password found")
 
         return result
 
     def insert_user_info(self, user_name, hashed_user_pw):
         query = QSqlQuery()
         pw = QByteArray(hashed_user_pw)
-        logger.debug(f'insert_user_info: username:{user_name}, password:{pw}')
+        logger.debug(f"{user_name}, password:{pw}")
         query.prepare("""INSERT INTO users (user_name, user_password) VALUES ($1, $2)
                             ON CONFLICT (user_name)
                             DO
@@ -132,13 +132,13 @@ class LoginWidget(QWidget):
         query.addBindValue(pw)
 
         if query.exec():
-            logger.debug("insert_user_info: User info inserted!")
+            logger.debug("User info inserted!")
         else:
             QMessageBox.warning(self,
                                 "Warning",
                                 "User name or password is improper!!",
                                 QMessageBox.Close)
-            logger.debug("insert_user_info: User info not inserted!")
+            logger.debug("User info not inserted!")
             logger.debug(f"{query.lastError()}")
 
     def encrypt_password(self, password):
@@ -173,7 +173,7 @@ class LoginWidget(QWidget):
                 # Open the SQL management application
                 sleep(0.5)  # Pause slightly before showing the parent window
                 self.start_main.emit(user_name)
-                logger.debug("process_login: Passed!!!")
+                logger.debug("Passed!!!")
         else:
             QMessageBox.warning(self,
                                 "Information Incorrect",

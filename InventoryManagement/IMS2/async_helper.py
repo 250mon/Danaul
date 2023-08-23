@@ -44,7 +44,7 @@ class AsyncHelper(QObject):
     def on_worker_started(self, action: str):
         """ To use asyncio and Qt together, one must run the asyncio
             event loop as a "guest" inside the Qt "host" event loop. """
-        logger.debug(f'on_worker_started... {action}')
+        logger.debug(f"on_worker_started... {action}")
         if not self.entry:
             raise Exception("No entry point for the asyncio event loop was set.")
         asyncio.set_event_loop(self.loop)

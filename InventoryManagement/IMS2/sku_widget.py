@@ -90,10 +90,10 @@ class SkuWidget(InventoryTableWidget):
     @ Slot()
     def edit_mode_clicked(self):
         if self.edit_mode.isChecked():
-            logger.debug('edit_mode_clicked: Now enter into edit mode')
+            logger.debug("Now enter into edit mode")
             self.source_model.set_editable(True)
         elif self.source_model.is_model_editing():
-            logger.debug('edit_mode_clicked: The model is in the middle of editing.'
+            logger.debug("The model is in the middle of editing."
                          ' Should save before exit the mode')
             QMessageBox.information(self,
                                     '편집모드 중 종료',
@@ -101,7 +101,7 @@ class SkuWidget(InventoryTableWidget):
                                     QMessageBox.Close)
             self.edit_mode.setChecked(True)
         else:
-            logger.debug('edit_mode_clicked: Now edit mode ends')
+            logger.debug("Now edit mode ends")
             self.source_model.set_editable(False)
 
     @Slot(str)
@@ -111,9 +111,9 @@ class SkuWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        logger.debug(f'do_action: {action}')
+        logger.debug(f"{action}")
         if action == "add_sku":
-            logger.debug('Adding sku ...')
+            logger.debug("Adding sku ...")
             if not self.add_new_row():
                 QMessageBox.information(self,
                                         "Failed New Sku",
@@ -121,7 +121,7 @@ class SkuWidget(InventoryTableWidget):
                                         QMessageBox.Close)
 
         elif action == "del_sku":
-            logger.debug('Deleting sku ...')
+            logger.debug("Deleting sku ...")
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
 
@@ -146,7 +146,6 @@ class SkuWidget(InventoryTableWidget):
         :param index:
         :return:
         """
-        if not self.edit_mode.isChecked() and index.isValid():
-            src_idx = self.proxy_model.mapToSource(index)
-            if hasattr(self.parent, 'sku_selected'):
-                self.parent.sku_selected(src_idx)
+        if not self.edit_mode.isChecked() and index.isValid() and hasattr(self.parent, 'sku_selected'):
+            sku_id = index.siblingAtColumn(self.source_model.get_col_number('sku_id')).data()
+            self.parent.sku_selected(sku_id)

@@ -20,14 +20,16 @@ class Logs(metaclass=Singleton):
     def init_logger(self, logger):
         if "Console" in self.log_output:
             ch = logging.StreamHandler()
-            ch.setFormatter(logging.Formatter('%(levelname)s %(name)s: %(message)s'))
+            ch.setFormatter(logging.Formatter('%(levelname)s:%(filename)s:'
+                                              '%(lineno)d:%(funcName)s: %(message)s'))
             ch.setLevel(self.c_log_level)
             logger.addHandler(ch)
 
         if "File" in self.log_output:
             output_file_name = self.output_filename + str(datetime.now().strftime("%y%m%d_%H%M%S"))
             fh = logging.FileHandler(output_file_name)
-            fh.setFormatter(logging.Formatter('%(levelname)s %(name)s: %(message)s'))
+            fh.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(filename)s:'
+                                              '%(lineno)d:%(funcName)s: %(message)s'))
             fh.setLevel(self.f_log_level)
             logger.addHandler(fh)
 

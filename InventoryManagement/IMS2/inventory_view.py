@@ -1,4 +1,5 @@
 import sys, os
+from time import sleep
 from typing import List
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
@@ -18,6 +19,7 @@ from sku_widget import SkuWidget
 from tr_widget import TrWidget
 from di_logger import Logs, logging
 from constants import CONFIG_FILE
+from emr_tr_reader import EmrTransactionReader
 
 # TODO
 # 1. excel file import / export
@@ -67,12 +69,18 @@ class InventoryWindow(QMainWindow):
         exit_action.setStatusTip('Exit application')
         exit_action.triggered.connect(QApplication.instance().quit)
 
+        import_tr_action = QAction(QIcon('../assets/import.png'), 'Import transactions', self)
+        import_tr_action.setStatusTip('Import transactions')
+        import_tr_action.triggered.connect(self.import_transactions)
+
         self.statusBar()
 
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
-        filemenu = menubar.addMenu('&File')
-        filemenu.addAction(exit_action)
+
+        file_menu = menubar.addMenu('&File')
+        file_menu.addAction(exit_action)
+        file_menu.addAction(import_tr_action)
 
     def setUpMainWindow(self):
         self.item_widget = ItemWidget(self)
@@ -135,18 +143,18 @@ class InventoryWindow(QMainWindow):
         :param df:
         :return:
         """
-        logger.debug(f'{action}')
+        logger.debug(f"{action}")
         if action == "item_save":
-            logger.debug('Saving items ...')
+            logger.debug("Saving items ...")
             result_str = await self.item_widget.save_to_db()
-            logger.debug('Updating models ...')
+            logger.debug("Updating models ...")
             await self.update_models(['items', 'skus'])
         elif action == "sku_save":
-            logger.debug('Saving skus ...')
+            logger.debug("Saving skus ...")
             result_str = await self.sku_widget.save_to_db()
             await self.update_models(['skus'])
         elif action == "tr_save":
-            logger.debug('Saving transactions ...')
+            logger.debug("Saving transactions ...")
             result_str = await self.sku_widget.save_to_db()
             result_str = await self.tr_widget.save_to_db()
             await self.update_models(['skus'])
@@ -166,21 +174,31 @@ class InventoryWindow(QMainWindow):
             await self.tr_model.update()
             pass
 
-    def item_selected(self, item_index: QModelIndex):
+    def item_selected(self, item_id: int):
         """
         A double-click event in the item view triggers this method,
         and this method consequently calls the sku view to display
         the item selected
         """
-        self.sku_widget.filter_selection(item_index)
+        self.sku_widget.filter_selection(item_id)
 
-    def sku_selected(self, sku_index: QModelIndex):
+    def sku_selected(self, sku_id: int):
         """
         A double-click event in the sku view triggers this method,
         and this method consequently calls transaction view to display
         the sku selected
         """
-        self.tr_widget.filter_selection(sku_index)
+        self.tr_widget.filter_selection(sku_id)
+
+    def import_transactions(self):
+        reader = EmrTransactionReader("bit_doc.xlsx")
+        bit_df = reader.read_df_from(['noci40,noci40_fr', 'noci120,noci120_fr'])
+        if bit_df is None:
+            logger.debug("bit_df is None")
+        else:
+            logger.debug(f"\n{bit_df}")
+            self.tr_widget.filter_no_selection()
+            self.tr_model.append_new_rows_from_bit(bit_df)
 
 
 if __name__ == '__main__':

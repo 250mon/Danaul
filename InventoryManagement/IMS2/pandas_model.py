@@ -93,7 +93,7 @@ class PandasModel(QAbstractTableModel):
             return False
 
     def flags(self, index: QModelIndex):
-        # logger.debug(f"flags: index({index.row()},{index.column()}) "
+        # logger.debug(f"index({index.row()},{index.column()}) "
         #              f"is_editable({self.is_editable}) "
         #              f"uneditable_rows_{self.uneditable_rows_set} "
         #              f"new_rows_{self.new_rows_set} "
@@ -124,22 +124,22 @@ class PandasModel(QAbstractTableModel):
         self.is_editable= is_editable
 
     def set_editable_row(self, row: int):
-        logger.debug(f'set_editable_row: row{row} => '
+        logger.debug(f"row{row} => "
                      f'editable_rows_{self.editable_rows_set}')
         self.editable_rows_set.add(row)
 
     def unset_editable_row(self, row: int):
-        logger.debug(f'unset_editable_row: row{row} from '
+        logger.debug(f"row{row} from "
                      f'editable_rows_{self.editable_rows_set}')
         if row in self.editable_rows_set:
             self.editable_rows_set.remove(row)
         else:
-            logger.warn(f'unset_editable_row: cannot find '
+            logger.warn(f"unset_editable_row: cannot find "
                         f'row {row} int the set')
 
     def clear_editable_rows(self):
         if any(self.editable_rows_set):
-            logger.debug(f'clear_editable_rows: remove all rows from '
+            logger.debug(f"remove all rows from "
                          f'editable_rows_{self.editable_rows_set}')
             self.editable_rows_set.clear()
 
@@ -149,21 +149,21 @@ class PandasModel(QAbstractTableModel):
         :param row:
         :return:
         """
-        logger.debug(f'set_new_row: row{row} => new_rows_{self.new_rows_set}')
+        logger.debug(f"row{row} => new_rows_{self.new_rows_set}")
         self.new_rows_set.add(row)
 
     def unset_new_row(self, row: int):
-        logger.debug(f'unset_editable_new_row: remove row {row} from '
+        logger.debug(f"remove row {row} from "
                      f'new_rows_{self.new_rows_set}')
         if row in self.new_rows_set:
             self.new_rows_set.remove(row)
         else:
-            logger.warn(f'unset_editable_new_row: cannot find row {row} int the set')
+            logger.warn(f"unset_editable_new_row: cannot find row {row} int the set")
 
     def clear_new_rows(self):
         if any(self.new_rows_set):
             self.new_rows_set.clear()
-            logger.debug(f'set_editable_new_row : clearing')
+            logger.debug(f"set_editable_new_row : clearing")
 
     def set_uneditable_row(self, row: int):
         """
@@ -171,21 +171,21 @@ class PandasModel(QAbstractTableModel):
         :param row:
         :return:
         """
-        logger.debug(f'set_uneditable_row: row{row} => '
+        logger.debug(f"row{row} => "
                      f'uneditable_rows_{self.uneditable_rows_set}')
         self.uneditable_rows_set.add(row)
 
     def unset_uneditable_row(self, row: int):
-        logger.debug(f'unset_uneditable_row: remove row {row} from '
+        logger.debug(f"remove row {row} from "
                      f'uneditable_rows_{self.uneditable_rows_set}')
         if row in self.uneditable_rows_set:
             self.uneditable_rows_set.remove(row)
         else:
-            logger.warn(f'unset_uneditable_row: cannot find row {row} int the set')
+            logger.warn(f"unset_uneditable_row: cannot find row {row} int the set")
 
     def clear_uneditable_rows(self):
         if any(self.uneditable_rows_set):
-            logger.debug(f'clear_uneditable_row: remove all rows from '
+            logger.debug(f"remove all rows from "
                          f'uneditable_rows_{self.uneditable_rows_set}')
             self.uneditable_rows_set.clear()
 

@@ -87,7 +87,7 @@ class TrWidget(InventoryTableWidget):
         end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
         date_search_btn = QPushButton('조회')
         date_search_btn.clicked.connect(lambda: self.filter_selection(
-            self.source_model.selected_upper_index))
+            self.source_model.selected_upper_id))
         two_search_btn = QPushButton('2')
         two_search_btn.clicked.connect(lambda: self.set_max_search_count(2))
         five_search_btn = QPushButton('5')
@@ -153,22 +153,22 @@ class TrWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        logger.debug(f'do_action: {action}')
+        logger.debug(f"{action}")
 
         if action == "buy":
-            logger.debug('do_actions: buying ...')
+            logger.debug("buying ...")
             self.add_new_tr('Buy')
         elif action == "sell":
-            logger.debug('do_actions: selling ...')
+            logger.debug("selling ...")
             self.add_new_tr('Sell')
         elif action == "adj+":
-            logger.debug('do_actions: adjusting plus ...')
+            logger.debug("adjusting plus ...")
             self.add_new_tr(tr_type='AdjustmentPlus')
         elif action == "adj-":
-            logger.debug('do_actions: adjusting minus ...')
+            logger.debug("adjusting minus ...")
             self.add_new_tr(tr_type='AdjustmentMinus')
         elif action == "del_tr":
-            logger.debug('Deleting tr ...')
+            logger.debug("Deleting tr ...")
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
 
@@ -179,7 +179,6 @@ class TrWidget(InventoryTableWidget):
         save_to_db()
         :return:
         """
-        last_index = self.source_model.index(self.source_model.rowCount() - 1, 0)
         self.source_model.update_sku_qty()
 
         if hasattr(self.parent, "async_start"):
@@ -204,12 +203,11 @@ class TrWidget(InventoryTableWidget):
         If it fails to pass the validation, remove it.
         :return:
         """
-        logger.debug(f'added_new_tr_by_single_tr_window: tr {index.row()} added')
+        logger.debug(f"tr {index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
-        if hasattr(self.source_model, "validate_new_row"):
-            if not self.source_model.validate_new_row(src_idx):
-                self.source_model.drop_rows([src_idx])
+        if not self.source_model.validate_new_row(src_idx):
+            self.source_model.drop_rows([src_idx])
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
@@ -223,23 +221,25 @@ class TrWidget(InventoryTableWidget):
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
 
-    def filter_selection(self, sku_index: QModelIndex):
+    def update_tr_view(self):
+        # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
+        # retrieve the data about the selected sku_id from DB
+        self.parent.async_start('tr_update')
+        # displaying the sku name in the tr view
+        self.sku_name_label.setText(self.source_model.selected_upper_name)
+
+    def filter_selection(self, sku_id: int):
         """
         A double-click event in the sku view triggers the parent's
         sku_selected method which in turn calls this method
         :param sku_id:
         :return:
         """
-        logger.debug(f"filter_selection: sku_index: {sku_index}")
-        # if there is remaining unsaved new rows, drop them
-        self.source_model.del_new_rows()
+        logger.debug(f"sku_id({sku_id})")
         # set selected_sku_id
-        self.source_model.set_upper_model_index(sku_index)
-        # retrieve the data about the selected sku_id from DB
-        self.parent.async_start('tr_update')
-        # displaying the sku name in the tr view
-        if hasattr(self.source_model, 'selected_upper_name'):
-            self.sku_name_label.setText(self.source_model.selected_upper_name)
+        self.source_model.set_upper_model_id(sku_id)
+        self.update_tr_view()
 
     def filter_no_selection(self):
         """
@@ -247,12 +247,9 @@ class TrWidget(InventoryTableWidget):
         :return:
         """
         # set selected_sku_id to None
-        self.source_model.set_upper_model_index(None)
-        # retrieve the data about no selected sku_id from DB
-        self.parent.async_start('tr_update')
-        # displaying the sku name in the tr view
-        self.sku_name_label.setText("")
+        self.source_model.set_upper_model_id(None)
+        self.update_tr_view()
 
     def set_max_search_count(self, max_count: int):
         Lab().set_max_transaction_count(max_count)
-        self.filter_selection(self.source_model.selected_upper_index)
+        self.filter_selection(self.source_model.selected_upper_id)

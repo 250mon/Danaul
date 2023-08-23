@@ -22,10 +22,12 @@ class EmrTransactionReader():
 
             # the result is a dataframe whose index is db_code and name is 총계
             bit_df = bit_df.groupby(by=['bit_code'], dropna=True).sum().loc[:, ["총계"]]
-            logger.debug(f"read_df_from: \n{bit_df}")
+            bit_df = bit_df.rename(columns={"총계": "tr_qty"})
+            logger.debug(f"\n{bit_df}")
             return bit_df
 
-        except:
+        except Exception as e:
+
             return None
 
 

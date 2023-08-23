@@ -61,14 +61,9 @@ class SkuModel(DataModel):
             self.model_df.loc[:, 'sub_name'], na_rep="-", sep=" ").str.replace("None", "")
         self.model_df['flag'] = RowFlags.OriginalRow
 
-    def set_upper_model_index(self, item_model_index: QModelIndex or None):
-        self.selected_upper_index = item_model_index
-
-        if item_model_index is not None:
-            self.selected_upper_id = item_model_index.siblingAtColumn(
-                self.item_model.get_col_number('item_id')).data()
-        else:
-            self.selected_upper_id = None
+    def set_upper_model_id(self, item_id: int or None):
+        self.selected_upper_id = item_id
+        logger.debug(f"item_id({self.selected_upper_id}) is set")
 
     def get_default_delegate_info(self) -> List[int]:
         """
@@ -172,7 +167,7 @@ class SkuModel(DataModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
-        logger.debug(f'setData({index}, {value})')
+        logger.debug(f"index({index}) value({value})")
 
         col_name = self.get_col_name(index.column())
         if col_name == 'active':
@@ -225,15 +220,15 @@ class SkuModel(DataModel):
         :return: new dataframe if succeeds, otherwise None
         """
         if self.selected_upper_id is None:
-            logger.error('make_a_new_row_df: item_id is empty')
+            logger.error("item_id is empty")
             return None
         elif not self.item_model.get_data_from_id(self.selected_upper_id, 'active'):
-            logger.error('make_a_new_row_df: item_id is not active')
+            logger.error("item_id is not active")
             return None
 
         default_item_id = self.selected_upper_id
         item_name = self.item_model.get_data_from_id(default_item_id, 'item_name')
-        logger.debug(f'make_a_new_row_df: {default_item_id} {item_name} being created')
+        logger.debug(f"item_id({default_item_id}) item_name({item_name}) being created")
         exp_date = date(9999, 1, 1)
 
         new_model_df = pd.DataFrame([{
@@ -252,8 +247,11 @@ class SkuModel(DataModel):
         }])
         return new_model_df
 
-    def update_sku_qty_after_transaction(self, index: QModelIndex, qty: int):
-        logger.debug(f'update_sku_qty_after_transaction: {qty}')
-        self.set_chg_flag(index)
-        self.setData(index.siblingAtColumn(self.get_col_number('sku_qty')), qty)
+    def update_sku_qty_after_transaction(self, sku_id: int, qty: int):
+        logger.debug(f"qty({qty})")
+        qty_index = self.index(self.model_df[self.model_df["sku_id"] == sku_id].index[0],
+                               self.get_col_number("sku_qty"),
+                               QModelIndex())
+        self.set_chg_flag(qty_index)
+        self.setData(qty_index, qty)
         self.clear_editable_rows()

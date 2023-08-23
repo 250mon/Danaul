@@ -55,8 +55,8 @@ class InventoryDb:
             stmt_value_part = ','.join(place_holders)
             stmt = f"INSERT INTO {table_name} VALUES({stmt_value_part})"
             return stmt
-        logger.debug(f"insert_df: Insert into {table}...")
-        logger.debug(f"insert_df: \n{df}")
+        logger.debug(f"Insert into {table}...")
+        logger.debug(f"\n{df}")
         args = df.values.tolist()
         stmt = make_stmt(table, args[0])
 
@@ -64,7 +64,7 @@ class InventoryDb:
         non_default_df = df.loc[:, df.iloc[0, :] != 'DEFAULT']
         args = non_default_df.values.tolist()
 
-        logger.debug(f"insert_df: {stmt} {args}")
+        logger.debug(f"{stmt} {args}")
         # return await self.db_util.pool_execute(stmt, args)
         return await self.db_util.executemany(stmt, args)
 
@@ -92,7 +92,7 @@ class InventoryDb:
         # args = [(item.item_id,) for item in items_df.itertuples()]
         col_name, id_series = next(del_df.items())
         args = [(_id,) for _id in id_series]
-        logger.debug(f"delete_df: Delete {col_name} = {args} from {table} ...")
+        logger.debug(f"Delete {col_name} = {args} from {table} ...")
         return await self.db_util.delete(table, col_name, args)
 
     async def update_df(self, table: str, up_df: pd.DataFrame):
@@ -102,7 +102,7 @@ class InventoryDb:
         ph_str = ','.join(place_holders)
         stmt = f"UPDATE {table} SET {ph_str} WHERE {id_name}=$1"
         args = [_tuple[1:] for _tuple in up_df.itertuples()]
-        logger.debug(f"update_df: {stmt}")
+        logger.debug(f"{stmt}")
         logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
@@ -132,7 +132,7 @@ class InventoryDb:
 
     async def delete_skus_df(self, skus_df: pd.DataFrame):
         args = [(sku_row.sku_id,) for sku_row in skus_df.itertuples()]
-        logger.debug(f"delete_record: Delete ids {args} from skus table ...")
+        logger.debug(f"Delete ids {args} from skus table ...")
         return await self.db_util.delete('skus', 'sku_id', args)
 
     async def update_trs_df(self, trs_df: pd.DataFrame):
@@ -160,7 +160,7 @@ class InventoryDb:
 
     async def delete_trs_df(self, trs_df: pd.DataFrame):
         args = [(tr_row.tr_id,) for tr_row in trs_df.itertuples()]
-        logger.debug(f"delete_record: Delete ids {args} from transactions table ...")
+        logger.debug(f"Delete ids {args} from transactions table ...")
         return await self.db_util.delete('transactions', 'tr_id', args)
 
 async def main():
