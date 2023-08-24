@@ -257,6 +257,6 @@ class SkuModel(DataModel):
         self.clear_editable_rows()
 
     def get_bit_codes(self) -> List:
-        code_set = set(self.model_df.bit_code.to_list())\
+        code_set = set(self.model_df.bit_code.to_list())
         code_set.discard('')
         return list(code_set)
