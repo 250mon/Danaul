@@ -16,4 +16,3 @@ class DefaultDelegate(QStyledItemDelegate):
                         option: QStyleOptionViewItem,
                         index: QModelIndex) -> None:
         super().initStyleOption(option, index)
-        option.backgroundBrush = QBrush(self.p_model.delegate_background_color(index))

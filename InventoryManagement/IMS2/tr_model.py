@@ -129,6 +129,9 @@ class TrModel(DataModel):
         }
         return spin_info_dict
 
+    def is_active_row(self, index: QModelIndex) -> bool:
+        return True
+
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
         Override method from QAbstractTableModel
@@ -166,7 +169,7 @@ class TrModel(DataModel):
                 return Qt.AlignCenter
 
         else:
-            return None
+            return super().data(index, role)
 
     def setData(self,
                 index: QModelIndex,

@@ -93,12 +93,6 @@ class PandasModel(QAbstractTableModel):
             return False
 
     def flags(self, index: QModelIndex):
-        # logger.debug(f"index({index.row()},{index.column()}) "
-        #              f"is_editable({self.is_editable}) "
-        #              f"uneditable_rows_{self.uneditable_rows_set} "
-        #              f"new_rows_{self.new_rows_set} "
-        #              f"Edit_Level({self.edit_level}) "
-        #              f"Col_Edit_Level({self.col_idx_edit_lvl[index.column()]})")
         if not index.isValid():
             logger.debug(f"CHECK!!! index({index}) is not valid")
             return False
@@ -191,12 +185,6 @@ class PandasModel(QAbstractTableModel):
             logger.debug(f"remove all rows from "
                          f'uneditable_rows_{self.uneditable_rows_set}')
             self.uneditable_rows_set.clear()
-
-    def delegate_background_color(self, index: QModelIndex) -> QColor:
-        if self.col_idx_edit_lvl[index.column()] <= self.edit_level:
-            return QColor("#D1F2EB")
-        else:
-            return QColor(Qt.transparent)
 
 
 if __name__ == "__main__":

@@ -3,9 +3,9 @@ from time import sleep
 from typing import List
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
-    QVBoxLayout
+    QVBoxLayout, QFileDialog, QInputDialog
 )
-from PySide6.QtCore import Qt, Signal, Slot, QModelIndex
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QAction, QIcon
 from login_widget import LoginWidget
 from async_helper import AsyncHelper
@@ -18,13 +18,8 @@ from item_widget import ItemWidget
 from sku_widget import SkuWidget
 from tr_widget import TrWidget
 from di_logger import Logs, logging
-from constants import CONFIG_FILE
+from constants import CONFIG_FILE, UserPrivilege
 from emr_tr_reader import EmrTransactionReader
-
-# TODO
-# 1. excel file import / export
-# 2. skus sum up and assign it to the root_sku
-# 3. tr filter: period
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -39,9 +34,9 @@ class InventoryWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        # self.login()
-        self.user_name = None
-        self.initUI('admin')
+        # self.user_name = None
+        # self.initUI('admin')
+        self.login()
 
     def login(self):
         self.login_widget = LoginWidget(CONFIG_FILE, self)
@@ -51,36 +46,51 @@ class InventoryWindow(QMainWindow):
     @Slot(str)
     def initUI(self, user_name: str):
         self.user_name = user_name
-        self.setMinimumSize(1500, 800)
-        self.setWindowTitle("다나을 재고관리")
-        self.setup_menu()
-
         self.item_model = ItemModel(self.user_name)
         self.sku_model = SkuModel(self.user_name, self.item_model)
         self.tr_model = TrModel(self.user_name, self.sku_model)
+
+        self.setMinimumSize(1500, 800)
+        self.setWindowTitle("다나을 재고관리")
+        self.setup_menu()
 
         self.setUpMainWindow()
         self.async_helper = AsyncHelper(self, self.save_to_db)
         self.show()
 
     def setup_menu(self):
+        self.statusBar()
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
+
+        # File menu
         exit_action = QAction(QIcon('../assets/exit.png'), 'Exit', self)
         exit_action.setShortcut('Ctrl+Q')
         exit_action.setStatusTip('Exit application')
         exit_action.triggered.connect(QApplication.instance().quit)
 
         import_tr_action = QAction(QIcon('../assets/import.png'), 'Import transactions', self)
+        import_tr_action.setShortcut('Ctrl+O')
         import_tr_action.setStatusTip('Import transactions')
-        import_tr_action.triggered.connect(self.import_transactions)
-
-        self.statusBar()
-
-        menubar = self.menuBar()
-        menubar.setNativeMenuBar(False)
+        import_tr_action.triggered.connect(self.show_file_dialog)
 
         file_menu = menubar.addMenu('&File')
         file_menu.addAction(exit_action)
         file_menu.addAction(import_tr_action)
+
+        # Admin menu
+        if self.item_model.get_user_privilege() == UserPrivilege.Admin:
+            reset_pw_action = QAction('Reset password', self)
+            reset_pw_action.triggered.connect(self.reset_password)
+
+            admin_menu = menubar.addMenu('Admin')
+            admin_menu.addAction(reset_pw_action)
+
+    def reset_password(self):
+        u_name, ok = QInputDialog.getText(self, "Reset Password", "Enter user name:")
+        if ok:
+            hashed_pw = self.login_widget.encrypt_password("a")
+            self.login_widget.insert_user_info(u_name, hashed_pw)
 
     def setUpMainWindow(self):
         self.item_widget = ItemWidget(self)
@@ -190,8 +200,17 @@ class InventoryWindow(QMainWindow):
         """
         self.tr_widget.filter_selection(sku_id)
 
-    def import_transactions(self):
-        reader = EmrTransactionReader("bit_doc.xlsx")
+    def show_file_dialog(self):
+        fname = QFileDialog.getOpenFileName(self, 'Open file', '../')
+        if fname[0]:
+            self.import_transactions(fname[0])
+
+    def import_transactions(self, file_name):
+        reader = EmrTransactionReader(file_name)
+        if reader is None:
+            logger.debug("Invalid file")
+            return
+
         codes = self.sku_model.get_bit_codes()
         bit_df = reader.read_df_from(codes)
         if bit_df is None:

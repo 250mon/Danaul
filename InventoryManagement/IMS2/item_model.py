@@ -101,24 +101,8 @@ class ItemModel(DataModel):
             else:
                 return Qt.AlignCenter
 
-        # elif role == Qt.BackgroundRole:
-        #     if self.is_row_type(index, 'deleted'):
-        #         return QBrush(Qt.darkGray)
-        #     elif not self.is_active_row(index):
-        #         return QBrush(Qt.lightGray)
-        #     elif self.is_row_type(index, 'new'):
-        #         if self.column_edit_level[col_name] <= EditLevel.Creatable:
-        #             return QBrush(Qt.yellow)
-        #         else:
-        #             return QBrush(Qt.darkYellow)
-        #     elif self.is_row_type(index, 'changed'):
-        #         if self.column_edit_level[col_name] <= self.edit_level:
-        #             return QBrush(Qt.green)
-        #         else:
-        #             return QBrush(Qt.darkGreen)
-
         else:
-            return None
+            return super().data(index, role)
 
     def setData(self,
                 index: QModelIndex,

@@ -24,8 +24,8 @@ CREATE_SKU_TABLE = \
         sku_id SERIAL PRIMARY KEY,
         active BOOL NOT NULL DEFAULT TRUE,
         root_sku INT NOT NULL DEFAULT 0,
-        sub_name VARCHAR(50),
-        bit_code VARCHAR(20),
+        sub_name TEXT,
+        bit_code TEXT,
         sku_qty INT NOT NULL,
         min_qty INT NOT NULL DEFAULT 2,
         item_id INT NOT NULL,
@@ -39,7 +39,7 @@ CREATE_USER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS users(
         user_id SERIAL PRIMARY KEY,
-        user_name VARCHAR(20) NOT NULL,
+        user_name TEXT NOT NULL,
         user_password BYTEA NOT NULL,
         UNIQUE(user_name)
     );"""
@@ -48,7 +48,7 @@ CREATE_TRANSACTION_TYPE_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS transaction_type(
         tr_type_id SERIAL PRIMARY KEY,
-        tr_type VARCHAR(20) NOT NULL,
+        tr_type TEXT NOT NULL,
         UNIQUE(tr_type)
     );"""
 

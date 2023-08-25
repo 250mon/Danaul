@@ -10,7 +10,7 @@ from di_lab import Lab
 from di_table_widget import InventoryTableWidget
 from tr_model import TrModel
 from single_tr_window import SingleTrWindow
-from constants import ADMIN_GROUP, UserPrivilege
+from constants import UserPrivilege
 
 
 logger = Logs().get_logger(os.path.basename(__file__))

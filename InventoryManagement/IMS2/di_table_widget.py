@@ -209,7 +209,7 @@ class InventoryTableWidget(QWidget):
         left_most_col_num = self.source_model.get_col_number(left_most_hidden)
         last_col_num = len(self.source_model.column_names)
         for c in range(left_most_col_num, last_col_num):
-            self.table_view.setColumnWidth(c, 2)
+            self.table_view.setColumnWidth(c, 1)
             # The following methods don't allow the hidden col
             # to be accessible
             # self.table_view.horizontalHeader().hideSection(c)

@@ -4,7 +4,7 @@ import asyncpg.exceptions
 from typing import Dict, List
 from abc import abstractmethod
 from PySide6.QtCore import QModelIndex, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QBrush
 from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -89,9 +89,6 @@ class DataModel(PandasModel):
         """
         flag = self.model_df.iloc[index.row(), self.get_col_number('flag')]
         return flag
-
-    def is_active_row(self, index: QModelIndex) -> bool:
-        return self.model_df.iloc[index.row(), self.get_col_number('active')]
 
     def set_upper_model_id(self, index: QModelIndex or None):
         """
@@ -178,6 +175,40 @@ class DataModel(PandasModel):
             return None
         return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
 
+    def is_active_row(self, index: QModelIndex) -> bool:
+        """
+        Default implementation
+        :param index:
+        :return:
+        """
+        return self.model_df.iloc[index.row(), self.get_col_number('active')]
+
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
+        if role == Qt.BackgroundRole:
+            if self.get_flag(index) & RowFlags.DeletedRow > 0:
+                return QBrush(Qt.darkGray)
+            elif not self.is_active_row(index):
+                return QBrush(Qt.lightGray)
+            elif self.is_colored_cell(index):
+                return QBrush(self.cell_color(index))
+            elif self.get_flag(index) & RowFlags.NewRow > 0:
+                if self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable:
+                    return QBrush(QColor(255, 255, 0))
+                else:
+                    return QBrush(QColor(255, 255, 0, 25))
+            elif self.get_flag(index) & RowFlags.ChangedRow > 0:
+                if self.col_idx_edit_lvl[index.column()] <= self.edit_level:
+                    return QBrush(QColor(0, 255, 0))
+                else:
+                    return QBrush(QColor(0, 255, 0, 25))
+            else:
+                if self.col_idx_edit_lvl[index.column()] <= self.edit_level:
+                    return QBrush(QColor(100, 255, 255, 25))
+                else:
+                    return QBrush(QColor(255, 255, 255))
+        else:
+            return None
+
     def setData(self,
                 index: QModelIndex,
                 value: object,
@@ -196,8 +227,21 @@ class DataModel(PandasModel):
 
         return result
 
-    def delegate_background_color(self, index: QModelIndex) -> QColor:
-        return super().delegate_background_color(index)
+    def is_colored_cell(self, index: QModelIndex) -> bool:
+        """
+        Use it if any special color is needed for a particular cell
+        :param index:
+        :return:
+        """
+        return False
+
+    def cell_color(self, index: QModelIndex) -> QColor:
+        """
+        If it is a colored cell, return a appropriate color
+        :param index:
+        :return:
+        """
+        return QColor(Qt.white)
 
     def append_new_row(self, **kwargs) -> bool:
         """

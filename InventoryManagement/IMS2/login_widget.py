@@ -38,11 +38,11 @@ class LoginWidget(QWidget):
         Check for the tables needed."""
         config = ConfigReader(self.db_config_file)
         database = QSqlDatabase.addDatabase("QPSQL")
-        database.setHostName(config.options["Host"])
-        database.setPort(int(config.options["Port"]))
-        database.setUserName(config.options["User"])
-        database.setPassword(config.options["Passwd"])
-        database.setDatabaseName(config.options["Database"])
+        database.setHostName(config.get_options("Host"))
+        database.setPort(int(config.get_options("Port")))
+        database.setUserName(config.get_options("User"))
+        database.setPassword(config.get_options("Password"))
+        database.setDatabaseName(config.get_options("Database"))
         if not database.open():
             logger.error("Unable to Connect.")
             logger.error(database.lastError())
@@ -83,12 +83,16 @@ class LoginWidget(QWidget):
 
         connect_button = QPushButton("Connect")
         connect_button.clicked.connect(self.process_login)
+        # respond to returnPressed
+        connect_button.setAutoDefault(True)
 
         change_password_button = QPushButton("Change password")
         change_password_button.clicked.connect(lambda: self.process_login(change_pw=True))
+        change_password_button.setAutoDefault(True)
 
         new_user_button = QPushButton("Sign up")
         new_user_button.clicked.connect(lambda: self.register_password_dialog(user_name=None))
+        new_user_button.setAutoDefault(True)
 
         main_v_box = QVBoxLayout()
         main_v_box.setAlignment(Qt.AlignTop)
@@ -153,6 +157,18 @@ class LoginWidget(QWidget):
         # Compare the hashed input password with the stored password
         return hashed_input_password == stored_password
 
+    def verify_user(self, password, user_name):
+        # The following code converts QByteArray to PyBtye(bytes) format
+        # stored_pwd: type is QByteArray hex format
+        stored_pw: QByteArray = self.query_user_password(user_name)
+        if stored_pw is None:
+            return False
+
+        # convert QByteArray to bytes
+        stored_pw_bytes: bytes = stored_pw.data()
+        password_verified = self.verify_password(password, stored_pw_bytes)
+        return password_verified
+
     def process_login(self, change_pw=False):
         """
         Check the user's information. Close the login window if a match
@@ -180,20 +196,10 @@ class LoginWidget(QWidget):
                                 "The user name or password is incorrect.",
                                 QMessageBox.Close)
 
-    def verify_user(self, password, user_name):
-        # The following code converts QByteArray to PyBtye(bytes) format
-        # stored_pwd: type is QByteArray hex format
-        stored_pw: QByteArray = self.query_user_password(user_name)
-        # convert QByteArray to bytes
-        stored_pw_bytes: bytes = stored_pw.data()
-        password_verified = self.verify_password(password, stored_pw_bytes)
-        return password_verified
-
     def register_password_dialog(self, user_name=None):
         """Set up the dialog box for the user to create a new user account."""
         self.hide()  # Hide the login window
         self.user_input_dialog = QDialog(self)
-        print(user_name)
         # create a new user account
         if user_name is None:
             self.user_input_dialog.setWindowTitle("Create New User")

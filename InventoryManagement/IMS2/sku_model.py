@@ -4,7 +4,6 @@ from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtGui import QColor
 from di_data_model import DataModel
-from di_lab import Lab
 from di_logger import Logs, logging
 from datetime_utils import *
 from item_model import ItemModel
@@ -71,7 +70,7 @@ class SkuModel(DataModel):
         :return:
         """
         default_info_list = [self.get_col_number(c) for c in
-                             ['root_sku', 'sub_name', 'description', 'bit_code']]
+                             ['sub_name', 'description', 'bit_code']]
         return default_info_list
 
     def get_combobox_delegate_info(self) -> Dict[int, List]:
@@ -134,24 +133,8 @@ class SkuModel(DataModel):
             else:
                 return Qt.AlignCenter
 
-        # elif role == Qt.BackgroundRole:
-        #     if self.is_row_type(index, 'deleted'):
-        #         return QBrush(Qt.darkGray)
-        #     elif not self.is_active_row(index):
-        #         return QBrush(Qt.lightGray)
-        #     elif self.is_row_type(index, 'new'):
-        #         if self.col_edit_lvl[col_name] <= EditLevel.Creatable:
-        #             return QBrush(Qt.yellow)
-        #         else:
-        #             return QBrush(Qt.darkYellow)
-        #     elif self.is_row_type(index, 'changed'):
-        #         if self.col_edit_lvl[col_name] <= self.edit_level:
-        #             return QBrush(Qt.green)
-        #         else:
-        #             return QBrush(Qt.darkGreen)
-
         else:
-            return None
+            return super().data(index, role)
 
     def setData(self,
                 index: QModelIndex,
@@ -188,30 +171,49 @@ class SkuModel(DataModel):
             if isinstance(value, QDate):
                 value = qdate_to_pydate(value)
 
+        elif col_name == 'root_sku':
+            root_row = self.model_df.loc[self.model_df['sku_id'] == value, :]
+            root_row_s = root_row.iloc[0].squeeze()
+            item_id = index.siblingAtColumn(self.get_col_number("item_id"))
+            if root_row_s.empty or root_row_s.item_id != item_id:
+                return None
+
         return super().setData(index, value, role)
 
-    def check_root_sku_qty(self, root_sku: int) -> bool:
+    def is_sku_qty_correct(self, sku_id: int, sku_qty: int) -> bool:
         """
-        Check if the root_sku qty is equal to the sub skus quantities
+        If it is a root sku, check if it is correct
         :param root_sku:
         :return:
         """
-        sku_grp = self.model_df.loc[self.model_df['root_sku'] == root_sku, ['sku_id', 'sku_qty']]
-        root_qty = sku_grp.loc[self.model_df['sku_id'] == root_sku, 'sku_qty'].item()
-        sub_sum_qty = sku_grp.loc[self.model_df['sku_id'] != root_sku, 'sku_qty'].sum().item()
-        if root_qty != sub_sum_qty:
+        sku_grp = self.model_df.loc[self.model_df['root_sku'] == sku_id, 'sku_qty']
+        if sku_grp.empty:
+            # it does not have any sub skus, then qty is regarded correct
+            return True
+
+        sum_qty = sku_grp.sum().item()
+        if sku_qty != sum_qty:
             return False
         else:
             return True
 
-    def delegate_background_color(self, index: QModelIndex) -> QColor:
-        col_name = self.get_col_name(index.column())
-        if col_name == 'sku_qty':
-            root_sku = index.siblingAtColumn(self.get_col_number('root_sku')).data()
-            if root_sku != 0 and not self.check_root_sku_qty(root_sku):
-                return QColor(Qt.red)
+    def is_colored_cell(self, index: QModelIndex) -> bool:
+        if self.get_col_name(index.column()) == "sku_qty":
+            return True
         else:
-            return super().delegate_background_color(index)
+            return super().is_colored_cell(index)
+
+    def cell_color(self, index: QModelIndex) -> QColor:
+        if self.get_col_name(index.column()) == "sku_qty":
+            row_s = self.model_df.iloc[index.row(), :]
+            if row_s.root_sku == 0 and not self.is_sku_qty_correct(row_s.sku_id, row_s.sku_qty):
+                return QColor(255, 180, 150, 50)
+            elif row_s.sku_qty <= row_s.min_qty:
+                return QColor(Qt.red)
+            else:
+                return super().cell_color(index)
+        else:
+            return super().cell_color(index)
 
     def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame or None:
         """
