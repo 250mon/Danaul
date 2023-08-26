@@ -59,7 +59,7 @@ class InventoryTableWidget(QWidget):
         """
         # table view
         self.table_view = QTableView(self)
-        self.table_view.horizontalHeader().setStretchLastSection(True)
+        # self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.setAlternatingRowColors(True)
         self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.table_view.resizeColumnsToContents()
@@ -204,6 +204,9 @@ class InventoryTableWidget(QWidget):
         self.source_model.del_new_rows()
         self.source_model.set_upper_model_id(None)
         self.proxy_model.setFilterRegularExpression("^\\d*$")
+
+    def set_col_width(self, col_name:str, width: int):
+        self.table_view.setColumnWidth(self.source_model.get_col_number(col_name), width)
 
     def set_col_hidden(self, left_most_hidden: str):
         left_most_col_num = self.source_model.get_col_number(left_most_hidden)

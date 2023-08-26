@@ -63,31 +63,40 @@ class TrWidget(InventoryTableWidget):
         :return:
         """
         self.set_col_hidden('tr_type_id')
+        self.set_col_width("tr_id", 50)
+        self.set_col_width("sku_id", 50)
+        self.set_col_width("tr_timestamp", 200)
+        self.set_col_width("description", 600)
         # Unlike item_widget and sku_widget, tr_widget always allows editing
         # because there is no select mode
         self.source_model.set_editable(True)
 
-        title_label = QLabel('거래내역')
+        title_label = QLabel('거래내역   ')
         font = QFont("Arial", 12, QFont.Bold)
         title_label.setFont(font)
-        hbox1 = QHBoxLayout()
-        hbox1.addWidget(title_label)
-        hbox1.stretch(1)
 
-        # search_bar = QLineEdit(self)
-        # search_bar.setPlaceholderText('매입/매출 입력')
-        # search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
-        search_all_btn = QPushButton('전체조회')
-        search_all_btn.clicked.connect(self.filter_no_selection)
         beg_dateedit = QDateEdit()
+        # beg_dateedit.setMaximumWidth(100)
         beg_dateedit.setDate(self.source_model.beg_timestamp)
         beg_dateedit.dateChanged.connect(self.source_model.set_beg_timestamp)
         end_dateedit = QDateEdit()
+        # end_dateedit.setMaximumWidth(100)
         end_dateedit.setDate(self.source_model.end_timestamp)
         end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
         date_search_btn = QPushButton('조회')
+        # date_search_btn.setMaximumWidth(100)
         date_search_btn.clicked.connect(lambda: self.filter_selection(
             self.source_model.selected_upper_id))
+
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(title_label)
+        hbox1.addWidget(beg_dateedit)
+        hbox1.addWidget(end_dateedit)
+        hbox1.addWidget(date_search_btn)
+        hbox1.addStretch(1)
+
+        search_all_btn = QPushButton('전체조회')
+        search_all_btn.clicked.connect(self.filter_no_selection)
         two_search_btn = QPushButton('2')
         two_search_btn.clicked.connect(lambda: self.set_max_search_count(2))
         five_search_btn = QPushButton('5')
@@ -114,9 +123,6 @@ class TrWidget(InventoryTableWidget):
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(search_all_btn)
-        hbox2.addWidget(beg_dateedit)
-        hbox2.addWidget(end_dateedit)
-        hbox2.addWidget(date_search_btn)
         hbox2.addWidget(two_search_btn)
         hbox2.addWidget(five_search_btn)
         hbox2.addWidget(ten_search_btn)
@@ -124,6 +130,7 @@ class TrWidget(InventoryTableWidget):
         hbox2.addStretch(1)
 
         hbox2.addWidget(self.sku_name_label)
+
         hbox2.addStretch(1)
         hbox2.addWidget(buy_btn)
         hbox2.addWidget(sell_btn)

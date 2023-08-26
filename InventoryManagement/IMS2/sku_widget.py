@@ -49,6 +49,10 @@ class SkuWidget(InventoryTableWidget):
         :return:
         """
         self.set_col_hidden('item_id')
+        self.set_col_width("sku_id", 50)
+        self.set_col_width("root_sku", 50)
+        self.set_col_width("active", 50)
+        self.set_col_width("description", 250)
 
         title_label = QLabel('세부품목')
         font = QFont("Arial", 12, QFont.Bold)

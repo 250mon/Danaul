@@ -50,7 +50,6 @@ class InventoryWindow(QMainWindow):
         self.sku_model = SkuModel(self.user_name, self.item_model)
         self.tr_model = TrModel(self.user_name, self.sku_model)
 
-        self.setMinimumSize(1500, 800)
         self.setWindowTitle("다나을 재고관리")
         self.setup_menu()
 
@@ -95,15 +94,21 @@ class InventoryWindow(QMainWindow):
     def setUpMainWindow(self):
         self.item_widget = ItemWidget(self)
         self.item_widget.set_source_model(self.item_model)
-        self.item_widget.setMaximumWidth(500)
 
         self.sku_widget = SkuWidget(self)
         self.sku_widget.set_source_model(self.sku_model)
-        self.sku_widget.setMaximumWidth(1000)
 
         self.tr_widget = TrWidget(self)
         self.tr_widget.set_source_model(self.tr_model)
-        self.tr_widget.setMaximumWidth(1500)
+
+        self.setMinimumSize(1200, 1000)
+        self.setMaximumSize(1600, 1000)
+        self.item_widget.setMinimumWidth(400)
+        self.item_widget.setMaximumWidth(500)
+        self.sku_widget.setMinimumWidth(800)
+        self.sku_widget.setMaximumWidth(1100)
+        self.tr_widget.setMinimumWidth(1200)
+        self.tr_widget.setMaximumWidth(1600)
 
         # self.setup_dock_widgets()
         self.setup_central_widget()
