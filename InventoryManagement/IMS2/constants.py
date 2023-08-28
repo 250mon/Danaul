@@ -33,10 +33,11 @@ class EditLevel(Enum):
 
 
 class ConfigReader:
-    def __init__(self, config_file):
-        self.options = self.read_config_file(config_file)
+    def __init__(self, file_path="config"):
+        self.options = {}
+        self.read_config_file(file_path)
 
-    def read_config_file(self, file_path="config"):
+    def read_config_file(self, file_path):
         try:
             with open(file_path, 'r') as fd:
                 # strip lines
@@ -46,13 +47,10 @@ class ConfigReader:
                 # parsing
                 words_iter = map(methodcaller("split", "="), lines_filtered)
                 # converting map obj to dict
-                options = {k.strip(): v.strip() for k, v in words_iter}
+                self.options = {k.strip(): v.strip() for k, v in words_iter}
 
         except Exception as e:
             print(e)
-            exit(0)
-
-        return options
 
     def get_options(self, option_name: str):
-        return self.options[option_name]
+        return self.options.get(option_name, None)

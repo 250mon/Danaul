@@ -1,3 +1,4 @@
+import os
 import logging
 from datetime import datetime
 from singleton import Singleton
@@ -26,12 +27,18 @@ class Logs(metaclass=Singleton):
             logger.addHandler(ch)
 
         if "File" in self.log_output:
-            output_file_name = self.output_filename + str(datetime.now().strftime("%y%m%d_%H%M%S"))
-            fh = logging.FileHandler(output_file_name)
+            curr_dir = os.getcwd()
+            log_dir = os.path.join(curr_dir, 'log')
+            os.makedirs(log_dir, exist_ok=True)
+
+            file_name = self.output_filename + str(datetime.now().strftime("%y%m%d_%H%M%S"))
+            log_path = os.path.join(log_dir, file_name + '.log')
+
+            fh = logging.FileHandler(log_path)
             fh.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(filename)s:'
                                               '%(lineno)d:%(funcName)s: %(message)s'))
             fh.setLevel(self.f_log_level)
             logger.addHandler(fh)
 
-    def convert_levels(self, str_lvl):
+    def convert_levels(self, str_lvl: str):
         return getattr(logging, str_lvl)

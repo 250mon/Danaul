@@ -255,10 +255,14 @@ class DataModel(PandasModel):
         else:
             next_new_id = self.model_df.iloc[:, 0].max() + 1
         logger.debug(f"New model_df_row id({next_new_id})")
+
         new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
         if new_row_df is None:
             return False
-        self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
+        elif self.model_df.empty:
+            self.model_df = new_row_df
+        else:
+            self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
 
         self.endInsertRows()
 
@@ -359,9 +363,10 @@ class DataModel(PandasModel):
         :return: the number of deleted new rows
         """
         row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
-        logger.debug(f"row_list {row_list}")
-        indexes = [self.index(row, 0) for row in row_list]
-        self.set_del_flag(indexes)
+        if len(row_list) > 0:
+            logger.debug(f"rows to delete: {row_list}")
+            indexes = [self.index(row, 0) for row in row_list]
+            self.set_del_flag(indexes)
         return len(row_list)
 
     def get_new_df(self) -> pd.DataFrame:
@@ -414,8 +419,6 @@ class DataModel(PandasModel):
             total_results['삭제'] = results_del
             logger.debug(f"result of deleting = {results_del}")
 
-            self.clear_uneditable_rows()
-
         new_df = self.get_new_df()
         if not new_df.empty:
             new_df.loc[:, [self.get_col_name(0)]] = 'DEFAULT'
@@ -426,7 +429,6 @@ class DataModel(PandasModel):
             logger.debug(f"\n{df_to_upload}")
             results_new = await Lab().insert_df(self.table_name, df_to_upload)
             total_results['추가'] = results_new
-            self.clear_new_rows()
             logger.debug(f"result of inserting new rows = {results_new}")
 
         chg_df = self.get_changed_df()
@@ -436,8 +438,11 @@ class DataModel(PandasModel):
             logger.debug(f"\n{df_to_upload}")
             results_chg = await Lab().update_df(self.table_name, df_to_upload)
             total_results['수정'] = results_chg
-            self.clear_editable_rows()
             logger.debug(f"result of changing = {results_chg}")
+
+        self.clear_uneditable_rows()
+        self.clear_new_rows()
+        self.clear_editable_rows()
 
         return make_return_msg(total_results)
 

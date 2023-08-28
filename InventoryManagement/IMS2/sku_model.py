@@ -173,9 +173,12 @@ class SkuModel(DataModel):
 
         elif col_name == 'root_sku':
             root_row = self.model_df.loc[self.model_df['sku_id'] == value, :]
+            if root_row.empty:
+                return None
+
             root_row_s = root_row.iloc[0].squeeze()
-            item_id = index.siblingAtColumn(self.get_col_number("item_id"))
-            if root_row_s.empty or root_row_s.item_id != item_id:
+            item_id = index.siblingAtColumn(self.get_col_number("item_id")).data()
+            if root_row_s.item_id != item_id:
                 return None
 
         return super().setData(index, value, role)
@@ -244,6 +247,7 @@ class SkuModel(DataModel):
             'expiration_date': exp_date,
             'description': "",
             'bit_code': "",
+            'sku_name': item_name,
             'item_id': default_item_id,
             'flag': RowFlags.NewRow
         }])

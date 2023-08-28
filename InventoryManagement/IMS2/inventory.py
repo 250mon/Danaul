@@ -1,5 +1,4 @@
 import sys, os
-from time import sleep
 from typing import List
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
@@ -45,16 +44,15 @@ class InventoryWindow(QMainWindow):
 
     @Slot(str)
     def initUI(self, user_name: str):
-        self.user_name = user_name
-        self.item_model = ItemModel(self.user_name)
-        self.sku_model = SkuModel(self.user_name, self.item_model)
-        self.tr_model = TrModel(self.user_name, self.sku_model)
-
         self.setWindowTitle("다나을 재고관리")
         self.setup_menu()
-
-        self.setUpMainWindow()
         self.async_helper = AsyncHelper(self, self.save_to_db)
+
+        self.setup_main_window(user_name)
+
+    def setup_main_window(self, user_name):
+        self.setup_models(user_name)
+        self.setup_widgets()
         self.show()
 
     def setup_menu(self):
@@ -73,25 +71,35 @@ class InventoryWindow(QMainWindow):
         import_tr_action.setStatusTip('Import transactions')
         import_tr_action.triggered.connect(self.show_file_dialog)
 
+        change_user_action = QAction(QIcon('../assets/user.png'), 'Change user', self)
+        change_user_action.triggered.connect(self.change_user)
+
         file_menu = menubar.addMenu('&File')
         file_menu.addAction(exit_action)
         file_menu.addAction(import_tr_action)
+        file_menu.addAction(change_user_action)
 
         # Admin menu
+        reset_pw_action = QAction('Reset password', self)
+        reset_pw_action.triggered.connect(self.reset_password)
+
+        self.admin_menu = menubar.addMenu('Admin')
+        self.admin_menu.addAction(reset_pw_action)
+        self.admin_menu.menuAction().setVisible(False)
+
+    def setup_models(self, user_name):
+        self.user_name = user_name
+        self.item_model = ItemModel(self.user_name)
+        self.sku_model = SkuModel(self.user_name, self.item_model)
+        self.tr_model = TrModel(self.user_name, self.sku_model)
+
         if self.item_model.get_user_privilege() == UserPrivilege.Admin:
-            reset_pw_action = QAction('Reset password', self)
-            reset_pw_action.triggered.connect(self.reset_password)
+            self.admin_menu.menuAction().setVisible(True)
+        else:
+            self.admin_menu.menuAction().setVisible(False)
 
-            admin_menu = menubar.addMenu('Admin')
-            admin_menu.addAction(reset_pw_action)
 
-    def reset_password(self):
-        u_name, ok = QInputDialog.getText(self, "Reset Password", "Enter user name:")
-        if ok:
-            hashed_pw = self.login_widget.encrypt_password("a")
-            self.login_widget.insert_user_info(u_name, hashed_pw)
-
-    def setUpMainWindow(self):
+    def setup_widgets(self):
         self.item_widget = ItemWidget(self)
         self.item_widget.set_source_model(self.item_model)
 
@@ -225,11 +233,26 @@ class InventoryWindow(QMainWindow):
             # self.tr_widget.filter_no_selection()
             self.tr_model.append_new_rows_from_bit(bit_df)
 
+    def reset_password(self):
+        u_name, ok = QInputDialog.getText(self, "Reset Password", "Enter user name:")
+        if ok:
+            hashed_pw = self.login_widget.encrypt_password("a")
+            self.login_widget.insert_user_info(u_name, hashed_pw)
 
-if __name__ == '__main__':
+    def change_user(self):
+        self.close()
+        self.login_widget.start_main.disconnect()
+        self.login_widget.start_main.connect(self.setup_main_window)
+        self.login_widget.show()
+
+
+def main():
     app = QApplication(sys.argv)
-    main_window = InventoryWindow()
-    # async_helper = AsyncHelper(main_window, main_window.save_to_db)
-
-    # signal.signal(signal.SIGINT, signal.SIG_DFL)
+    InventoryWindow()
     app.exec()
+
+
+try:
+    main()
+except Exception as e:
+    logger.Exception("Unexpected exception! %s", e)

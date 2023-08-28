@@ -102,7 +102,7 @@ class PandasModel(QAbstractTableModel):
         if index.row() in self.uneditable_rows_set:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         elif (index.row() in self.new_rows_set and
-              self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable):
+                self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable):
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         # elif (index.row() in self.editable_rows_set and
         elif self.col_idx_edit_lvl[index.column()] <= self.edit_level:
@@ -135,7 +135,7 @@ class PandasModel(QAbstractTableModel):
                         f'row {row} int the set')
 
     def clear_editable_rows(self):
-        if any(self.editable_rows_set):
+        if len(self.editable_rows_set) > 0:
             logger.debug(f"remove all rows from "
                          f'editable_rows_{self.editable_rows_set}')
             self.editable_rows_set.clear()
@@ -158,7 +158,7 @@ class PandasModel(QAbstractTableModel):
             logger.warn(f"unset_editable_new_row: cannot find row {row} int the set")
 
     def clear_new_rows(self):
-        if any(self.new_rows_set):
+        if len(self.new_rows_set) > 0:
             self.new_rows_set.clear()
             logger.debug(f"set_editable_new_row : clearing")
 
@@ -181,7 +181,7 @@ class PandasModel(QAbstractTableModel):
             logger.warn(f"unset_uneditable_row: cannot find row {row} int the set")
 
     def clear_uneditable_rows(self):
-        if any(self.uneditable_rows_set):
+        if len(self.uneditable_rows_set) > 0:
             logger.debug(f"remove all rows from "
                          f'uneditable_rows_{self.uneditable_rows_set}')
             self.uneditable_rows_set.clear()

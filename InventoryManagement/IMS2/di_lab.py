@@ -100,7 +100,7 @@ class Lab(metaclass=Singleton):
         logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)
-        logger.debug(f"{db_results[:2]}")
+        # logger.debug(f"{db_results[:2]}")
         if db_results is None:
             return pd.DataFrame()
         df = self._db_to_df(db_results)
