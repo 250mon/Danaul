@@ -8,6 +8,7 @@
 !*.py
 !*.ipynb
 !*.qrc
+!*.qss
 !**/assets/*
 
 # even if they are in subdirectoreis

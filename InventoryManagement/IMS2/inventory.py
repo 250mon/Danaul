@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
     QVBoxLayout, QFileDialog, QInputDialog
 )
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import Qt, Signal, Slot, QFile
 from PySide6.QtGui import QAction, QIcon
 from login_widget import LoginWidget
 from async_helper import AsyncHelper
@@ -17,7 +17,7 @@ from item_widget import ItemWidget
 from sku_widget import SkuWidget
 from tr_widget import TrWidget
 from di_logger import Logs, logging
-from constants import CONFIG_FILE, UserPrivilege
+from constants import CONFIG_FILE, UserPrivilege, ConfigReader
 from emr_tr_reader import EmrTransactionReader
 
 
@@ -33,9 +33,11 @@ class InventoryWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        # self.user_name = None
-        # self.initUI('admin')
-        self.login()
+        is_test: str = ConfigReader(CONFIG_FILE).get_options("Testmode")
+        if is_test.lower() == "true":
+            self.initUI('test')
+        else:
+            self.login()
 
     def login(self):
         self.login_widget = LoginWidget(CONFIG_FILE, self)
@@ -248,6 +250,14 @@ class InventoryWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+
+    # style_file = QFile("qss/aqua.qss")
+    # style_file = QFile("qss/dark_orange.qss")
+    # style_file = QFile("qss/light_blue.qss")
+    style_file = QFile("qss/di_custom.qss")
+    style_file.open(QFile.ReadOnly)
+    app.setStyleSheet(style_file.readAll().toStdString())
+
     InventoryWindow()
     app.exec()
 
