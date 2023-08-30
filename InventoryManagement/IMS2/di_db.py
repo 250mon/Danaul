@@ -204,7 +204,7 @@ async def main():
         items_df = pd.DataFrame({
             'item_id':       ['DEFAULT', 'DEFAULT', 'DEFAULT'],
             'active':        [True, True, True],
-            'item_name':     ['노시셉톨', '써지겔', 'Qplint'],
+            'item_name':     ['노시셉톨', '써지겔', 'Qplint 단상지'],
             'category_id':   [1, 1, 3],
             'description':   ['', '', '']
         })
@@ -218,7 +218,7 @@ async def main():
             'sub_name':         ['40ml', '120ml', ''],
             'bit_code':         ['noci40', 'noci120', 'surgigel'],
             'sku_qty':          [0, 0, 0],
-            'min_qty':          [2, 2, 1],
+            'min_qty':          [1, 1, 1],
             'item_id':          [1, 1, 2],
             'expiration_date':  ['DEFAULT', 'DEFAULT', 'DEFAULT'],
             'description':      ['', '', '']

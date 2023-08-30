@@ -7,7 +7,7 @@ from di_data_model import DataModel
 from di_logger import Logs, logging
 from datetime_utils import *
 from item_model import ItemModel
-from constants import RowFlags, EditLevel
+from constants import RowFlags, EditLevel, DEFAULT_MIN_QTY
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -211,7 +211,7 @@ class SkuModel(DataModel):
             row_s = self.model_df.iloc[index.row(), :]
             if row_s.root_sku == 0 and not self.is_sku_qty_correct(row_s.sku_id, row_s.sku_qty):
                 return QColor(255, 180, 150, 50)
-            elif row_s.sku_qty <= row_s.min_qty:
+            elif row_s.sku_qty < row_s.min_qty:
                 return QColor(Qt.red)
             else:
                 return super().cell_color(index)
@@ -243,7 +243,7 @@ class SkuModel(DataModel):
             'sub_name': "",
             'active': True,
             'sku_qty': 0,
-            'min_qty': 2,
+            'min_qty': DEFAULT_MIN_QTY,
             'expiration_date': exp_date,
             'description': "",
             'bit_code': "",
