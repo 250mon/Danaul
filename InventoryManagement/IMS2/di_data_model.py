@@ -190,6 +190,8 @@ class DataModel(PandasModel):
             elif not self.is_active_row(index):
                 return QBrush(Qt.lightGray)
             elif self.is_colored_cell(index):
+                # if the cell needs colored background depending on the
+                # contents like sku_qty
                 return QBrush(self.cell_color(index))
             elif self.get_flag(index) & RowFlags.NewRow > 0:
                 if self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable:
@@ -205,7 +207,7 @@ class DataModel(PandasModel):
                 if self.col_idx_edit_lvl[index.column()] <= self.edit_level:
                     return QBrush(QColor(100, 255, 255, 25))
                 else:
-                    return QBrush(QColor(255, 255, 255))
+                    return QBrush(Qt.transparent)
         else:
             return None
 
