@@ -91,11 +91,22 @@ class SkuWidget(InventoryTableWidget):
         vbox.addWidget(self.table_view)
         self.setLayout(vbox)
 
+    @Slot(str)
+    def enable_edit_mode(self, sender: str):
+        if sender != "sku_widget":
+            self.edit_mode.setEnabled(True)
+
+    @Slot(str)
+    def disable_edit_mode(self, sender: str):
+        if sender != "sku_widget":
+            self.edit_mode.setEnabled(False)
+
     @ Slot()
     def edit_mode_clicked(self):
         if self.edit_mode.isChecked():
             logger.debug("Now enter into edit mode")
             self.source_model.set_editable(True)
+            self.parent.edit_lock_signal.emit("sku_widget")
         elif self.source_model.is_model_editing():
             logger.debug("The model is in the middle of editing."
                          ' Should save before exit the mode')
@@ -107,6 +118,7 @@ class SkuWidget(InventoryTableWidget):
         else:
             logger.debug("Now edit mode ends")
             self.source_model.set_editable(False)
+            self.parent.edit_unlock_signal.emit("sku_widget")
 
     @Slot(str)
     def do_actions(self, action: str):

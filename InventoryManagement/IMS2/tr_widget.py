@@ -1,9 +1,9 @@
 import os
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
-    QMessageBox, QDateEdit
+    QMessageBox, QDateEdit, QGroupBox
 )
-from PySide6.QtCore import Qt, Slot, QModelIndex, QDate
+from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
 from di_logger import Logs, logging
 from di_lab import Lab
@@ -106,9 +106,18 @@ class TrWidget(InventoryTableWidget):
         twenty_search_btn = QPushButton('20')
         twenty_search_btn.clicked.connect(lambda: self.set_max_search_count(20))
 
+        hbox2 = QHBoxLayout()
+        hbox2.addWidget(search_all_btn)
+        hbox2.addWidget(two_search_btn)
+        hbox2.addWidget(five_search_btn)
+        hbox2.addWidget(ten_search_btn)
+        hbox2.addWidget(twenty_search_btn)
+        hbox2.addStretch(1)
+
         self.sku_name_label = QLabel()
         font = QFont("Arial", 14, QFont.Bold)
         self.sku_name_label.setFont(font)
+        hbox2.addWidget(self.sku_name_label)
 
         buy_btn = QPushButton('매입')
         buy_btn.clicked.connect(lambda: self.do_actions("buy"))
@@ -121,22 +130,24 @@ class TrWidget(InventoryTableWidget):
         save_btn = QPushButton('저장')
         save_btn.clicked.connect(self.save_model_to_db)
 
-        hbox2 = QHBoxLayout()
-        hbox2.addWidget(search_all_btn)
-        hbox2.addWidget(two_search_btn)
-        hbox2.addWidget(five_search_btn)
-        hbox2.addWidget(ten_search_btn)
-        hbox2.addWidget(twenty_search_btn)
-        hbox2.addStretch(1)
+        self.edit_mode = QGroupBox("편집 모드")
+        self.edit_mode.setCheckable(False)
+        edit_hbox = QHBoxLayout()
+        edit_hbox.addWidget(buy_btn)
+        edit_hbox.addWidget(sell_btn)
+        edit_hbox.addWidget(adj_plus_btn)
+        edit_hbox.addWidget(adj_minus_btn)
+        edit_hbox.addWidget(save_btn)
+        self.edit_mode.setLayout(edit_hbox)
+        self.edit_mode.setEnabled(True)
 
-        hbox2.addWidget(self.sku_name_label)
-
         hbox2.addStretch(1)
-        hbox2.addWidget(buy_btn)
-        hbox2.addWidget(sell_btn)
-        hbox2.addWidget(adj_plus_btn)
-        hbox2.addWidget(adj_minus_btn)
-        hbox2.addWidget(save_btn)
+        # hbox2.addWidget(buy_btn)
+        # hbox2.addWidget(sell_btn)
+        # hbox2.addWidget(adj_plus_btn)
+        # hbox2.addWidget(adj_minus_btn)
+        # hbox2.addWidget(save_btn)
+        hbox2.addWidget(self.edit_mode)
 
         vbox = QVBoxLayout()
         vbox.addLayout(hbox1)
@@ -152,6 +163,16 @@ class TrWidget(InventoryTableWidget):
             vbox.addLayout(del_hbox)
 
         self.setLayout(vbox)
+
+    @Slot(str)
+    def enable_edit_mode(self, sender: str):
+        if sender != "tr_widget":
+            self.edit_mode.setEnabled(True)
+
+    @Slot(str)
+    def disable_edit_mode(self, sender: str):
+        if sender != "tr_widget":
+            self.edit_mode.setEnabled(False)
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -191,6 +212,8 @@ class TrWidget(InventoryTableWidget):
         if hasattr(self.parent, "async_start"):
             self.parent.async_start("tr_save")
 
+        self.parent.edit_unlock_signal.emit("tr_widget")
+
     def add_new_tr(self, tr_type) -> bool:
         if self.add_new_row(tr_type=tr_type):
             self.tr_window = SingleTrWindow(self.proxy_model, self)
@@ -215,6 +238,9 @@ class TrWidget(InventoryTableWidget):
         src_idx = self.proxy_model.mapToSource(index)
         if not self.source_model.validate_new_row(src_idx):
             self.source_model.drop_rows([src_idx])
+        elif self.source_model.is_model_editing():
+            self.parent.edit_lock_signal.emit("tr_widget")
+
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):

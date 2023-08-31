@@ -452,5 +452,4 @@ class DataModel(PandasModel):
         :return:
         """
         return not self.model_df.loc[
-            self.model_df['flag'] != RowFlags.OriginalRow,
-            'flag'].empty
+            self.model_df['flag'] != RowFlags.OriginalRow, 'flag'].empty

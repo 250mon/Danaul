@@ -20,6 +20,9 @@ class InventoryTableWidget(QWidget):
         self.parent: QMainWindow = parent
         self.source_model = None
 
+        self.parent.edit_lock_signal.connect(self.disable_edit_mode)
+        self.parent.edit_unlock_signal.connect(self.enable_edit_mode)
+
     def set_source_model(self, model: DataModel):
         """
         Common
@@ -98,6 +101,15 @@ class InventoryTableWidget(QWidget):
         Needs to be implemented
         :return:
         """
+
+    @Slot()
+    def enable_edit_mode(self):
+        pass
+
+    @Slot()
+    def disable_edit_mode(self):
+        pass
+
 
     def _get_selected_indexes(self):
         """

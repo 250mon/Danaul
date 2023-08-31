@@ -30,6 +30,8 @@ Lab(InventoryDb(CONFIG_FILE))
 class InventoryWindow(QMainWindow):
     start_signal = Signal(str)
     done_signal = Signal(str)
+    edit_lock_signal = Signal(str)
+    edit_unlock_signal = Signal(str)
 
     def __init__(self):
         super().__init__()
