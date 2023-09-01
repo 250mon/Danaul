@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from typing import Dict, List
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex, Slot
 from PySide6.QtGui import QColor
 from di_data_model import DataModel
 from di_logger import Logs, logging
@@ -23,6 +23,8 @@ class SkuModel(DataModel):
         self.item_model = item_model
         self.init_params()
         self.selected_upper_id = None
+        self.item_model.item_model_changed_signal.connect(
+            self.item_model_changed)
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
 
@@ -94,6 +96,15 @@ class SkuModel(DataModel):
             self.get_col_number('min_qty'): [0, 1000],
         }
         return spin_info_dict
+
+    def is_active_row(self, index: QModelIndex or int) -> bool:
+        if isinstance(index, QModelIndex):
+            item_id = self.model_df.iloc[index.row(), self.get_col_number('item_id')]
+        else:
+            item_id = self.model_df.loc[self.model_df.iloc[:, 0] == index, 'item_id'].item()
+
+        item_active = self.item_model.is_active_row(item_id)
+        return item_active and super().is_active_row(index)
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
@@ -266,3 +277,20 @@ class SkuModel(DataModel):
         code_set = set(self.model_df.bit_code.to_list())
         code_set.discard('')
         return list(code_set)
+
+    @Slot(object)
+    def item_model_changed(self, item_ids: List):
+        """
+        THIS SLOT IS NOT USED FOR THE TIME BEING
+        When Item model is changed as follows:
+            - active states
+        :param item_ids:
+        :return:
+        """
+        active_df = self.item_model.model_df.loc[
+                        self.item_model.model_df.item_id in item_ids,
+                        ["item_id", "active"]
+                    ]
+        self.model_df.set_index('item_id', inplace=True)
+        self.model_df.update(active_df.set_index('item_id'))
+        self.model_df.reset_index()

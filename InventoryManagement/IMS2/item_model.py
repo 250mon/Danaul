@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from typing import Dict, List, Tuple
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex, Signal
 from di_data_model import DataModel
 from di_lab import Lab
 from di_logger import Logs, logging
@@ -18,6 +18,8 @@ Also, converting model data(dataframe) back into a data class to update db
 
 
 class ItemModel(DataModel):
+    item_model_changed_signal = Signal(object)
+
     def __init__(self, user_name):
         self.init_params()
         super().__init__(user_name)

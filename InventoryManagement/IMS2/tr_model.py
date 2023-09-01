@@ -206,11 +206,11 @@ class TrModel(DataModel):
         :return: new dataframe if succeeds, otherwise None
         """
         logger.debug(f"new_id({next_new_id})\n")
-        if self.selected_upper_id is None:
-            logger.error("sku_id is empty")
+        if not self.sku_model.is_active_row(self.selected_upper_id):
+            logger.debug("sku_id is not active")
             return None
-        elif not self.sku_model.get_data_from_id(self.selected_upper_id, 'active'):
-            logger.error("sku_id is not active")
+        elif self.selected_upper_id is None:
+            logger.error("sku_id is empty")
             return None
         elif 'tr_type' not in kwargs.keys():
             logger.error("tr_type is not specified")

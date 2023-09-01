@@ -175,13 +175,19 @@ class DataModel(PandasModel):
             return None
         return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
 
-    def is_active_row(self, index: QModelIndex) -> bool:
+    def is_active_row(self, index: QModelIndex or int) -> bool:
         """
         Default implementation
-        :param index:
+        :param index: QModelIndex or id
         :return:
         """
-        return self.model_df.iloc[index.row(), self.get_col_number('active')]
+        if isinstance(index, QModelIndex):
+            # index is given as an arg
+            active_val = self.model_df.iloc[index.row(), self.get_col_number('active')]
+        else:
+            # id is given as an arg
+            active_val = self.model_df.loc[self.model_df.iloc[:, 0] == index, 'active'].item()
+        return active_val
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         if role == Qt.BackgroundRole:

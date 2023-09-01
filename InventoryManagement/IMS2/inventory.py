@@ -37,7 +37,9 @@ class InventoryWindow(QMainWindow):
         super().__init__()
         is_test: str = ConfigReader(CONFIG_FILE).get_options("Testmode")
         if is_test.lower() == "true":
-            self.initUI('test')
+            self.initUI("test")
+        elif is_test.lower() == "admin":
+            self.initUI("admin")
         else:
             self.login()
 
@@ -174,32 +176,21 @@ class InventoryWindow(QMainWindow):
         if action == "item_save":
             logger.debug("Saving items ...")
             result_str = await self.item_widget.save_to_db()
-            logger.debug("Updating models ...")
-            await self.update_models(['items', 'skus'])
+            logger.debug("Updating items ...")
+            await self.item_model.update()
         elif action == "sku_save":
             logger.debug("Saving skus ...")
             result_str = await self.sku_widget.save_to_db()
-            await self.update_models(['skus'])
+            await self.sku_model.update()
         elif action == "tr_save":
             logger.debug("Saving transactions ...")
             result_str = await self.sku_widget.save_to_db()
             result_str = await self.tr_widget.save_to_db()
-            await self.update_models(['skus'])
-            await self.update_models(['transactions'])
-        elif action == "tr_update":
-            await self.update_models(['transactions'])
-        self.done_signal.emit(action)
-
-    async def update_models(self, model_names: List):
-        if 'items' in model_names:
-            await self.item_model.update()
-
-        if 'skus' in model_names:
             await self.sku_model.update()
-
-        if 'transactions' in model_names:
             await self.tr_model.update()
-            pass
+        elif action == "tr_update":
+            await self.tr_model.update()
+        self.done_signal.emit(action)
 
     def item_selected(self, item_id: int):
         """

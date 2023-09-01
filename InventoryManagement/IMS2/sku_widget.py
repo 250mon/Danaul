@@ -105,8 +105,7 @@ class SkuWidget(InventoryTableWidget):
     def edit_mode_clicked(self):
         if self.edit_mode.isChecked():
             logger.debug("Now enter into edit mode")
-            self.source_model.set_editable(True)
-            self.parent.edit_lock_signal.emit("sku_widget")
+            self.edit_mode_starts()
         elif self.source_model.is_model_editing():
             logger.debug("The model is in the middle of editing."
                          ' Should save before exit the mode')
@@ -117,8 +116,15 @@ class SkuWidget(InventoryTableWidget):
             self.edit_mode.setChecked(True)
         else:
             logger.debug("Now edit mode ends")
-            self.source_model.set_editable(False)
-            self.parent.edit_unlock_signal.emit("sku_widget")
+            self.edit_mode_ends()
+
+    def edit_mode_starts(self):
+        self.source_model.set_editable(True)
+        self.parent.edit_lock_signal.emit("sku_widget")
+
+    def edit_mode_ends(self):
+        self.source_model.set_editable(False)
+        self.parent.edit_unlock_signal.emit("sku_widget")
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -151,7 +157,7 @@ class SkuWidget(InventoryTableWidget):
         if hasattr(self.parent, "async_start"):
             self.parent.async_start("sku_save")
         self.edit_mode.setChecked(False)
-        self.source_model.set_editable(False)
+        self.edit_mode_ends()
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
