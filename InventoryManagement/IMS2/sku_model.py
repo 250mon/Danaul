@@ -97,14 +97,14 @@ class SkuModel(DataModel):
         }
         return spin_info_dict
 
-    def is_active_row(self, index: QModelIndex or int) -> bool:
-        if isinstance(index, QModelIndex):
-            item_id = self.model_df.iloc[index.row(), self.get_col_number('item_id')]
+    def is_active_row(self, idx: QModelIndex or int) -> bool:
+        if isinstance(idx, QModelIndex):
+            item_id = self.get_data_from_index(idx, 'item_id')
         else:
-            item_id = self.model_df.loc[self.model_df.iloc[:, 0] == index, 'item_id'].item()
+            item_id = self.get_data_from_id(idx, 'item_id')
 
         item_active = self.item_model.is_active_row(item_id)
-        return item_active and super().is_active_row(index)
+        return item_active and super().is_active_row(idx)
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
@@ -239,7 +239,7 @@ class SkuModel(DataModel):
             logger.error("item_id is empty")
             return None
         elif not self.item_model.get_data_from_id(self.selected_upper_id, 'active'):
-            logger.error("item_id is not active")
+            logger.debug("item_id is not active")
             return None
 
         default_item_id = self.selected_upper_id
@@ -282,7 +282,7 @@ class SkuModel(DataModel):
     def item_model_changed(self, item_ids: List):
         """
         THIS SLOT IS NOT USED FOR THE TIME BEING
-        When Item model is changed as follows:
+        It is called when Item model is changed as follows:
             - active states
         :param item_ids:
         :return:
@@ -291,6 +291,8 @@ class SkuModel(DataModel):
                         self.item_model.model_df.item_id in item_ids,
                         ["item_id", "active"]
                     ]
+        # change the active state of skus according to the active state
+        # of the item
         self.model_df.set_index('item_id', inplace=True)
         self.model_df.update(active_df.set_index('item_id'))
         self.model_df.reset_index()

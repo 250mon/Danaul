@@ -67,8 +67,7 @@ class TrModel(DataModel):
         logger.debug(f"sku_id({self.selected_upper_id}) is set")
 
         if sku_id is not None:
-            self.selected_upper_name = self.sku_model.model_df.loc[
-                self.sku_model.model_df.sku_id == sku_id, "sku_name"].item()
+            self.selected_upper_name = self.sku_model.get_data_from_id(sku_id, 'sku_name')
             logger.debug(f"sku_name({self.selected_upper_name}) is set")
         else:
             self.selected_upper_name = ""
@@ -129,7 +128,7 @@ class TrModel(DataModel):
         }
         return spin_info_dict
 
-    def is_active_row(self, index: QModelIndex) -> bool:
+    def is_active_row(self, idx: QModelIndex) -> bool:
         return True
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
@@ -247,7 +246,7 @@ class TrModel(DataModel):
         }])
         return new_model_df
 
-    def append_new_rows_from_bit(self, bit_df: pd.DataFrame):
+    def append_new_rows_from_emr(self, bit_df: pd.DataFrame):
         temp_selected_id = None
         if self.selected_upper_id is not None:
             temp_selected_id = self.selected_upper_id
@@ -332,15 +331,18 @@ class TrModel(DataModel):
         logger.debug(f"before_qty({before_qty}){op}tr_qty({tr_qty}) => after_qty({after_qty})")
 
     def update_sku_qty(self):
+        """
+        When transactions are saved, updating sku qty was carried out immediately
+        :return:
+        """
         def get_last_row_qty(qty_update_df: pd.DataFrame):
             qty_update_df.reset_index(inplace=True)
-            id_s = qty_update_df.groupby('sku_id')['tr_id'].idxmax()
-            qty_df = qty_update_df.iloc[id_s, :][["sku_id", "after_qty"]]
+            idx_s = qty_update_df.groupby('sku_id')['tr_id'].idxmax()
+            qty_df = qty_update_df.loc[idx_s, ["sku_id", "after_qty"]]
             logger.debug(f"qty_df to update\n{qty_df}")
             return qty_df
 
-        # if selected_upper_id is none, batch mode reading from bit emr
-        new_tr_df = self.model_df.loc[self.model_df.flag & RowFlags.NewRow > 0, ["tr_id", "sku_id", "after_qty"]]
+        new_tr_df = self.get_new_df()
         if not new_tr_df.empty:
             qty_df = get_last_row_qty(new_tr_df)
             for row in qty_df.itertuples():

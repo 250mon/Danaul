@@ -72,6 +72,20 @@ class DataModel(PandasModel):
         flag_col = self.get_col_number('flag')
         return index.column() == flag_col
 
+    def get_data_from_index(self, index: QModelIndex, col: str) -> object:
+        # if not index.isValid():
+        #     return None
+        # elif col not in self.column_names:
+        #     return None
+        return self.model_df.iloc[index.row(), self.get_col_number(col)]
+
+    def get_data_from_id(self, id: int, col: str) -> object:
+        # if id not in self.model_df.iloc[:, 0].values:
+        #     return None
+        # elif col not in self.column_names:
+        #     return None
+        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
+
     def set_flag(self, index: QModelIndex, flag: int):
         """
         Set the flag to the row where the index belongs to
@@ -80,15 +94,6 @@ class DataModel(PandasModel):
         :return:
         """
         self.model_df.iloc[index.row(), self.get_col_number('flag')] = flag
-
-    def get_flag(self, index: QModelIndex) -> int:
-        """
-        Returns the flag of the row where the index belongs to
-        :param index:
-        :return: flag
-        """
-        flag = self.model_df.iloc[index.row(), self.get_col_number('flag')]
-        return flag
 
     def set_upper_model_id(self, index: QModelIndex or None):
         """
@@ -170,28 +175,25 @@ class DataModel(PandasModel):
         """
         return {}
 
-    def get_data_from_id(self, id: int, col: str) -> object:
-        if col not in self.column_names:
-            return None
-        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
-
-    def is_active_row(self, index: QModelIndex or int) -> bool:
+    def is_active_row(self, idx: QModelIndex or int) -> bool:
         """
         Default implementation
-        :param index: QModelIndex or id
+        :param idx: QModelIndex or id
         :return:
         """
-        if isinstance(index, QModelIndex):
+        if isinstance(idx, QModelIndex):
             # index is given as an arg
-            active_val = self.model_df.iloc[index.row(), self.get_col_number('active')]
+            active_val = self.get_data_from_index(idx, 'active')
         else:
             # id is given as an arg
-            active_val = self.model_df.loc[self.model_df.iloc[:, 0] == index, 'active'].item()
+            active_val = self.get_data_from_id(idx, 'active')
+
         return active_val
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         if role == Qt.BackgroundRole:
-            if self.get_flag(index) & RowFlags.DeletedRow > 0:
+            flag = self.get_data_from_index(index, 'flag')
+            if flag & RowFlags.DeletedRow > 0:
                 return QBrush(Qt.darkGray)
             elif not self.is_active_row(index):
                 return QBrush(Qt.lightGray)
@@ -199,12 +201,12 @@ class DataModel(PandasModel):
                 # if the cell needs colored background depending on the
                 # contents like sku_qty
                 return QBrush(self.cell_color(index))
-            elif self.get_flag(index) & RowFlags.NewRow > 0:
+            elif flag & RowFlags.NewRow > 0:
                 if self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable:
                     return QBrush(QColor(255, 255, 0))
                 else:
                     return QBrush(QColor(255, 255, 0, 25))
-            elif self.get_flag(index) & RowFlags.ChangedRow > 0:
+            elif flag & RowFlags.ChangedRow > 0:
                 if self.col_idx_edit_lvl[index.column()] <= self.edit_level:
                     return QBrush(QColor(0, 255, 0))
                 else:
@@ -222,15 +224,16 @@ class DataModel(PandasModel):
                 value: object,
                 role=Qt.EditRole):
 
+        flag = self.get_data_from_index(index, 'flag')
         # Unless it is a deleted row, proceed to set the data
-        if self.get_flag(index) & RowFlags.DeletedRow > 0:
+        if flag & RowFlags.DeletedRow > 0:
             logger.debug("Cannot change data in the deleted row")
             return
 
         result = super().setData(index, value, role)
 
         # Unless it is a new row, set the change flag
-        if self.get_flag(index) & RowFlags.NewRow == 0:
+        if flag & RowFlags.NewRow == 0:
             self.set_chg_flag(index)
 
         return result
@@ -328,7 +331,7 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        curr_flag = self.get_flag(index)
+        curr_flag = self.get_data_from_index(index, 'flag')
         curr_flag |= RowFlags.ChangedRow
         if self.diff_row(index):
             self.set_flag(index, curr_flag)
@@ -341,7 +344,7 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flags = [self.get_flag(index) for index in indexes]
+        flags = [self.get_data_from_index(index, 'flag') for index in indexes]
         is_new = [flag & RowFlags.NewRow for flag in flags]
         new_idxes = [index for index, cond in zip(indexes, is_new)
                        if cond > 0]
@@ -355,7 +358,7 @@ class DataModel(PandasModel):
 
         # exclusive or op with deleted flag
         for index in other_idxes:
-            curr_flag = self.get_flag(index)
+            curr_flag = self.get_data_from_index(index, 'flag')
             curr_flag ^= RowFlags.DeletedRow
             self.set_flag(index, curr_flag)
 

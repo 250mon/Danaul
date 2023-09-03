@@ -226,7 +226,7 @@ class InventoryWindow(QMainWindow):
         else:
             logger.debug(f"\n{bit_df}")
             # self.tr_widget.filter_no_selection()
-            self.tr_model.append_new_rows_from_bit(bit_df)
+            self.tr_model.append_new_rows_from_emr(bit_df)
 
     def reset_password(self):
         u_name, ok = QInputDialog.getText(self, "Reset Password", "Enter user name:")
