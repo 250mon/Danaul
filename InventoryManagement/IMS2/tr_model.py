@@ -9,6 +9,7 @@ from constants import EditLevel
 from datetime_utils import *
 from sku_model import SkuModel
 from constants import RowFlags
+from di_exceptions import *
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -198,25 +199,25 @@ class TrModel(DataModel):
 
         return super().setData(index, value, role)
 
-    def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame or None:
+    def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame:
         """
         Needs to be implemented in subclasses
         :param next_new_id:
-        :return: new dataframe if succeeds, otherwise None
+        :return: new dataframe if succeeds, otherwise raise an exception
         """
         logger.debug(f"new_id({next_new_id})\n")
         if self.selected_upper_id is None:
-            logger.error("sku_id is empty")
-            return None
+            error = "sku_id is empty"
+            raise NonExistentSkuIdError(error)
         elif self.selected_upper_id not in self.sku_model.model_df.sku_id.values:
-            logger.debug("sku_id does not exist")
-            return None
+            error = f"sku_id({self.selected_upper_id}) does not exist"
+            raise NonExistentSkuIdError(error)
         elif not self.sku_model.is_active_row(self.selected_upper_id):
-            logger.debug("sku_id is not active")
-            return None
+            error = f"sku_id({self.selected_upper_id}) is not active"
+            raise InactiveSkuIdError(error)
         elif 'tr_type' not in kwargs.keys():
-            logger.error("tr_type is not specified")
-            return None
+            error = "tr_type is not specified"
+            raise InvalidTrTypeError(error)
 
         try:
             id_s = self.model_df.groupby("sku_id")["tr_id"].get_group(self.selected_upper_id)

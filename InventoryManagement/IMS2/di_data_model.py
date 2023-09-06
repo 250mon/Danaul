@@ -9,6 +9,7 @@ from pandas_model import PandasModel
 from di_lab import Lab
 from di_logger import Logs, logging
 from constants import EditLevel, RowFlags, UserPrivilege, ADMIN_GROUP
+from di_exceptions import *
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -254,10 +255,10 @@ class DataModel(PandasModel):
         """
         return QColor(Qt.white)
 
-    def append_new_row(self, **kwargs) -> bool:
+    def append_new_row(self, **kwargs):
         """
         Appends a new row to the end of the model
-        :return: True if succeeded or False
+        :return: raise an exception if failed
         """
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
 
@@ -267,10 +268,12 @@ class DataModel(PandasModel):
             next_new_id = self.model_df.iloc[:, 0].max() + 1
         logger.debug(f"New model_df_row id({next_new_id})")
 
-        new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
-        if new_row_df is None:
-            return False
-        elif self.model_df.empty:
+        try:
+            new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
+        except Exception as e:
+            raise e
+
+        if self.model_df.empty:
             self.model_df = new_row_df
         else:
             self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
@@ -279,7 +282,6 @@ class DataModel(PandasModel):
 
         # handles model flags
         self.set_new_row(self.rowCount() - 1)
-        return True
 
     @abstractmethod
     def make_a_new_row_df(self, next_new_id, **kwargs):

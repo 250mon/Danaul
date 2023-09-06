@@ -8,6 +8,7 @@ from di_logger import Logs, logging
 from datetime_utils import *
 from item_model import ItemModel
 from constants import RowFlags, EditLevel, DEFAULT_MIN_QTY
+from di_exceptions import *
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -229,18 +230,18 @@ class SkuModel(DataModel):
         else:
             return super().cell_color(index)
 
-    def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame or None:
+    def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame:
         """
         Needs to be implemented in subclasses
         :param next_new_id:
-        :return: new dataframe if succeeds, otherwise None
+        :return: new dataframe if succeeds, otherwise raise an exception
         """
         if self.selected_upper_id is None:
-            logger.error("item_id is empty")
-            return None
+            error = "item_id is empty"
+            raise NonExistentItemIdError(error)
         elif not self.item_model.get_data_from_id(self.selected_upper_id, 'active'):
-            logger.debug("item_id is not active")
-            return None
+            error = f"item_id({self.selected_upper_id}) is not active"
+            raise InactiveItemIdError(error)
 
         default_item_id = self.selected_upper_id
         item_name = self.item_model.get_data_from_id(default_item_id, 'item_name')
