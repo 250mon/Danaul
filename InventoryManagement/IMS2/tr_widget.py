@@ -185,16 +185,16 @@ class TrWidget(InventoryTableWidget):
 
         if action == "buy":
             logger.debug("buying ...")
-            self.add_new_tr('Buy')
+            self.add_new_row(tr_type='Buy')
         elif action == "sell":
             logger.debug("selling ...")
-            self.add_new_tr('Sell')
+            self.add_new_row(tr_type='Sell')
         elif action == "adj+":
             logger.debug("adjusting plus ...")
-            self.add_new_tr(tr_type='AdjustmentPlus')
+            self.add_new_row(tr_type='AdjustmentPlus')
         elif action == "adj-":
             logger.debug("adjusting minus ...")
-            self.add_new_tr(tr_type='AdjustmentMinus')
+            self.add_new_row(tr_type='AdjustmentMinus')
         elif action == "del_tr":
             logger.debug("Deleting tr ...")
             if selected_indexes := self._get_selected_indexes():
@@ -214,16 +214,23 @@ class TrWidget(InventoryTableWidget):
 
         self.parent.edit_unlock_signal.emit("tr_widget")
 
-    def add_new_tr(self, tr_type) -> bool:
-        if self.add_new_row(tr_type=tr_type):
-            self.tr_window = SingleTrWindow(self.proxy_model, self)
-            return True
-        else:
+    def add_new_row(self, **kwargs):
+        """
+        Override superclass method
+        :param tr_type:
+        :return:
+        """
+        try:
+            self.source_model.append_new_row(**kwargs)
+        except Exception as e:
             QMessageBox.information(self,
-                                    "Failed New Sku",
-                                    "세부품목을 먼저 선택하세요.",
+                                    "Failed New Transaction",
+                                    # "세부품목을 먼저 선택하세요.",
+                                    str(e),
                                     QMessageBox.Close)
-            return False
+
+        else:
+            self.tr_window = SingleTrWindow(self.proxy_model, self)
 
     @Slot(object)
     def added_new_tr_by_single_tr_window(self, index: QModelIndex):

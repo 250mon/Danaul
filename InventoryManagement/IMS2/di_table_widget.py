@@ -140,13 +140,20 @@ class InventoryTableWidget(QWidget):
         :return:
         """
 
-    def add_new_row(self, **kwargs) -> bool:
+    def add_new_row(self, **kwargs):
         """
         Common
         This is called from a Button
-        :return: True if succeeded or False
+        :return:
         """
-        return self.source_model.append_new_row(**kwargs)
+        try:
+            self.source_model.append_new_row(**kwargs)
+        except Exception as e:
+            QMessageBox.information(self,
+                                    "Failed New Sku",
+                                    # "세부품목을 먼저 선택하세요.",
+                                    str(e),
+                                    QMessageBox.Close)
 
     def change_rows(self, indexes: List[QModelIndex]):
         """
@@ -189,13 +196,7 @@ class InventoryTableWidget(QWidget):
         Common
         :return:
         """
-        result_str = await self.source_model.save_to_db()
-        if result_str is not None:
-            QMessageBox.information(self,
-                                    '저장결과',
-                                    result_str,
-                                    QMessageBox.Close)
-        return result_str
+        return await self.source_model.save_to_db()
 
     def filter_selection(self, id: int):
         """

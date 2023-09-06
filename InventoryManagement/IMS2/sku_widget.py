@@ -137,12 +137,7 @@ class SkuWidget(InventoryTableWidget):
         logger.debug(f"{action}")
         if action == "add_sku":
             logger.debug("Adding sku ...")
-            if not self.add_new_row():
-                QMessageBox.information(self,
-                                        "Failed New Sku",
-                                        "품목을 선택되지 않았거나, 활성화 품목이 아닙니다.",
-                                        QMessageBox.Close)
-
+            self.add_new_row()
         elif action == "del_sku":
             logger.debug("Deleting sku ...")
             if selected_indexes := self._get_selected_indexes():

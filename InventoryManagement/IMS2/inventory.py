@@ -1,8 +1,7 @@
 import sys, os
-from typing import List
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
-    QVBoxLayout, QFileDialog, QInputDialog
+    QVBoxLayout, QFileDialog, QInputDialog, QMessageBox
 )
 from PySide6.QtCore import Qt, Signal, Slot, QFile
 from PySide6.QtGui import QAction, QIcon
@@ -117,7 +116,7 @@ class InventoryWindow(QMainWindow):
         self.tr_widget = TrWidget(self)
         self.tr_widget.set_source_model(self.tr_model)
 
-        self.setMinimumSize(1200, 1000)
+        self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
         self.item_widget.setMinimumWidth(400)
         self.item_widget.setMaximumWidth(500)
@@ -175,6 +174,7 @@ class InventoryWindow(QMainWindow):
         :return:
         """
         logger.debug(f"{action}")
+        result_str = None
         if action == "item_save":
             logger.debug("Saving items ...")
             result_str = await self.item_widget.save_to_db()
@@ -186,13 +186,19 @@ class InventoryWindow(QMainWindow):
             await self.sku_model.update()
         elif action == "tr_save":
             logger.debug("Saving transactions ...")
-            result_str = await self.sku_widget.save_to_db()
+            await self.sku_widget.save_to_db()
             result_str = await self.tr_widget.save_to_db()
             await self.sku_model.update()
             await self.tr_model.update()
         elif action == "tr_update":
             await self.tr_model.update()
         self.done_signal.emit(action)
+
+        if result_str is not None:
+            QMessageBox.information(self,
+                                    '저장결과',
+                                    result_str,
+                                    QMessageBox.Close)
 
     def item_selected(self, item_id: int):
         """
