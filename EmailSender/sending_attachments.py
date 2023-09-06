@@ -44,6 +44,7 @@ class EmailSender:
         self.subject = year + '년 ' + month + self.options['subject']
         self.body = self.options['body']
         self.dir_path = self.options['dir_path']
+        print(f"Title: {self.subject}")
 
     def read_config(self):
 
@@ -57,7 +58,8 @@ class EmailSender:
         message["From"] = self.sender_email
         message["To"] = receiver_email
         message["Subject"] = self.subject
-        message["Bcc"] = receiver_email  # Recommended for mass emails
+        # BCC Recommended for mass emails
+        # message["Bcc"] = receiver_email
 
         # Add body to email
         message.attach(MIMEText(self.body, "plain"))
@@ -81,11 +83,15 @@ class EmailSender:
         return part
 
     def send_email(self, addr_files):
-        receiver_email, attached_files = addr_files
-        message = self.create_message(receiver_email)
+        # receiver is a tuple like (name, email)
+        receiver, attached_files = addr_files
+        message = self.create_message(receiver[1])
         if len(attached_files) == 0:
-            print(f'No file found to send for {receiver_email}.')
+            print(f'No file found to send for {receiver}.')
             return
+        else:
+            print(f'Receiver: {receiver}.')
+
 
         # attach files to message
         for file in attached_files:
@@ -108,7 +114,7 @@ class EmailSender:
             server.ehlo() # can be omitted
             server.login(self.sender_email, self.password)
             # Send email
-            server.sendmail(self.sender_email, receiver_email, text)
+            server.sendmail(self.sender_email, receiver[1], text)
             # server.send_message(message)
         except Exception as e:
             # Print any error messages to stdout
@@ -123,7 +129,7 @@ class EmailSender:
         print(f'\nfiles are {files}')
         files_to_send = []
         for file in files:
-            ans = input(f'{file}: are you sure to send? (a(all) / y(yes) / n(no)) ')
+            ans = input(f'{file}: are you sure to send to {name}? (a(all) / y(yes) / n(no)) ')
             if not self.ans and ans.lower() == 'a':
                 self.ans = True
             if self.ans or ans.lower() == 'y':
@@ -134,7 +140,7 @@ class EmailSender:
         addrs = utils.config_reader('address.sh')
         # find the exact file path to attach
         files_to_attach = map(self.find_files_by_name, addrs.keys())
-        addr_files_pair = zip(addrs.values(), files_to_attach)
+        addr_files_pair = zip(addrs.items(), files_to_attach)
         list(map(self.send_email, addr_files_pair))
 
 

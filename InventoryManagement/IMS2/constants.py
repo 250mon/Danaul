@@ -5,7 +5,7 @@ from operator import methodcaller
 CONFIG_FILE = 'di_config'
 ADMIN_GROUP = ['admin', 'jye']
 MAX_TRANSACTION_COUNT = 10
-DEFAULT_MIN_QTY = 2
+DEFAULT_MIN_QTY = 1
 
 
 class UserPrivilege:

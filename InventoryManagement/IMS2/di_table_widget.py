@@ -67,6 +67,7 @@ class InventoryTableWidget(QWidget):
         self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.table_view.resizeColumnsToContents()
         self.table_view.setSortingEnabled(True)
+        self.table_view.verticalHeader().setVisible(False)
         self.setStyleSheet(
             "QTableView::item:selected"
             "{"

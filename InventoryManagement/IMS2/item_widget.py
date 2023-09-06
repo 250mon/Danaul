@@ -61,6 +61,7 @@ class ItemWidget(InventoryTableWidget):
         self.set_col_hidden('category_id')
         self.set_col_width("item_id", 50)
         self.set_col_width("active", 50)
+        self.set_col_width("item_name", 150)
         self.set_col_width("description", 150)
 
         title_label = QLabel('품목')

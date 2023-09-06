@@ -36,6 +36,10 @@ class InventoryWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         is_test: str = ConfigReader(CONFIG_FILE).get_options("Testmode")
+
+        self.login_widget = LoginWidget(CONFIG_FILE, self)
+        self.login_widget.start_main.connect(self.initUI)
+
         if is_test.lower() == "true":
             self.initUI("test")
         elif is_test.lower() == "admin":
@@ -44,8 +48,6 @@ class InventoryWindow(QMainWindow):
             self.login()
 
     def login(self):
-        self.login_widget = LoginWidget(CONFIG_FILE, self)
-        self.login_widget.start_main.connect(self.initUI)
         self.login_widget.show()
 
     @Slot(str)
