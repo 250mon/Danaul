@@ -67,9 +67,12 @@ class ItemWidget(InventoryTableWidget):
         title_label = QLabel('품목')
         font = QFont("Arial", 12, QFont.Bold)
         title_label.setFont(font)
+        refresh_btn = QPushButton('Refresh')
+        refresh_btn.clicked.connect(self.update_all_views)
         hbox1 = QHBoxLayout()
         hbox1.addWidget(title_label)
         hbox1.stretch(1)
+        hbox1.addWidget(refresh_btn)
 
         search_bar = QLineEdit(self)
         search_bar.setPlaceholderText('검색어')
@@ -223,3 +226,13 @@ class ItemWidget(InventoryTableWidget):
                 self.parent, 'item_selected'):
             item_id = index.siblingAtColumn(self.source_model.get_col_number('item_id')).data()
             self.parent.item_selected(item_id)
+
+    def update_all_views(self):
+        """
+        Update the views with the latest data from db
+        :return:
+        """
+        if hasattr(self.parent, "async_start"):
+            self.parent.async_start("item_update")
+            self.parent.async_start("sku_update")
+            self.parent.async_start("tr_update")
