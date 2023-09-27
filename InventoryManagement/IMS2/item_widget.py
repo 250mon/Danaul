@@ -67,7 +67,7 @@ class ItemWidget(InventoryTableWidget):
         title_label = QLabel('품목')
         font = QFont("Arial", 12, QFont.Bold)
         title_label.setFont(font)
-        refresh_btn = QPushButton('Refresh')
+        refresh_btn = QPushButton('전체새로고침')
         refresh_btn.clicked.connect(self.update_all_views)
         hbox1 = QHBoxLayout()
         hbox1.addWidget(title_label)

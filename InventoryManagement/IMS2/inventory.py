@@ -191,9 +191,9 @@ class InventoryWindow(QMainWindow):
             await self.sku_model.update()
             await self.tr_model.update()
         elif action == "item_update":
-            await self.tr_model.update()
+            await self.item_model.update()
         elif action == "sku_update":
-            await self.tr_model.update()
+            await self.sku_model.update()
         elif action == "tr_update":
             await self.tr_model.update()
         self.done_signal.emit(action)
