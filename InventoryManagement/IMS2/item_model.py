@@ -30,7 +30,7 @@ class ItemModel(DataModel):
         self.col_edit_lvl = {
             'item_id': EditLevel.NotEditable,
             'active': EditLevel.AdminModifiable,
-            'item_name': EditLevel.Creatable,
+            'item_name': EditLevel.AdminModifiable,
             'category_name': EditLevel.UserModifiable,
             'description': EditLevel.UserModifiable,
             'category_id': EditLevel.NotEditable,
