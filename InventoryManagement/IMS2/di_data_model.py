@@ -140,7 +140,7 @@ class DataModel(PandasModel):
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
-    async def update(self):
+    async def update(self, **kwargs):
         """
         Update the model whenever relevant DB data changes
         Called by inventory_view
@@ -149,7 +149,7 @@ class DataModel(PandasModel):
         :return:
         """
         logger.debug("Downloading data from DB")
-        await Lab().update_lab_df_from_db(self.table_name)
+        await Lab().update_lab_df_from_db(self.table_name, **kwargs)
         logger.debug("Updating the model and view")
         self.update_model_df_from_db()
 

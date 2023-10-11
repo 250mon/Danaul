@@ -20,6 +20,7 @@ class Lab(metaclass=Singleton):
         self.di_db = di_db
         self.di_db_util = self.di_db.db_util
         self.max_transaction_count = MAX_TRANSACTION_COUNT
+        self.show_inactive_items = False
 
         self.items = {}
         self.skus = {}
@@ -79,24 +80,41 @@ class Lab(metaclass=Singleton):
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
+        where_clause = ""
+        if not self.show_inactive_items:
+            if table == "items":
+                where_clause = " WHERE active = True"
+            elif table == "skus":
+                where_clause = " WHERE (item_id IN (SELECT item_id FROM items WHERE active = True)) AND " \
+                               "(active = True)"
+            elif table == "transactions":
+                where_clause = " WHERE sku_id IN (SELECT sku_id FROM skus AS s WHERE " \
+                               "(s.item_id IN (SELECT item_id FROM items AS i WHERE i.active = True)) AND " \
+                               "(s.active = True))"
+
         if table == "transactions":
             sku_id = kwargs.get('sku_id', None)
             beg_ts = kwargs.get('beg_timestamp', '')
             end_ts = kwargs.get('end_timestamp', '')
             if sku_id is None:
-                query = f"SELECT * FROM transactions order by tr_id desc limit " \
+                query = f"SELECT * FROM transactions {where_clause} ORDER BY tr_id DESC LIMIT " \
                         f"{self.max_transaction_count}"
             else:
                 if beg_ts != '' and end_ts != '':
-                    query = f"SELECT * FROM transactions where sku_id = {sku_id} " \
-                            f"and tr_timestamp >= '{beg_ts}' and tr_timestamp <= '{end_ts}' " \
-                            f"order by tr_id desc limit {self.max_transaction_count}"
+                    query = f"SELECT * FROM transactions WHERE sku_id = {sku_id} " \
+                            f"AND tr_timestamp >= '{beg_ts}' AND tr_timestamp <= '{end_ts}' " \
+                            f"ORDER BY tr_id DESC LIMIT {self.max_transaction_count}"
                 else:
                     # beg_ts == '' or end_ts == '':
-                    query = f"SELECT * FROM transactions where sku_id = {sku_id} " \
-                            f"order by tr_id desc limit {self.max_transaction_count}"
+                    query = f"SELECT * FROM transactions WHERE sku_id = {sku_id} " \
+                            f"ORDER BY tr_id DESC LIMIT {self.max_transaction_count}"
+
+            where_clause = ""
+
         else:
             query = f"SELECT * FROM {table}"
+
+        query = query + where_clause
         logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)

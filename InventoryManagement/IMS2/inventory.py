@@ -31,6 +31,7 @@ class InventoryWindow(QMainWindow):
     done_signal = Signal(str)
     edit_lock_signal = Signal(str)
     edit_unlock_signal = Signal(str)
+    update_all_signal = Signal()
 
     def __init__(self):
         super().__init__()
@@ -85,6 +86,14 @@ class InventoryWindow(QMainWindow):
         file_menu.addAction(exit_action)
         file_menu.addAction(import_tr_action)
         file_menu.addAction(change_user_action)
+
+        # View menu
+        self.inactive_item_action = QAction('Show inactive items', self)
+        self.inactive_item_action.setStatusTip('Show inactive items')
+        self.inactive_item_action.triggered.connect(self.view_inactive_items)
+
+        view_menu = menubar.addMenu('&View')
+        view_menu.addAction(self.inactive_item_action)
 
         # Admin menu
         reset_pw_action = QAction('Reset password', self)
@@ -196,6 +205,7 @@ class InventoryWindow(QMainWindow):
             await self.sku_model.update()
         elif action == "tr_update":
             await self.tr_model.update()
+
         self.done_signal.emit(action)
 
         if result_str is not None:
@@ -239,6 +249,23 @@ class InventoryWindow(QMainWindow):
             logger.debug(f"\n{bit_df}")
             # self.tr_widget.filter_no_selection()
             self.tr_model.append_new_rows_from_emr(bit_df)
+
+    def view_inactive_items(self):
+        if Lab().show_inactive_items:
+            Lab().show_inactive_items = False
+            self.inactive_item_action.setText('Show inactive items')
+        else:
+            Lab().show_inactive_items = True
+            self.inactive_item_action.setText('Hide inactive items')
+
+        self.update_all()
+
+    @Slot()
+    def update_all(self):
+        self.async_start("item_update")
+        self.async_start("sku_update")
+        self.tr_model.selected_upper_id = None
+        self.async_start("tr_update")
 
     def reset_password(self):
         u_name, ok = QInputDialog.getText(self, "Reset Password", "Enter user name:")
