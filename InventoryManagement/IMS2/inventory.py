@@ -39,6 +39,7 @@ class InventoryWindow(QMainWindow):
 
         self.login_widget = LoginWidget(CONFIG_FILE, self)
         self.login_widget.start_main.connect(self.initUI)
+        self.update_all_signal.connect(self.update_all)
 
         if is_test.lower() == "true":
             self.initUI("test")
@@ -54,7 +55,7 @@ class InventoryWindow(QMainWindow):
     def initUI(self, user_name: str):
         self.setWindowTitle("다나을 재고관리")
         self.setup_menu()
-        self.async_helper = AsyncHelper(self, self.save_to_db)
+        self.async_helper = AsyncHelper(self, self.do_db_work)
 
         self.setup_main_window(user_name)
 
@@ -175,7 +176,7 @@ class InventoryWindow(QMainWindow):
         # AsyncHelper will eventually call self.save_to_db(action, action)
         self.start_signal.emit(action)
 
-    async def save_to_db(self, action: str):
+    async def do_db_work(self, action: str):
         """
         This is the function registered to async_helper as a async coroutine
         :param action:
@@ -189,10 +190,15 @@ class InventoryWindow(QMainWindow):
             result_str = await self.item_widget.save_to_db()
             logger.debug("Updating items ...")
             await self.item_model.update()
+            await self.sku_model.update()
+            self.tr_model.selected_upper_id = None
+            await self.tr_model.update()
         elif action == "sku_save":
             logger.debug("Saving skus ...")
             result_str = await self.sku_widget.save_to_db()
             await self.sku_model.update()
+            self.tr_model.selected_upper_id = None
+            await self.tr_model.update()
         elif action == "tr_save":
             logger.debug("Saving transactions ...")
             await self.sku_widget.save_to_db()
@@ -204,6 +210,7 @@ class InventoryWindow(QMainWindow):
         elif action == "sku_update":
             await self.sku_model.update()
         elif action == "tr_update":
+            self.tr_model.selected_upper_id = None
             await self.tr_model.update()
 
         self.done_signal.emit(action)
@@ -264,7 +271,6 @@ class InventoryWindow(QMainWindow):
     def update_all(self):
         self.async_start("item_update")
         self.async_start("sku_update")
-        self.tr_model.selected_upper_id = None
         self.async_start("tr_update")
 
     def reset_password(self):

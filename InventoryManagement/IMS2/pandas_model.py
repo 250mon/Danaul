@@ -95,7 +95,7 @@ class PandasModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if not index.isValid():
             logger.debug(f"CHECK!!! index({index}) is not valid")
-            return False
+            return Qt.NoItemFlags
 
         if not self.is_editable:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
