@@ -210,6 +210,10 @@ class InventoryWindow(QMainWindow):
         elif action == "sku_update":
             await self.sku_model.update()
         elif action == "tr_update":
+            await self.tr_model.update()
+        elif action == "all_update":
+            await self.item_model.update()
+            await self.sku_model.update()
             self.tr_model.selected_upper_id = None
             await self.tr_model.update()
 
@@ -269,9 +273,7 @@ class InventoryWindow(QMainWindow):
 
     @Slot()
     def update_all(self):
-        self.async_start("item_update")
-        self.async_start("sku_update")
-        self.async_start("tr_update")
+        self.async_start("all_update")
 
     def reset_password(self):
         u_name, ok = QInputDialog.getText(self, "Reset Password", "Enter user name:")
