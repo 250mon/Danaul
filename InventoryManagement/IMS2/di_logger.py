@@ -19,6 +19,9 @@ class Logs(metaclass=Singleton):
         return logger
 
     def init_logger(self, logger):
+        if self.log_output is None:
+            return
+
         if "Console" in self.log_output:
             ch = logging.StreamHandler()
             ch.setFormatter(logging.Formatter('%(levelname)s:%(filename)s:'
