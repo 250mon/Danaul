@@ -95,7 +95,7 @@ class PandasModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if not index.isValid():
             logger.debug(f"CHECK!!! index({index}) is not valid")
-            return False
+            return Qt.NoItemFlags
 
         if not self.is_editable:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -104,12 +104,10 @@ class PandasModel(QAbstractTableModel):
         elif (index.row() in self.new_rows_set and
                 self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable):
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
-        # elif (index.row() in self.editable_rows_set and
         elif self.col_idx_edit_lvl[index.column()] <= self.edit_level:
             return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        # return Qt.NoItemFlags
 
     def set_edit_level(self, level: EditLevel):
         self.edit_level = level

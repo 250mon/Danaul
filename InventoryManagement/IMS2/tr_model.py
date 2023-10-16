@@ -93,11 +93,13 @@ class TrModel(DataModel):
                   'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
                   'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")}
         logger.debug(f"\n{kwargs}")
-        await Lab().update_lab_df_from_db(self.table_name, **kwargs)
+        await super().update(**kwargs)
 
-        self._set_model_df()
-        self.layoutAboutToBeChanged.emit()
-        self.layoutChanged.emit()
+        # await Lab().update_lab_df_from_db(self.table_name, **kwargs)
+        #
+        # self._set_model_df()
+        # self.layoutAboutToBeChanged.emit()
+        # self.layoutChanged.emit()
 
     def get_default_delegate_info(self) -> List[int]:
         """

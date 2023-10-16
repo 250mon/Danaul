@@ -31,6 +31,7 @@ class InventoryWindow(QMainWindow):
     done_signal = Signal(str)
     edit_lock_signal = Signal(str)
     edit_unlock_signal = Signal(str)
+    update_all_signal = Signal()
 
     def __init__(self):
         super().__init__()
@@ -38,6 +39,7 @@ class InventoryWindow(QMainWindow):
 
         self.login_widget = LoginWidget(CONFIG_FILE, self)
         self.login_widget.start_main.connect(self.initUI)
+        self.update_all_signal.connect(self.update_all)
 
         if is_test.lower() == "true":
             self.initUI("test")
@@ -53,7 +55,7 @@ class InventoryWindow(QMainWindow):
     def initUI(self, user_name: str):
         self.setWindowTitle("다나을 재고관리")
         self.setup_menu()
-        self.async_helper = AsyncHelper(self, self.save_to_db)
+        self.async_helper = AsyncHelper(self, self.do_db_work)
 
         self.setup_main_window(user_name)
 
@@ -85,6 +87,14 @@ class InventoryWindow(QMainWindow):
         file_menu.addAction(exit_action)
         file_menu.addAction(import_tr_action)
         file_menu.addAction(change_user_action)
+
+        # View menu
+        self.inactive_item_action = QAction('Show inactive items', self)
+        self.inactive_item_action.setStatusTip('Show inactive items')
+        self.inactive_item_action.triggered.connect(self.view_inactive_items)
+
+        view_menu = menubar.addMenu('&View')
+        view_menu.addAction(self.inactive_item_action)
 
         # Admin menu
         reset_pw_action = QAction('Reset password', self)
@@ -166,7 +176,7 @@ class InventoryWindow(QMainWindow):
         # AsyncHelper will eventually call self.save_to_db(action, action)
         self.start_signal.emit(action)
 
-    async def save_to_db(self, action: str):
+    async def do_db_work(self, action: str):
         """
         This is the function registered to async_helper as a async coroutine
         :param action:
@@ -180,10 +190,15 @@ class InventoryWindow(QMainWindow):
             result_str = await self.item_widget.save_to_db()
             logger.debug("Updating items ...")
             await self.item_model.update()
+            await self.sku_model.update()
+            self.tr_model.selected_upper_id = None
+            await self.tr_model.update()
         elif action == "sku_save":
             logger.debug("Saving skus ...")
             result_str = await self.sku_widget.save_to_db()
             await self.sku_model.update()
+            self.tr_model.selected_upper_id = None
+            await self.tr_model.update()
         elif action == "tr_save":
             logger.debug("Saving transactions ...")
             await self.sku_widget.save_to_db()
@@ -196,6 +211,12 @@ class InventoryWindow(QMainWindow):
             await self.sku_model.update()
         elif action == "tr_update":
             await self.tr_model.update()
+        elif action == "all_update":
+            await self.item_model.update()
+            await self.sku_model.update()
+            self.tr_model.selected_upper_id = None
+            await self.tr_model.update()
+
         self.done_signal.emit(action)
 
         if result_str is not None:
@@ -239,6 +260,20 @@ class InventoryWindow(QMainWindow):
             logger.debug(f"\n{bit_df}")
             # self.tr_widget.filter_no_selection()
             self.tr_model.append_new_rows_from_emr(bit_df)
+
+    def view_inactive_items(self):
+        if Lab().show_inactive_items:
+            Lab().show_inactive_items = False
+            self.inactive_item_action.setText('Show inactive items')
+        else:
+            Lab().show_inactive_items = True
+            self.inactive_item_action.setText('Hide inactive items')
+
+        self.update_all()
+
+    @Slot()
+    def update_all(self):
+        self.async_start("all_update")
 
     def reset_password(self):
         u_name, ok = QInputDialog.getText(self, "Reset Password", "Enter user name:")

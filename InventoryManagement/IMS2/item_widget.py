@@ -232,7 +232,4 @@ class ItemWidget(InventoryTableWidget):
         Update the views with the latest data from db
         :return:
         """
-        if hasattr(self.parent, "async_start"):
-            self.parent.async_start("item_update")
-            self.parent.async_start("sku_update")
-            self.parent.async_start("tr_update")
+        self.parent.update_all_signal.emit()

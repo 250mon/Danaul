@@ -202,11 +202,11 @@ async def main():
 
     async def insert_items():
         items_df = pd.DataFrame({
-            'item_id':       ['DEFAULT', 'DEFAULT', 'DEFAULT'],
-            'active':        [True, True, True],
-            'item_name':     ['노시셉톨', '써지겔', 'Qplint 단상지'],
-            'category_id':   [1, 1, 3],
-            'description':   ['', '', '']
+            'item_id':       ['DEFAULT', 'DEFAULT'],
+            'active':        [True, True],
+            'item_name':     ['노시셉톨', '써지겔'],
+            'category_id':   [1, 1],
+            'description':   ['', '']
         })
         print(await danaul_db.insert_df('items', items_df))
 
