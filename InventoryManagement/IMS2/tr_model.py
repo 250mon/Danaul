@@ -153,8 +153,8 @@ class TrModel(DataModel):
                 try:
                     ret = int(data_to_display)
                 except Exception as e:
-                    print(e)
-                    print(f"{col_name} {data_to_display}")
+                    logger.error(e)
+                    logger.error(f"{col_name} {data_to_display}")
                 return int(data_to_display)
             elif col_name == 'tr_timestamp':
                 # data type is datetime.date
@@ -252,21 +252,9 @@ class TrModel(DataModel):
         }])
         return new_model_df
 
-    def append_new_rows_from_emr(self, bit_df: pd.DataFrame):
-        temp_selected_id = None
-        if self.selected_upper_id is not None:
-            temp_selected_id = self.selected_upper_id
-            self.selected_upper_id = None
-            # logger.error("There exists a selected sku_id.")
-            # return
-
-        sku_sub_df = self.sku_model.model_df.loc[:, ["sku_id", "bit_code"]]
-        sku_sub_df.loc[:, "bit_code"] = sku_sub_df.bit_code.str.replace('\s', '', regex=True)
-        sku_bit_id_df = sku_sub_df.set_index("bit_code")
-        # index: bit_code, columns: ["tr_qty", "sku_id"]
-        joined_df = pd.merge(bit_df, sku_bit_id_df, left_index=True, right_index=True)
-        logger.debug(f"joined_df\n"
-                     f"{joined_df}")
+    def append_new_rows_from_emr(self, joined_df: pd.DataFrame):
+        temp_selected_id = self.selected_upper_id
+        self.selected_upper_id = None
 
         next_new_id = self.model_df.iloc[:, 0].max() + 1
         logger.debug(f"New model_df_row id is {next_new_id}")
@@ -284,6 +272,39 @@ class TrModel(DataModel):
 
         if temp_selected_id is not None:
             self.selected_upper_id = temp_selected_id
+
+    # def append_new_rows_from_emr(self, bit_df: pd.DataFrame):
+    #     temp_selected_id = None
+    #     if self.selected_upper_id is not None:
+    #         temp_selected_id = self.selected_upper_id
+    #         self.selected_upper_id = None
+    #         # logger.error("There exists a selected sku_id.")
+    #         # return
+    #
+    #     sku_sub_df = self.sku_model.model_df.loc[:, ["sku_id", "bit_code"]]
+    #     sku_sub_df.loc[:, "bit_code"] = sku_sub_df.bit_code.str.replace('\s', '', regex=True)
+    #     sku_bit_id_df = sku_sub_df.set_index("bit_code")
+    #     # index: bit_code, columns: ["tr_qty", "sku_id"]
+    #     joined_df = pd.merge(bit_df, sku_bit_id_df, left_index=True, right_index=True)
+    #     logger.debug(f"joined_df\n"
+    #                  f"{joined_df}")
+    #
+    #     next_new_id = self.model_df.iloc[:, 0].max() + 1
+    #     logger.debug(f"New model_df_row id is {next_new_id}")
+    #
+    #     for row in joined_df.itertuples():
+    #         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+    #         self.selected_upper_id = row.sku_id
+    #         new_row_df = self.make_a_new_row_df(next_new_id, tr_type="Sell", tr_qty=row.tr_qty)
+    #         if new_row_df is not None:
+    #             self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
+    #             next_new_id += 1
+    #             self.endInsertRows()
+    #             if not self.validate_new_row(self.index(self.rowCount()-1, 0, QModelIndex())):
+    #                 self.drop_rows([self.rowCount() - 1])
+    #
+    #     if temp_selected_id is not None:
+    #         self.selected_upper_id = temp_selected_id
 
     def validate_new_row(self, index: QModelIndex) -> bool:
         """

@@ -22,10 +22,6 @@ class Lab(metaclass=Singleton):
         self.max_transaction_count = MAX_TRANSACTION_COUNT
         self.show_inactive_items = False
 
-        self.items = {}
-        self.skus = {}
-        self.transactions = {}
-
         self.table_df = {
             'category': None,
             'users': None,

@@ -1,4 +1,5 @@
 import sys, os
+import pandas as pd
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
     QVBoxLayout, QFileDialog, QInputDialog, QMessageBox
@@ -18,6 +19,7 @@ from tr_widget import TrWidget
 from di_logger import Logs, logging
 from constants import CONFIG_FILE, UserPrivilege, ConfigReader
 from emr_tr_reader import EmrTransactionReader
+from bit_import_widget import ImportWidget
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -32,6 +34,7 @@ class InventoryWindow(QMainWindow):
     edit_lock_signal = Signal(str)
     edit_unlock_signal = Signal(str)
     update_all_signal = Signal()
+    import_trs_signal = Signal(pd.DataFrame)
 
     def __init__(self):
         super().__init__()
@@ -40,6 +43,7 @@ class InventoryWindow(QMainWindow):
         self.login_widget = LoginWidget(CONFIG_FILE, self)
         self.login_widget.start_main.connect(self.initUI)
         self.update_all_signal.connect(self.update_all)
+        self.import_trs_signal.connect(self.import_transactions)
 
         if is_test.lower() == "true":
             self.initUI("test")
@@ -47,6 +51,8 @@ class InventoryWindow(QMainWindow):
             self.initUI("admin")
         else:
             self.login()
+
+        self.import_widget = None
 
     def login(self):
         self.login_widget.show()
@@ -244,21 +250,30 @@ class InventoryWindow(QMainWindow):
     def show_file_dialog(self):
         fname = QFileDialog.getOpenFileName(self, 'Open file', '../')
         if fname[0]:
-            self.import_transactions(fname[0])
+            self.read_emrfile(fname[0])
 
-    def import_transactions(self, file_name):
-        reader = EmrTransactionReader(file_name)
+    def read_emrfile(self, file_name):
+        reader = EmrTransactionReader(file_name, self)
         if reader is None:
             logger.debug("Invalid file")
             return
 
-        codes = self.sku_model.get_bit_codes()
-        bit_df = reader.read_df_from(codes)
-        if bit_df is None:
-            logger.debug("bit_df is None")
+        code_df = self.sku_model.get_bitcode_df()
+        bit_df = reader.read_df_from(code_df)
+
+        if self.import_widget is None:
+            self.import_widget = ImportWidget(bit_df, self)
+        else:
+            self.import_widget.load()
+
+        self.import_widget.show()
+
+    @Slot(pd.DataFrame)
+    def import_transactions(self, bit_df):
+        if bit_df is None or bit_df.empty:
+            logger.debug("bit_df is empty")
         else:
             logger.debug(f"\n{bit_df}")
-            # self.tr_widget.filter_no_selection()
             self.tr_model.append_new_rows_from_emr(bit_df)
 
     def view_inactive_items(self):
