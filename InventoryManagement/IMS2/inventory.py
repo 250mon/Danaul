@@ -274,7 +274,14 @@ class InventoryWindow(QMainWindow):
             logger.debug("bit_df is empty")
         else:
             logger.debug(f"\n{bit_df}")
-            self.tr_model.append_new_rows_from_emr(bit_df)
+            result_s = self.tr_model.append_new_rows_from_emr(bit_df)
+
+        if not result_s.empty:
+            QMessageBox.information(self,
+                                    'Import Result',
+                                    result_s.to_string(index=False),
+                                    QMessageBox.Close)
+
 
     def view_inactive_items(self):
         if Lab().show_inactive_items:

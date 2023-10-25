@@ -87,4 +87,5 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     window = ImportWidget(data)
+    window.show()
     app.exec()
