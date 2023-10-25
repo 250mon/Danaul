@@ -258,13 +258,12 @@ class InventoryWindow(QMainWindow):
             logger.debug("Invalid file")
             return
 
-        code_df = self.sku_model.get_bitcode_df()
-        bit_df = reader.read_df_from(code_df)
+        emr_df = reader.read_df_from()
 
         if self.import_widget is None:
-            self.import_widget = ImportWidget(bit_df, self)
+            self.import_widget = ImportWidget(emr_df, self)
         else:
-            self.import_widget.load()
+            self.import_widget.load(emr_df)
 
         self.import_widget.show()
 
