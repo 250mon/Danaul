@@ -234,6 +234,7 @@ class TrModel(DataModel):
         tr_type = kwargs['tr_type']
         tr_type_id = Lab().tr_type_id_s.loc[tr_type]
         tr_qty = kwargs.get('tr_qty', 1)
+        description = kwargs.get('description', "")
         user_id = Lab().user_id_s.loc[self.user_name]
 
         new_model_df = pd.DataFrame([{
@@ -244,7 +245,7 @@ class TrModel(DataModel):
             'before_qty': last_qty,
             'after_qty': last_qty,
             'tr_timestamp': datetime.now(),
-            'description': "",
+            'description': description,
             'user_name': self.user_name,
             'user_id': user_id,
             'tr_type_id': tr_type_id,
@@ -263,7 +264,13 @@ class TrModel(DataModel):
         for row in joined_df.itertuples():
             self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
             self.selected_upper_id = row.sku_id
-            new_row_df = self.make_a_new_row_df(next_new_id, tr_type="Sell", tr_qty=row.tr_qty)
+            new_row_df = self.make_a_new_row_df(
+                next_new_id,
+                tr_type="Sell",
+                tr_qty=row.tr_qty,
+                description="***EMR IMPORTED***",
+            )
+
             if new_row_df is not None:
                 self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
                 next_new_id += 1
@@ -276,17 +283,18 @@ class TrModel(DataModel):
         if temp_selected_id is not None:
             self.selected_upper_id = temp_selected_id
 
+        # makes a result message
         joined_df.loc[:, "res"] = result_s
         msg_df = pd.DataFrame({"res": [True, False], "Result": ["Success", "Failed"]})
-        result_df = pd.merge(joined_df, msg_df, on="res")
-        result_df = result_df[["sku_name", "tr_qty", "Result"]].astype("string")
-        result_df = result_df.loc[result_df.Result == "Failed", :]
+        msg_merged_df = pd.merge(joined_df, msg_df, on="res")
+        msg_merged_df = msg_merged_df[["sku_name", "tr_qty", "Result"]].astype("string")
+        msg_merged_df = msg_merged_df.loc[msg_merged_df.Result == "Failed", :]
 
-        result_s = result_df["Result"].str.ljust(15, fillchar='.')
-        result_s = result_s + result_df["sku_name"].str.ljust(25, fillchar='.')
-        result_s = result_s + result_df["tr_qty"].str.rjust(5, fillchar='.')
+        msg_s = msg_merged_df["Result"].str.ljust(15, fillchar='.')
+        msg_s = msg_s + msg_merged_df["sku_name"].str.ljust(25, fillchar='.')
+        msg_s = msg_s + msg_merged_df["tr_qty"].str.rjust(5, fillchar='.')
 
-        return result_s
+        return msg_s
 
     def validate_new_row(self, index: QModelIndex) -> bool:
         """

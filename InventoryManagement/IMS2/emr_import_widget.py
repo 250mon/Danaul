@@ -31,6 +31,7 @@ class ImportWidget(QWidget):
         self.load(data_df)
 
     def initUi(self):
+        self.setWindowTitle("Importing EMR data")
         self.importView = QListView()
 
         self.deleteButton = QPushButton("Delete")

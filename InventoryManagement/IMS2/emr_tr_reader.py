@@ -17,9 +17,11 @@ class EmrTransactionReader():
 
         try:
             if PurePath(self.filename).suffix == '.xlsx':
+                logger.debug(f"{self.filename} is being imported ... format xlsx")
                 bit_df = pd.read_excel(self.filename)
             elif PurePath(self.filename).suffix == '.csv':
-                bit_df = pd.read_csv(self.filename, sep="\t", encoding='utf-16LE')
+                logger.debug(f"{self.filename} is being imported ... format csv")
+                bit_df = pd.read_csv(self.filename, sep="\t", encoding='utf-16')
             else:
                 logger.error(f"Not implemented importing file type {self.filename}")
                 return

@@ -19,7 +19,7 @@ from tr_widget import TrWidget
 from di_logger import Logs, logging
 from constants import CONFIG_FILE, UserPrivilege, ConfigReader
 from emr_tr_reader import EmrTransactionReader
-from bit_import_widget import ImportWidget
+from emr_import_widget import ImportWidget
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -268,12 +268,12 @@ class InventoryWindow(QMainWindow):
         self.import_widget.show()
 
     @Slot(pd.DataFrame)
-    def import_transactions(self, bit_df):
-        if bit_df is None or bit_df.empty:
-            logger.debug("bit_df is empty")
+    def import_transactions(self, emr_df):
+        if emr_df is None or emr_df.empty:
+            logger.debug("emr_df is empty")
         else:
-            logger.debug(f"\n{bit_df}")
-            result_s = self.tr_model.append_new_rows_from_emr(bit_df)
+            logger.debug(f"\n{emr_df}")
+            result_s = self.tr_model.append_new_rows_from_emr(emr_df)
 
         if not result_s.empty:
             QMessageBox.information(self,
