@@ -61,12 +61,14 @@ class ImportWidget(QWidget):
             int_indexes = [index.row() for index in indexes]
             # Remove the item and refresh.
             self.model.data_df.drop(pd.Index(int_indexes), inplace=True)
+            self.model.data_df.reset_index(inplace=True, drop=True)
             self.model.layoutChanged.emit()
             # Clear the selection (as it is no longer valid).
             self.importView.clearSelection()
 
     def load(self, data_df=None):
         if data_df is not None:
+            data_df.reset_index(inplace=True, drop=True)
             self.model.data_df = data_df
         self.importView.setModel(self.model)
         self.model.layoutChanged.emit()

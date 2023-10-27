@@ -274,12 +274,11 @@ class InventoryWindow(QMainWindow):
         else:
             logger.debug(f"\n{emr_df}")
             result_s = self.tr_model.append_new_rows_from_emr(emr_df)
-
-        if not result_s.empty:
-            QMessageBox.information(self,
-                                    'Import Result',
-                                    result_s.to_string(index=False),
-                                    QMessageBox.Close)
+            if not result_s.empty:
+                QMessageBox.information(self,
+                                        'Import Result',
+                                        result_s.to_string(index=False),
+                                        QMessageBox.Close)
 
 
     def view_inactive_items(self):
