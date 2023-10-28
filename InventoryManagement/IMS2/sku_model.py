@@ -279,6 +279,10 @@ class SkuModel(DataModel):
         code_set.discard('')
         return list(code_set)
 
+    def get_bitcode_df(self) -> pd.DataFrame:
+        bitcode_df = self.model_df.loc[:, ["sku_id", "bit_code"]]
+        return bitcode_df[bitcode_df["bit_code"].astype(bool)]
+
     @Slot(object)
     def item_model_changed(self, item_ids: List):
         """
