@@ -14,7 +14,7 @@ class ImportModel(QAbstractListModel):
     def data(self, index, role):
         if role == Qt.DisplayRole:
             data_row = self.data_df.values[index.row()]
-            # [sku_id, qty, item_name]
+            # [treatment_id, qty, treatment_name]
             text = f"{data_row[1]} {data_row[2]}:\t\t{data_row[0]} "
             return text
 
@@ -59,7 +59,7 @@ class ImportWidget(QWidget):
         indexes = self.importView.selectedIndexes()
         if indexes:
             int_indexes = [index.row() for index in indexes]
-            # Remove the item and refresh.
+            # Remove the treatments.and refresh.
             self.model.data_df.drop(pd.Index(int_indexes), inplace=True)
             self.model.data_df.reset_index(inplace=True, drop=True)
             self.model.layoutChanged.emit()

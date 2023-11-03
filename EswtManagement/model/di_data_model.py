@@ -56,7 +56,7 @@ class DataModel(PandasModel):
         :return:
         """
         col_idx_edit_lvl = {}
-        for col_name, lvl in col_edit_lvl.items():
+        for col_name, lvl in col_edit_lvl.treatments():
             col_idx = self.column_names.index(col_name)
             col_idx_edit_lvl[col_idx] = lvl
         super().set_column_index_edit_level(col_idx_edit_lvl)
@@ -83,7 +83,7 @@ class DataModel(PandasModel):
         #     return None
         # elif col not in self.column_names:
         #     return None
-        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
+        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].treatments.)
 
     def set_flag(self, index: QModelIndex, flag: int):
         """
@@ -398,7 +398,7 @@ class DataModel(PandasModel):
             messages = {}
             # total_results are composed of 3 results: new, chg, del
             # Each result are composed of result from multiple queries
-            for op_type, result in total_results.items():
+            for op_type, result in total_results.treatments():
                 if result is None:
                     msg = '성공!!'
                 elif isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
@@ -411,7 +411,7 @@ class DataModel(PandasModel):
                 messages[op_type] = msg
 
             return_msg = f'<{self.table_name} RESULTS>'
-            for op_type, msg in messages.items():
+            for op_type, msg in messages.treatments():
                 return_msg += ('\n' + op_type + ': ' + msg)
             return return_msg
 

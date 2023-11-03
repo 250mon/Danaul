@@ -8,7 +8,7 @@ import pandas as pd
 from common.d_logger import Logs, logging
 from constants import MAX_TRANSACTION_COUNT
 from common.singleton import Singleton
-import db.inventory_schema
+import db.db_schema
 
 
 logger = Logs().get_logger(os.path.basename(__file__))
@@ -20,15 +20,15 @@ class Lab(metaclass=Singleton):
         self.di_db = di_db
         self.di_db_util = self.di_db.db_util
         self.max_transaction_count = MAX_TRANSACTION_COUNT
-        self.show_inactive_items = False
+        self.show_inactive_treatments = False
 
         self.table_df = {
             'category': None,
             'users': None,
-            'transaction_type': None,
-            'items': None,
+            'providers': None,
+            'treatments': None,
             'skus': None,
-            'transactions': None
+            'sessions': None
         }
         self._set_db_column_names()
 
@@ -70,40 +70,40 @@ class Lab(metaclass=Singleton):
     def _set_db_column_names(self):
         col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
         self.table_column_names = {}
-        self.table_column_names['items'] = col_name.findall(db.inventory_schema.CREATE_ITEM_TABLE)
+        self.table_column_names['treatments'] = col_name.findall(db.inventory_schema.CREATE_TREATMENT_TABLE)
         self.table_column_names['skus'] = col_name.findall(db.inventory_schema.CREATE_SKU_TABLE)
-        self.table_column_names['transactions'] = col_name.findall(db.inventory_schema.CREATE_TRANSACTION_TABLE)
+        self.table_column_names['sessions'] = col_name.findall(db.inventory_schema.CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
         where_clause = ""
-        if not self.show_inactive_items:
-            if table == "items":
+        if not self.show_inactive_treatments:
+            if table == "treatments":
                 where_clause = " WHERE active = True"
             elif table == "skus":
-                where_clause = " WHERE (item_id IN (SELECT item_id FROM items WHERE active = True)) AND " \
+                where_clause = " WHERE (treatment_id IN (SELECT treatment_id FROM treatments WHERE active = True)) AND " \
                                "(active = True)"
-            elif table == "transactions":
-                where_clause = " WHERE sku_id IN (SELECT sku_id FROM skus AS s WHERE " \
-                               "(s.item_id IN (SELECT item_id FROM items AS i WHERE i.active = True)) AND " \
+            elif table == "sessions":
+                where_clause = " WHERE treatment_id IN (SELECT treatment_id FROM skus AS s WHERE " \
+                               "(s.treatment_id IN (SELECT treatment_id FROM treatments AS i WHERE i.active = True)) AND " \
                                "(s.active = True))"
 
-        if table == "transactions":
-            sku_id = kwargs.get('sku_id', None)
+        if table == "sessions":
+            treatment_id = kwargs.get('treatment_id', None)
             beg_ts = kwargs.get('beg_timestamp', '')
             end_ts = kwargs.get('end_timestamp', '')
-            if sku_id is None:
-                query = f"SELECT * FROM transactions {where_clause} ORDER BY tr_id DESC LIMIT " \
+            if treatment_id is None:
+                query = f"SELECT * FROM sessions {where_clause} ORDER BY session_id DESC LIMIT " \
                         f"{self.max_transaction_count}"
             else:
                 if beg_ts != '' and end_ts != '':
-                    query = f"SELECT * FROM transactions WHERE sku_id = {sku_id} " \
-                            f"AND tr_timestamp >= '{beg_ts}' AND tr_timestamp <= '{end_ts}' " \
-                            f"ORDER BY tr_id DESC LIMIT {self.max_transaction_count}"
+                    query = f"SELECT * FROM sessions WHERE treatment_id = {treatment_id} " \
+                            f"AND timestamp >= '{beg_ts}' AND timestamp <= '{end_ts}' " \
+                            f"ORDER BY session_id DESC LIMIT {self.max_transaction_count}"
                 else:
                     # beg_ts == '' or end_ts == '':
-                    query = f"SELECT * FROM transactions WHERE sku_id = {sku_id} " \
-                            f"ORDER BY tr_id DESC LIMIT {self.max_transaction_count}"
+                    query = f"SELECT * FROM sessions WHERE treatment_id = {treatment_id} " \
+                            f"ORDER BY session_id DESC LIMIT {self.max_transaction_count}"
 
             where_clause = ""
 
@@ -142,8 +142,8 @@ class Lab(metaclass=Singleton):
 
         self.category_name_s = make_series('category', True)
         self.category_id_s = make_series('category', False)
-        self.tr_type_s = make_series('transaction_type', True)
-        self.tr_type_id_s = make_series('transaction_type', False)
+        self.tr_type_s = make_series('providers', True)
+        self.provider_id_s = make_series('providers', False)
         self.user_name_s = make_series('users', True)
         self.user_id_s = make_series('users', False)
 
@@ -160,8 +160,8 @@ class Lab(metaclass=Singleton):
     async def delete_df(self, table: str, del_df: pd.DataFrame):
         return await self.di_db.delete_df(table, del_df)
 
-    async def upsert_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.upsert_items_df(items_df)
+    async def upsert_treatments_df(self, treatments_df: pd.DataFrame):
+        return await self.di_db.upsert_treatments_df(treatments_df)
 
     async def insert_skus_df(self, skus_df: pd.DataFrame):
         return await self.di_db.insert_df('skus', skus_df)
@@ -170,15 +170,15 @@ class Lab(metaclass=Singleton):
         return await self.di_db.delete_skus_df(skus_df)
 
     async def insert_trs_df(self, trs_df: pd.DataFrame):
-        return await self.di_db.insert_df('transactions', trs_df)
+        return await self.di_db.insert_df('sessions', trs_df)
 
     async def delete_trs_df(self, trs_df: pd.DataFrame):
         return await self.di_db.delete_trs_df(trs_df)
 
     async def get_trs_df_by_date(self, start_date: date, end_date: date):
-        query = """ SELECT * FROM transactions as t
-                        WHERE tr_timestamp::date >= $1
-                        AND tr_timestamp::date <= $2 """
+        query = """ SELECT * FROM sessions as t
+                        WHERE timestamp::date >= $1
+                        AND timestamp::date <= $2 """
         args = (start_date, end_date)
         db_results = await self.di_db_util.select_query(query, [args, ])
         df = self._db_to_df(db_results)
@@ -186,54 +186,54 @@ class Lab(metaclass=Singleton):
 
 async def main(lab):
     cat_s = lab.categories_df.set_index('category_id')['category_name']
-    tr_type_s = lab.tr_types_df.set_index('tr_type_id')['tr_type']
+    tr_type_s = lab.tr_types_df.set_index('provider_id')['tr_type']
 
     # Convert a dataframe into classes and insert them into DB
-    new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
+    new_treatments_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
                                  [None, True, 'n6', 3, 'change']],
-                                columns=['item_id', 'active', 'item_name',
+                                columns=['treatment_id', 'active', 'treatment_name',
                                          'category_id', 'description'])
-    # await lab.di_db.insert_items_df(new_items_df)
-    await lab.di_db.upsert_items_df(new_items_df)
-    await lab.update_lab_df_from_db('items')
+    # await lab.di_db.insert_treatments_df(new_treatments_df)
+    await lab.di_db.upsert_treatments_df(new_treatments_df)
+    await lab.update_lab_df_from_db('treatments')
 
     # Get data from db
-    lab.items_df['category'] = lab.items_df['category_id'].map(cat_s)
-    print(lab.items_df)
+    lab.treatments_df['category'] = lab.treatments_df['category_id'].map(cat_s)
+    print(lab.treatments_df)
 
-    # i_s = lab.items_df.set_index('item_id')['item_name']
+    # i_s = lab.treatments_df.set_index('treatment_id')['treatment_name']
     #
-    # lab.skus_df['item_name'] = lab.skus_df['item_id'].map(i_s)
+    # lab.skus_df['treatment_name'] = lab.skus_df['treatment_id'].map(i_s)
     # print(lab.skus_df)
     #
-    # sku_idx_df = lab.skus_df.set_index('sku_id')
+    # treatment_idx_df = lab.skus_df.set_index('treatment_id')
     #
-    # lab.trs_df['item_name'] = lab.trs_df['sku_id'].map(sku_idx_df['item_name'])
-    # lab.trs_df['tr_type'] = lab.trs_df['tr_type_id'].map(tr_type_s)
+    # lab.trs_df['treatment_name'] = lab.trs_df['treatment_id'].map(treatment_idx_df['treatment_name'])
+    # lab.trs_df['tr_type'] = lab.trs_df['provider_id'].map(tr_type_s)
     # print(lab.trs_df)
 
-    # item = await lab.get_item_from_db_by_id(1)
-    # print(item.item_name)
+    # treatments.= await lab.get_treatments.from_db_by_id(1)
+    # print(treatments.treatment_name)
 
     # transaction = await lab.get_transaction_from_db_by_id(1)
-    # print(transaction.tr_timestamp)
+    # print(transaction.timestamp)
 
     # skus = await lab.get_skus_from_db()
-    # skus = await lab.get_sku_from_db_by_item_id(1)
+    # skus = await lab.get_sku_from_db_by_treatment_id(1)
     # for sku in skus.values():
-    #     print(sku.sku_id)
+    #     print(sku.treatment_id)
     #
-    # trs = await lab.get_transactions_from_db_by_sku_id(1)
+    # trs = await lab.get_sessions_from_db_by_treatment_id(1)
     # for tr in trs.values():
-    #     print(tr.tr_id)
+    #     print(tr.session_id)
 
     # s_date = date.today()
     # e_date = date.today()
-    # trs = await lab.get_transactions_from_db_by_date(s_date, e_date)
+    # trs = await lab.get_sessions_from_db_by_date(s_date, e_date)
     # for tr in trs.values():
-    #     print(tr.tr_id)
+    #     print(tr.session_id)
 
 if __name__ == '__main__':
-    danaul_db = InventoryDb('../di_config')
+    danaul_db = InventoryDb('../ds_config')
     lab = Lab(danaul_db)
     asyncio.run(main(lab))

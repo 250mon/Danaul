@@ -4,7 +4,7 @@ from abc import abstractmethod
 from PySide6.QtWidgets import QMainWindow, QWidget, QMessageBox, QTableView
 from PySide6.QtCore import Slot, QSortFilterProxyModel, QModelIndex
 from model.di_data_model import DataModel
-from common.di_default_delegate import DefaultDelegate
+from common.default_delegate import DefaultDelegate
 from common.combobox_delegate import ComboBoxDelegate
 from common.spinbox_delegate import SpinBoxDelegate
 from common.d_logger import Logs, logging
@@ -69,7 +69,7 @@ class InventoryTableWidget(QWidget):
         self.table_view.setSortingEnabled(True)
         self.table_view.verticalHeader().setVisible(False)
         self.setStyleSheet(
-            "QTableView::item:selected"
+            "QTableView::treatments.selected"
             "{"
             "background-color : #d9fffb;"
             "selection-color : #000000;"
@@ -84,17 +84,17 @@ class InventoryTableWidget(QWidget):
         for col_idx in self.source_model.get_default_delegate_info():
             default_delegate = DefaultDelegate(self)
             default_delegate.set_model(self.source_model)
-            self.table_view.setItemDelegateForColumn(col_idx, default_delegate)
+            self.table_view.settreatments.elegateForColumn(col_idx, default_delegate)
 
-        for col_idx, val_list in self.source_model.get_combobox_delegate_info().items():
+        for col_idx, val_list in self.source_model.get_combobox_delegate_info().treatments():
             combo_delegate = ComboBoxDelegate(val_list, self)
             combo_delegate.set_model(self.source_model)
-            self.table_view.setItemDelegateForColumn(col_idx, combo_delegate)
+            self.table_view.settreatments.elegateForColumn(col_idx, combo_delegate)
 
-        for col_idx, val_list in self.source_model.get_spinbox_delegate_info().items():
+        for col_idx, val_list in self.source_model.get_spinbox_delegate_info().treatments():
             spin_delegate = SpinBoxDelegate(*val_list, self)
             spin_delegate.set_model(self.source_model)
-            self.table_view.setItemDelegateForColumn(col_idx, spin_delegate)
+            self.table_view.settreatments.elegateForColumn(col_idx, spin_delegate)
 
     @abstractmethod
     def _setup_ui(self):
@@ -160,7 +160,7 @@ class InventoryTableWidget(QWidget):
         Common
         This is called from a Button
         Just tagging as 'changed' in flag column and allowing the user
-        to modify the items
+        to modify the treatments
         :param indexes:
         :return:
         """
@@ -202,7 +202,7 @@ class InventoryTableWidget(QWidget):
         """
         A double click event that triggers the upper level widget's
         row_selected method eventually calls this method
-        :param item_id:
+        :param treatment_id:
         :return:
         """
         # if there is remaining unsaved new rows, drop them

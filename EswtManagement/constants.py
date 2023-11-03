@@ -2,7 +2,7 @@ from enum import Enum
 from functools import total_ordering
 from operator import methodcaller
 
-CONFIG_FILE = 'di_config'
+CONFIG_FILE = '../ds_config'
 ADMIN_GROUP = ['admin', 'jye']
 MAX_TRANSACTION_COUNT = 10
 DEFAULT_MIN_QTY = 1
@@ -33,8 +33,8 @@ class EditLevel(Enum):
         return NotImplemented
 
 
-class ConfigReader:
-    def __init__(self, file_path="config"):
+class ConfigReader():
+    def __init__(self, file_path=CONFIG_FILE):
         self.options = {}
         self.read_config_file(file_path)
 

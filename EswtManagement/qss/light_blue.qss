@@ -100,17 +100,17 @@ QMenuBar {
     background-color: #e0e0e0;
 }
 
-QMenuBar::item {
+QMenuBar::treatments.{
     background-color: #e0e0e0;
 }
 
-QMenuBar::item:selected {
+QMenuBar::treatments.selected {
     color: #1b3774;
     border: 1px solid #5e90fa;
     background-color: #5e90fa;
 }
 
-QMenuBar::item:pressed {
+QMenuBar::treatments.pressed {
     color: #1b3774;
     border: 1px solid #7cabf9;
     background-color: #7cabf9;
@@ -134,14 +134,14 @@ QMenu::right-arrow {
     image:url(icons/right_arrow_light.png);
 }
 
-QMenu::item {
+QMenu::treatments.{
     color: #ffffff;
     background-color: #828282;
     padding: 2px 30px 2px 30px;
     border: 1px solid #828282; /* reserve space for selection border */
 }
 
-QMenu::item:selected {
+QMenu::treatments.selected {
     color: #1b3774;
     background-color: #7cabf9;
 }
@@ -719,7 +719,7 @@ QComboBox::down-arrow:focus {
     image: url(icons/down_arrow_lighter.png);
 }
 
-QComboBox QAbstractItemView {
+QComboBox QAbstracttreatments.iew {
     color: #ffffff;
     background-color: #828282;
     border-radius: 3px;
@@ -742,7 +742,7 @@ QComboBox {
 }
 /* end Common parameters */
 
-QAbstractItemView {
+QAbstracttreatments.iew {
     color: #828282;
     alternate-background-color: #b3b8bf; /* related with QListView background  */
     border: 1px solid #828282;
@@ -751,9 +751,9 @@ QAbstractItemView {
 }
 
 /* hack to deactivate changing background color when focus (due to QFrame generic transparent color) */
-QAbstractItemView:selected,
-QAbstractItemView:on,
-QAbstractItemView:focus {
+QAbstracttreatments.iew:selected,
+QAbstracttreatments.iew:on,
+QAbstracttreatments.iew:focus {
     background-color: #bdc1c9; /* same as QTable background color */
 }
 
@@ -812,19 +812,19 @@ QTreeView QPushButton {
 }
 
 /* Color Buttons inside the "Properties window" */
-QAbstractItemView Gui--ColorButton {
+QAbstracttreatments.iew Gui--ColorButton {
     padding: 0px;
     margin: 0px;
     height: 10px;
 }
 
-QAbstractItemView QPushButton:hover {
+QAbstracttreatments.iew QPushButton:hover {
     color: black;
     background-color: qlineargradient(spread:pad, x1:1, y1:0.545, x2:1, y2:0, stop:0 #3874f2, stop:1 #5e90fa);
     border-color: #3874f2;
 }
 
-QAbstractItemView QPushButton:disabled {
+QAbstracttreatments.iew QPushButton:disabled {
     color: transparent;
     background-color: transparent;
     border-color: transparent;
@@ -1090,7 +1090,7 @@ QListView {
     border-radius: 4px;
     background-color: #bdc1c9;  /* related with alternate-background-color*/
     selection-color: black;
-    selection-background-color: #5e90fa; /* should be similar to QListView::item selected background-color */
+    selection-background-color: #5e90fa; /* should be similar to QListView::treatments.selected background-color */
     show-decoration-selected: 1; /* make the selection span the entire width of the view */
     padding: 0px;
     margin: 0px 4px 0px 4px;
@@ -1098,8 +1098,8 @@ QListView {
 }
 
 QListView,
-QListView::item,
-QListView QAbstractItemView {
+QListView::treatments.
+QListView QAbstracttreatments.iew {
     margin: 0px;
     icon-size: 20px; /* temporal */
     paint-alternating-row-colors-for-empty-area: 1;
@@ -1115,7 +1115,7 @@ QComboBox QListView {
     padding: 0px;
 }
 
-QListView::item {
+QListView::treatments.{
     border: 0px transparent #e6e6e6;
     border-radius: 4px;
     background-color: transparent;
@@ -1125,8 +1125,8 @@ QListView::item {
     position: relative;
 }
 
-QListView::item:selected,
-QTreeView::item:selected  {
+QListView::treatments.selected,
+QTreeView::treatments.selected  {
     color: black;
     background-color: #5e90fa; /* should be similar to QListView selection-background-color */
 }
@@ -1136,15 +1136,15 @@ QTreeView::branch  {
     background: transparent;
 }
 
-QTreeView::branch:has-siblings:!adjoins-item  {
+QTreeView::branch:has-siblings:!adjoins-treatments. {
     border-image: url(icons/branch_vline.png) 0;
 }
 
-QTreeView::branch:has-siblings:adjoins-item  {
+QTreeView::branch:has-siblings:adjoins-treatments. {
     border-image: url(icons/branch_more.png) 0;
 }
 
-QTreeView::branch:!has-children:!has-siblings:adjoins-item  {
+QTreeView::branch:!has-children:!has-siblings:adjoins-treatments. {
     border-image: url(icons/branch_end.png) 0;
 }
 
@@ -1391,15 +1391,15 @@ QTableView {
     margin: 0px;
 }
 
-QTableView::item:hover  {
+QTableView::treatments.hover  {
     background: #abb0b7;
 }
 
-QTableView::item:disabled  {
+QTableView::treatments.disabled  {
     color: #e6e6e6;
 }
 
-QTableView::item:selected  {
+QTableView::treatments.selected  {
     color: #1b3774;
     background-color: #7cabf9;
 }
@@ -1513,7 +1513,7 @@ QToolBox::tab:selected { /* italicize selected tabs */
     border-color: #5e90fa;
  }
 
-QStatusBar::item {
+QStatusBar::treatments.{
     color: #ffffff;
     background-color: #e6e6e6;
     border: 1px solid #e6e6e6;
@@ -1688,7 +1688,7 @@ QSint--ActionGroup QFrame[class="content"] QComboBox:on {
     background-color: #b6b6b6;
 }
 
-QSint--ActionGroup QFrame[class="content"] QComboBox QAbstractItemView {
+QSint--ActionGroup QFrame[class="content"] QComboBox QAbstracttreatments.iew {
     border-color: #828282;
     background-color: #828282;
 }

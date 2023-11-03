@@ -1,9 +1,9 @@
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
+from PySide6.QtWidgets import QStyledtreatments.elegate, QStyleOptionViewItem
 from PySide6.QtCore import QModelIndex
 from common.pandas_model import PandasModel
 
 
-class DefaultDelegate(QStyledItemDelegate):
+class DefaultDelegate(QStyledtreatments.elegate):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.p_model = None
@@ -12,6 +12,6 @@ class DefaultDelegate(QStyledItemDelegate):
         self.p_model = model
 
     def initStyleOption(self,
-                        option: QStyleOptionViewItem,
+                        option: QStyleOptionViewtreatments.
                         index: QModelIndex) -> None:
         super().initStyleOption(option, index)

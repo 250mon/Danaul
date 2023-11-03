@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QPushButton, QDataWidgetMapper, QGridLayout, QSizePolicy
 )
 from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel
-from model.tr_model import TrModel
+from model.session_model import TrModel
 from common.d_logger import Logs, logging
 
 

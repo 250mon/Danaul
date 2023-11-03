@@ -141,18 +141,18 @@ QProgressBar::chunk {
 QMenuBar {
 	background-color: QLinearGradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(207, 209, 207, 255), stop:1 rgba(230, 229, 230, 255));
 }
-QMenuBar::item {
+QMenuBar::treatments.{
 	color: #000000;
   	spacing: 3px;
   	padding: 1px 4px;
 	background-color: QLinearGradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(207, 209, 207, 255), stop:1 rgba(230, 229, 230, 255));
 }
 
-QMenuBar::item:selected {
+QMenuBar::treatments.selected {
   	background-color: QLinearGradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(0, 113, 255, 255), stop:1 rgba(91, 171, 252, 255));
 	color: #FFFFFF;
 }
-QMenu::item:selected {
+QMenu::treatments.selected {
 	border-style: solid;
 	border-top-color: transparent;
 	border-right-color: transparent;
@@ -165,7 +165,7 @@ QMenu::item:selected {
 	padding-bottom:4px;
 	padding-right:7px;
 }
-QMenu::item {
+QMenu::treatments.{
 	border-style: solid;
 	border-top-color: transparent;
 	border-right-color: transparent;

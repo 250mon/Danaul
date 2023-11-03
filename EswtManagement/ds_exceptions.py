@@ -4,7 +4,7 @@ class BaseInvalidIdError(IndexError):
     pass
 
 
-class NonExistentItemIdError(BaseInvalidIdError):
+class NonExistenttreatments.dError(BaseInvalidIdError):
     pass
 
 
@@ -12,7 +12,7 @@ class NonExistentSkuIdError(BaseInvalidIdError):
     pass
 
 
-class InactiveItemIdError(BaseInvalidIdError):
+class Inactivetreatments.dError(BaseInvalidIdError):
     pass
 
 

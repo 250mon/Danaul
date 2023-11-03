@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
 from common.d_logger import Logs, logging
 from db.ds_lab import Lab
-from model.tr_model import TrModel
+from model.session_model import TrModel
 from ui.di_table_widget import InventoryTableWidget
 from ui.single_tr_window import SingleTrWindow
 from constants import UserPrivilege
@@ -39,15 +39,15 @@ class TrWidget(InventoryTableWidget):
         Needs to be implemented
         :return:
         """
-        # Filtering is performed on item_name column
-        search_col_num = self.source_model.get_col_number('sku_id')
+        # Filtering is performed on treatment_name column
+        search_col_num = self.source_model.get_col_number('treatment_id')
         self.proxy_model.setFilterKeyColumn(search_col_num)
 
         # Sorting
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
-        initial_sort_col_num = self.source_model.get_col_number('tr_id')
+        initial_sort_col_num = self.source_model.get_col_number('session_id')
 
         # descending order makes problem with mapToSource index
         # self.proxy_model.sort(initial_sort_col_num, Qt.DescendingOrder)
@@ -62,12 +62,12 @@ class TrWidget(InventoryTableWidget):
         Needs to be implemented
         :return:
         """
-        self.set_col_hidden('tr_type_id')
-        self.set_col_width("tr_id", 50)
-        self.set_col_width("sku_id", 50)
-        self.set_col_width("tr_timestamp", 200)
+        self.set_col_hidden('provider_id')
+        self.set_col_width("session_id", 50)
+        self.set_col_width("treatment_id", 50)
+        self.set_col_width("timestamp", 200)
         self.set_col_width("description", 600)
-        # Unlike item_widget and sku_widget, tr_widget always allows editing
+        # Unlike treatments.widget and sku_widget, tr_widget always allows editing
         # because there is no select mode
         self.source_model.set_editable(True)
 
@@ -236,7 +236,7 @@ class TrWidget(InventoryTableWidget):
     def added_new_tr_by_single_tr_window(self, index: QModelIndex):
         """
         This is called when SingleTrWindow emits a signal
-        It validates the newly added item(the last index)
+        It validates the newly added treatments.the last index)
         If it fails to pass the validation, remove it.
         :return:
         """
@@ -252,7 +252,7 @@ class TrWidget(InventoryTableWidget):
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
         """
-        While changing items, activating other items would make changing
+        While changing treatments, activating other treatments would make changing
         to stop.
         :param index:
         :return:
@@ -262,23 +262,23 @@ class TrWidget(InventoryTableWidget):
             self.source_model.clear_editable_rows()
 
     def update_tr_view(self):
-        # retrieve the data about the selected sku_id from DB
+        # retrieve the data about the selected treatment_id from DB
         self.parent.async_start('tr_update')
         # displaying the sku name in the tr view
         self.sku_name_label.setText(self.source_model.selected_upper_name)
 
-    def filter_selection(self, sku_id: int):
+    def filter_selection(self, treatment_id: int):
         """
         A double-click event in the sku view triggers the parent's
         sku_selected method which in turn calls this method
-        :param sku_id:
+        :param treatment_id:
         :return:
         """
-        logger.debug(f"sku_id({sku_id})")
+        logger.debug(f"treatment_id({treatment_id})")
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
-        # set selected_sku_id
-        self.source_model.set_upper_model_id(sku_id)
+        # set selected_treatment_id
+        self.source_model.set_upper_model_id(treatment_id)
         self.update_tr_view()
 
     def filter_no_selection(self):
@@ -288,7 +288,7 @@ class TrWidget(InventoryTableWidget):
         """
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
-        # set selected_sku_id to None
+        # set selected_treatment_id to None
         self.source_model.set_upper_model_id(None)
         self.update_tr_view()
 

@@ -8,20 +8,20 @@ from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
 from common.d_logger import Logs, logging
 from ui.di_table_widget import InventoryTableWidget
-from model.item_model import ItemModel
-from ui.single_item_window import SingleItemWindow
+from model.treatment_model import TreatmentModel
+from ui.single_treatments.window import Singletreatments.indow
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 
-class ItemWidget(InventoryTableWidget):
+class treatments.idget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.delegate_mode = True
 
-    def set_source_model(self, model: ItemModel):
+    def set_source_model(self, model: TreatmentModel):
         self.source_model = model
         self._apply_model()
 
@@ -30,8 +30,8 @@ class ItemWidget(InventoryTableWidget):
         Needs to be implemented
         :return:
         """
-        # Filtering is performed on item_name column
-        # search_col_num = self.source_model.get_col_number('item_name')
+        # Filtering is performed on treatment_name column
+        # search_col_num = self.source_model.get_col_number('treatment_name')
         # self.proxy_model.setFilterKeyColumn(search_col_num)
 
         # -1 means searching every column
@@ -41,7 +41,7 @@ class ItemWidget(InventoryTableWidget):
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
-        initial_sort_col_num = self.source_model.get_col_number('item_id')
+        initial_sort_col_num = self.source_model.get_col_number('treatment_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     def _setup_initial_table_view(self):
@@ -58,9 +58,9 @@ class ItemWidget(InventoryTableWidget):
         :return:
         """
         self.set_col_hidden('category_id')
-        self.set_col_width("item_id", 50)
+        self.set_col_width("treatment_id", 50)
         self.set_col_width("active", 50)
-        self.set_col_width("item_name", 150)
+        self.set_col_width("treatment_name", 150)
         self.set_col_width("description", 150)
 
         title_label = QLabel('품목')
@@ -77,9 +77,9 @@ class ItemWidget(InventoryTableWidget):
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_btn = QPushButton('추가')
-        add_btn.clicked.connect(lambda: self.do_actions("add_item"))
+        add_btn.clicked.connect(lambda: self.do_actions("add_treatments.))
         del_btn = QPushButton('삭제/해제')
-        del_btn.clicked.connect(lambda: self.do_actions("del_item"))
+        del_btn.clicked.connect(lambda: self.do_actions("del_treatments.))
         save_btn = QPushButton('저장')
         save_btn.clicked.connect(self.save_model_to_db)
 
@@ -106,12 +106,12 @@ class ItemWidget(InventoryTableWidget):
 
     @Slot(str)
     def enable_edit_mode(self, sender: str):
-        if sender != "item_widget":
+        if sender != "treatments.widget":
             self.edit_mode.setEnabled(True)
 
     @Slot(str)
     def disable_edit_mode(self, sender: str):
-        if sender != "item_widget":
+        if sender != "treatments.widget":
             self.edit_mode.setEnabled(False)
 
     @ Slot(bool)
@@ -133,11 +133,11 @@ class ItemWidget(InventoryTableWidget):
 
     def edit_mode_starts(self):
         self.source_model.set_editable(True)
-        self.parent.edit_lock_signal.emit("item_widget")
+        self.parent.edit_lock_signal.emit("treatments.widget")
 
     def edit_mode_ends(self):
         self.source_model.set_editable(False)
-        self.parent.edit_unlock_signal.emit("item_widget")
+        self.parent.edit_unlock_signal.emit("treatments.widget")
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -147,29 +147,29 @@ class ItemWidget(InventoryTableWidget):
         :return:
         """
         logger.debug(f"{action}")
-        if action == "add_item":
-            logger.debug("Adding item ...")
+        if action == "add_treatments.:
+            logger.debug("Adding treatments....")
             self.add_new_row()
             if not self.delegate_mode:
                 # Input window mode using DataMapperWidget
-                new_item_index = self.source_model.index(self.source_model.rowCount()-1, 0)
-                self.item_window = SingleItemWindow(self.proxy_model,
-                                                    new_item_index, self)
+                new_treatments.index = self.source_model.index(self.source_model.rowCount()-1, 0)
+                self.treatments.window = Singletreatments.indow(self.proxy_model,
+                                                    new_treatments.index, self)
 
-        elif action == "chg_item":
-            logger.debug("Changing item ...")
+        elif action == "chg_treatments.:
+            logger.debug("Changing treatments....")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"chg_item {selected_indexes}")
+                logger.debug(f"chg_treatments.{selected_indexes}")
                 # if self.delegate_mode:
                 #     self.change_rows_by_delegate(selected_indexes)
                 if not self.delegate_mode:
-                    self.item_window = SingleItemWindow(self.proxy_model,
+                    self.treatments.window = Singletreatments.indow(self.proxy_model,
                                                         selected_indexes, self)
 
-        elif action == "del_item":
-            logger.debug("Deleting item ...")
+        elif action == "del_treatments.:
+            logger.debug("Deleting treatments....")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"del_item {selected_indexes}")
+                logger.debug(f"del_treatments.{selected_indexes}")
                 self.delete_rows(selected_indexes)
 
     def save_model_to_db(self):
@@ -180,20 +180,20 @@ class ItemWidget(InventoryTableWidget):
         :return:
         """
         if hasattr(self.parent, "async_start"):
-            self.parent.async_start("item_save")
+            self.parent.async_start("treatments.save")
         self.edit_mode.setChecked(False)
         self.edit_mode_ends()
 
     @Slot(object)
-    def added_new_item_by_single_item_window(self, index: QModelIndex):
+    def added_new_treatments.by_single_treatments.window(self, index: QModelIndex):
         """
-        This is called when SingleItemWindow emits a signal
-        It validates the newly added item. If it fails, remove it.
-        index is indicating the item_id column of a new item
+        This is called when Singletreatments.indow emits a signal
+        It validates the newly added treatments. If it fails, remove it.
+        index is indicating the treatment_id column of a new item
         :return:
         """
         if self.source_model.is_flag_column(index):
-            logger.debug(f"item {index.row()} added")
+            logger.debug(f"treatments.{index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
         if hasattr(self.source_model, "validate_new_row"):
@@ -201,30 +201,30 @@ class ItemWidget(InventoryTableWidget):
                 self.source_model.drop_rows([src_idx])
 
     @Slot(object)
-    def changed_items_by_single_item_window(self, indexes: List[QModelIndex]):
+    def changed_treatments_by_single_treatments.window(self, indexes: List[QModelIndex]):
         """
-        This is called when SingleItemWindow emits a signal
+        This is called when Singletreatments.indow emits a signal
         :param indexes:
         :return:
         """
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 self.source_model.set_chg_flag(idx)
-                logger.debug(f"items {idx.row()} changed")
+                logger.debug(f"treatments {idx.row()} changed")
 
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        An item being double clicked in the item view automatically makes
-        the sku view to do filtering to show the skus of the selected item.
+        An treatments.being double clicked in the treatments.view automatically makes
+        the sku view to do filtering to show the skus of the selected treatments.
         :param index:
         :return:
         """
         if not self.edit_mode.isChecked() and index.isValid() and hasattr(
-                self.parent, 'item_selected'):
-            item_id = index.siblingAtColumn(self.source_model.get_col_number('item_id')).data()
-            self.parent.item_selected(item_id)
+                self.parent, 'treatments.selected'):
+            treatment_id = index.siblingAtColumn(self.source_model.get_col_number('treatment_id')).data()
+            self.parent.treatments.selected(treatment_id)
 
     def update_all_views(self):
         """

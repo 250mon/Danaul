@@ -32,19 +32,19 @@ class TrModel(DataModel):
         super().__init__(user_name)
 
     def init_params(self):
-        self.set_table_name('transactions')
+        self.set_table_name('sessions')
 
         self.col_edit_lvl = {
-            'tr_id': EditLevel.NotEditable,
-            'sku_id': EditLevel.NotEditable,
+            'session_id': EditLevel.NotEditable,
+            'treatment_id': EditLevel.NotEditable,
             'tr_type': EditLevel.Creatable,
             'tr_qty': EditLevel.Creatable,
             'before_qty': EditLevel.NotEditable,
             'after_qty': EditLevel.NotEditable,
-            'tr_timestamp': EditLevel.NotEditable,
+            'timestamp': EditLevel.NotEditable,
             'description': EditLevel.UserModifiable,
             'user_name': EditLevel.NotEditable,
-            'tr_type_id': EditLevel.NotEditable,
+            'provider_id': EditLevel.NotEditable,
             'user_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
@@ -59,16 +59,16 @@ class TrModel(DataModel):
         :return:
         """
         # set more columns for the view
-        self.model_df['tr_type'] = self.model_df['tr_type_id'].map(Lab().tr_type_s)
+        self.model_df['tr_type'] = self.model_df['provider_id'].map(Lab().tr_type_s)
         self.model_df['user_name'] = self.model_df['user_id'].map(Lab().user_name_s)
         self.model_df['flag'] = RowFlags.OriginalRow
 
-    def set_upper_model_id(self, sku_id: int or None):
-        self.selected_upper_id = sku_id
-        logger.debug(f"sku_id({self.selected_upper_id}) is set")
+    def set_upper_model_id(self, treatment_id: int or None):
+        self.selected_upper_id = treatment_id
+        logger.debug(f"treatment_id({self.selected_upper_id}) is set")
 
-        if sku_id is not None:
-            self.selected_upper_name = self.sku_model.get_data_from_id(sku_id, 'sku_name')
+        if treatment_id is not None:
+            self.selected_upper_name = self.sku_model.get_data_from_id(treatment_id, 'sku_name')
             logger.debug(f"sku_name({self.selected_upper_name}) is set")
         else:
             self.selected_upper_name = ""
@@ -83,13 +83,13 @@ class TrModel(DataModel):
 
     async def update(self):
         """
-        Override method to use selected_sku_id and begin_/end_ timestamp
+        Override method to use selected_treatment_id and begin_/end_ timestamp
         :return:
         """
         # end day needs to be added 1 day otherwise query results only includes those thata
         # were created until the day 00h 00mm 00sec
         logger.debug(f"downloading data from DB")
-        kwargs = {'sku_id': self.selected_upper_id,
+        kwargs = {'treatment_id': self.selected_upper_id,
                   'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
                   'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")}
         logger.debug(f"\n{kwargs}")
@@ -146,7 +146,7 @@ class TrModel(DataModel):
         col_name = self.get_col_name(index.column())
         data_to_display = self.model_df.iloc[index.row(), index.column()]
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = ['tr_id', 'user_id', 'sku_id', 'tr_type_id',
+            int_type_columns = ['session_id', 'user_id', 'treatment_id', 'provider_id',
                                 'tr_qty', 'before_qty', 'after_qty']
             if col_name in int_type_columns:
                 # if column data is int, return int type
@@ -156,7 +156,7 @@ class TrModel(DataModel):
                     logger.error(e)
                     logger.error(f"{col_name} {data_to_display}")
                 return int(data_to_display)
-            elif col_name == 'tr_timestamp':
+            elif col_name == 'timestamp':
                 # data type is datetime.date
                 return pydt_to_qdt(data_to_display)
             else:
@@ -191,10 +191,10 @@ class TrModel(DataModel):
 
         col_name = self.get_col_name(index.column())
         if col_name == 'tr_type':
-            id_col = self.get_col_number('tr_type_id')
-            self.model_df.iloc[index.row(), id_col] = Lab().tr_type_id_s.loc[value]
+            id_col = self.get_col_number('provider_id')
+            self.model_df.iloc[index.row(), id_col] = Lab().provider_id_s.loc[value]
 
-        elif col_name == 'tr_timestamp':
+        elif col_name == 'timestamp':
             # data type is datetime.date
             if isinstance(value, QDateTime):
                 value = qdt_to_pydt(value)
@@ -209,46 +209,46 @@ class TrModel(DataModel):
         """
         logger.debug(f"new_id({next_new_id})\n")
         if self.selected_upper_id is None:
-            error = "sku_id is empty"
+            error = "treatment_id is empty"
             raise NonExistentSkuIdError(error)
-        elif self.selected_upper_id not in self.sku_model.model_df.sku_id.values:
-            error = f"sku_id({self.selected_upper_id}) does not exist"
+        elif self.selected_upper_id not in self.sku_model.model_df.treatment_id.values:
+            error = f"treatment_id({self.selected_upper_id}) does not exist"
             raise NonExistentSkuIdError(error)
         elif not self.sku_model.is_active_row(self.selected_upper_id):
-            error = f"sku_id({self.selected_upper_id}) is not active"
+            error = f"treatment_id({self.selected_upper_id}) is not active"
             raise InactiveSkuIdError(error)
         elif 'tr_type' not in kwargs.keys():
             error = "tr_type is not specified"
             raise InvalidTrTypeError(error)
 
         try:
-            id_s = self.model_df.groupby("sku_id")["tr_id"].get_group(self.selected_upper_id)
+            id_s = self.model_df.groupby("treatment_id")["session_id"].get_group(self.selected_upper_id)
             idx = id_s.idxmax()
-            last_qty = self.model_df.iloc[idx, self.get_col_number("after_qty")].item()
+            last_qty = self.model_df.iloc[idx, self.get_col_number("after_qty")].treatments.)
         except Exception as e:
             logger.debug(e)
-            # key error where tr_id is not present
+            # key error where session_id is not present
             sku_df = self.sku_model.model_df
-            last_qty = sku_df.loc[sku_df["sku_id"] == self.selected_upper_id, "sku_qty"].item()
+            last_qty = sku_df.loc[sku_df["treatment_id"] == self.selected_upper_id, "sku_qty"].treatments.)
 
         tr_type = kwargs['tr_type']
-        tr_type_id = Lab().tr_type_id_s.loc[tr_type]
+        provider_id = Lab().provider_id_s.loc[tr_type]
         tr_qty = kwargs.get('tr_qty', 1)
         description = kwargs.get('description', "")
         user_id = Lab().user_id_s.loc[self.user_name]
 
         new_model_df = pd.DataFrame([{
-            'tr_id': next_new_id,
-            'sku_id': self.selected_upper_id,
+            'session_id': next_new_id,
+            'treatment_id': self.selected_upper_id,
             'tr_type': tr_type,
             'tr_qty': tr_qty,
             'before_qty': last_qty,
             'after_qty': last_qty,
-            'tr_timestamp': datetime.now(),
+            'timestamp': datetime.now(),
             'description': description,
             'user_name': self.user_name,
             'user_id': user_id,
-            'tr_type_id': tr_type_id,
+            'provider_id': provider_id,
             'flag': RowFlags.NewRow
         }])
         return new_model_df
@@ -263,7 +263,7 @@ class TrModel(DataModel):
         result_s = pd.Series([False] * joined_df.shape[0], index=joined_df.index)
         for row in joined_df.itertuples():
             self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
-            self.selected_upper_id = row.sku_id
+            self.selected_upper_id = row.treatment_id
             new_row_df = self.make_a_new_row_df(
                 next_new_id,
                 tr_type="Sell",
@@ -303,7 +303,7 @@ class TrModel(DataModel):
         :param index:
         :return:
         """
-        sku_id = index.siblingAtColumn(self.get_col_number('sku_id')).data()
+        treatment_id = index.siblingAtColumn(self.get_col_number('treatment_id')).data()
         tr_type = index.siblingAtColumn(self.get_col_number('tr_type')).data()
         tr_qty = index.siblingAtColumn(self.get_col_number('tr_qty')).data()
         before_qty = index.siblingAtColumn(self.get_col_number('before_qty')).data()
@@ -330,7 +330,7 @@ class TrModel(DataModel):
 
         debug_msg = "valid" if result is True else "not valid"
         logger.debug(f"before_qty({before_qty}) tr_qty({tr_qty})")
-        logger.debug(f"Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
+        logger.debug(f"Sku({treatment_id}) Tr({tr_type}) is {debug_msg}")
         # not allow a user to change tr_qty after this point
         self.clear_new_rows()
 
@@ -349,13 +349,13 @@ class TrModel(DataModel):
 
     def update_sku_qty(self):
         """
-        When transactions are saved, updating sku qty was carried out immediately
+        When sessions are saved, updating sku qty was carried out immediately
         :return:
         """
         def get_last_row_qty(qty_update_df: pd.DataFrame):
             qty_update_df.reset_index(inplace=True)
-            idx_s = qty_update_df.groupby('sku_id')['tr_id'].idxmax()
-            qty_df = qty_update_df.loc[idx_s, ["sku_id", "after_qty"]]
+            idx_s = qty_update_df.groupby('treatment_id')['session_id'].idxmax()
+            qty_df = qty_update_df.loc[idx_s, ["treatment_id", "after_qty"]]
             logger.debug(f"qty_df to update\n{qty_df}")
             return qty_df
 
@@ -363,4 +363,4 @@ class TrModel(DataModel):
         if not new_tr_df.empty:
             qty_df = get_last_row_qty(new_tr_df)
             for row in qty_df.itertuples():
-                self.sku_model.update_sku_qty_after_transaction(row.sku_id, row.after_qty)
+                self.sku_model.update_sku_qty_after_transaction(row.treatment_id, row.after_qty)

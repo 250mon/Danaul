@@ -28,15 +28,15 @@ class SkuWidget(InventoryTableWidget):
         Needs to be implemented
         :return:
         """
-        # Filtering is performed on item_name column
-        search_col_num = self.source_model.get_col_number('item_id')
+        # Filtering is performed on treatment_name column
+        search_col_num = self.source_model.get_col_number('treatment_id')
         self.proxy_model.setFilterKeyColumn(search_col_num)
 
         # Sorting
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
-        initial_sort_col_num = self.source_model.get_col_number('sku_id')
+        initial_sort_col_num = self.source_model.get_col_number('treatment_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     def _setup_initial_table_view(self):
@@ -48,10 +48,10 @@ class SkuWidget(InventoryTableWidget):
         Needs to be implemented
         :return:
         """
-        self.set_col_hidden('item_id')
-        self.set_col_width("sku_id", 50)
+        self.set_col_hidden('treatment_id')
+        self.set_col_width("treatment_id", 50)
         self.set_col_width("root_sku", 50)
-        self.set_col_width("item_name", 150)
+        self.set_col_width("treatment_name", 150)
         self.set_col_width("active", 50)
         self.set_col_width("description", 250)
 
@@ -159,11 +159,11 @@ class SkuWidget(InventoryTableWidget):
     def row_double_clicked(self, index: QModelIndex):
         """
         A sku being double clicked in the sku view automatically makes
-        the transaction view to do filtering to show the transactions of
+        the transaction view to do filtering to show the sessions of
         the selected sku.
         :param index:
         :return:
         """
         if not self.edit_mode.isChecked() and index.isValid() and hasattr(self.parent, 'sku_selected'):
-            sku_id = index.siblingAtColumn(self.source_model.get_col_number('sku_id')).data()
-            self.parent.sku_selected(sku_id)
+            treatment_id = index.siblingAtColumn(self.source_model.get_col_number('treatment_id')).data()
+            self.parent.sku_selected(treatment_id)

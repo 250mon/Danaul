@@ -4,13 +4,12 @@ import pandas as pd
 import bcrypt
 from typing import List
 from db.db_utils import DbUtil
-from db.inventory_schema import (
+from db.db_schema import (
     CREATE_CATEGORY_TABLE,
-    CREATE_ITEM_TABLE,
-    CREATE_SKU_TABLE,
+    CREATE_TREATMENT_TABLE,
+    CREATE_PROVIDER_TABLE,
     CREATE_USER_TABLE,
-    CREATE_TRANSACTION_TYPE_TABLE,
-    CREATE_TRANSACTION_TABLE,
+    CREATE_SESSIONS_TABLE,
 )
 from common.d_logger import Logs, logging
 
@@ -20,21 +19,20 @@ logger.setLevel(logging.DEBUG)
 
 
 class InventoryDb:
-    def __init__(self, db_config_file):
-        self.db_util = DbUtil(db_config_file)
+    def __init__(self):
+        self.db_util = DbUtil()
 
     async def create_tables(self):
         statements = [CREATE_CATEGORY_TABLE,
-                      CREATE_ITEM_TABLE,
-                      CREATE_SKU_TABLE,
+                      CREATE_TREATMENT_TABLE,
+                      CREATE_PROVIDER_TABLE,
                       CREATE_USER_TABLE,
-                      CREATE_TRANSACTION_TYPE_TABLE,
-                      CREATE_TRANSACTION_TABLE]
+                      CREATE_SESSIONS_TABLE]
         return await self.db_util.create_tables(statements)
 
     async def drop_tables(self):
-        table_names = ['category', 'items', 'skus', 'users',
-                       'transactions', 'transaction_type']
+        table_names = ['category', 'treatments', 'providers', 'users',
+                       'sessions']
         # dropping is always in a reverse order from creating
         return await self.db_util.drop_tables(table_names[::-1])
 
@@ -68,29 +66,28 @@ class InventoryDb:
         # return await self.db_util.pool_execute(stmt, args)
         return await self.db_util.executemany(stmt, args)
 
-    async def upsert_items_df(self, items_df: pd.DataFrame):
+    async def upsert_treatments_df(self, treatments_df: pd.DataFrame):
         """
-        Insert items_df into DB, if the item_name pre-exists, update it
-        :param items:
+        Insert treatments_df into DB, if the treatment_name pre-exists, update it
+        :param treatments_df:
         :return:
         """
-        stmt = """INSERT INTO items VALUES(DEFAULT, $1, $2, $3, $4)
-                    ON CONFLICT (item_name)
+        stmt = """INSERT INTO treatments VALUES(DEFAULT, $1, $2, $3, $4)
+                    ON CONFLICT (treatment_name)
                     DO
                      UPDATE SET active = $1,
-                                item_name = $2,
+                                treatment_name = $2,
                                 category_id = $3,
                                 description = $4"""
-        args = [(item.active, item.item_name, item.category_id, item.description)
-                for item in items_df.itertuples()]
+        args = [(tx.active, tx.treatment_name, tx.category_id, tx.description)
+                for tx in treatments_df.itertuples()]
 
-        logger.debug("Upsert Items ...")
+        logger.debug("Upsert treatments ...")
         logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
-        # args = [(item.item_id,) for item in items_df.itertuples()]
-        col_name, id_series = next(del_df.items())
+        col_name, id_series = next(del_df.treatments())
         args = [(_id,) for _id in id_series]
         logger.debug(f"Delete {col_name} = {args} from {table} ...")
         return await self.db_util.delete(table, col_name, args)
@@ -106,65 +103,32 @@ class InventoryDb:
         logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
-    async def update_skus_df(self, skus_df: pd.DataFrame):
+    async def update_sessions_df(self, sessions_df: pd.DataFrame):
         """
-        Update skus in DB from skus_df based on sku_id
-        :param skus:
-        :return:
-        """
-        stmt = """UPDATE skus SET active = $2,
-                                  root_sku = $3,
-                                  sub_name = $4,
-                                  bit_code = $5,
-                                  sku_qty = $6,
-                                  min_qty = $7,
-                                  item_id = $8,
-                                  expiration_date = $9,
-                                  description = $10
-                              WHERE sku_id = $1"""
-        args = [(sku.sku_id, sku.active, sku.root_sku, sku.sub_name,
-                 sku.bit_code, sku.sku_qty, sku.min_qty, sku.item_id,
-                 sku.expiration_date, sku.description)
-                for sku in skus_df.itertuples()]
-        logger.debug("Update Skus ...")
-        logger.debug(args)
-        return await self.db_util.executemany(stmt, args)
-
-    async def delete_skus_df(self, skus_df: pd.DataFrame):
-        args = [(sku_row.sku_id,) for sku_row in skus_df.itertuples()]
-        logger.debug(f"Delete ids {args} from skus table ...")
-        return await self.db_util.delete('skus', 'sku_id', args)
-
-    async def update_trs_df(self, trs_df: pd.DataFrame):
-        """
-        Update trs in DB from trs_df based on tr_id
+        Update sessions in DB from trs_df based on session_id
         :param trs:
         :return:
         """
-        stmt = """UPDATE transactions SET user_id = $2,
-                                          sku_id = $3,
-                                          tr_type_id = $4,
-                                          tr_qty = $5,
-                                          before_qty = $6,
-                                          after_qty = $7,
-                                          tr_timestamp = $8,
-                                          description = $9
-                                      WHERE tr_id = $1"""
-        args = [(tr.tr_id, tr.user_id, tr.sku_id, tr.tr_type,
-                 tr.tr_qty, tr.before_qty, tr.after_qty, tr.timestamp,
-                 tr.description)
-                for tr in trs_df.itertuples()]
-        logger.debug("Update Transactions ...")
+        stmt = """UPDATE sessions SET treatment_id = $2,
+                                      treatment_detail = $3
+                                      provider_id = $4,
+                                      timestamp = $5,
+                                      description = $6
+                                   WHERE session_id = $1"""
+        args = [(session.session_id, session.treatment_id, session.treatment_detail,
+                 session.provider_id, session.timestamp, session.description)
+                for session in sessions_df.itertuples()]
+        logger.debug("Update sessions ...")
         logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
-    async def delete_trs_df(self, trs_df: pd.DataFrame):
-        args = [(tr_row.tr_id,) for tr_row in trs_df.itertuples()]
-        logger.debug(f"Delete ids {args} from transactions table ...")
-        return await self.db_util.delete('transactions', 'tr_id', args)
+    async def delete_sessions_df(self, sessions_df: pd.DataFrame):
+        args = [(session_row.session_id,) for session_row in sessions_df.itertuples()]
+        logger.debug(f"Delete ids {args} from sessions table ...")
+        return await self.db_util.delete('sessions', 'session_id', args)
 
 async def main():
-    danaul_db = InventoryDb('../di_config')
+    danaul_db = InventoryDb()
 
     # Initialize db by dropping all the tables and then
     # creating them all over again.
@@ -175,13 +139,13 @@ async def main():
         extra_data = {}
         # initial insert
         extra_data['category'] = pd.DataFrame({
-            'id': [1, 2, 3, 4],
-            'name': ['외용제', '수액제', '보조기', '기타']
+            'id': [1, 2],
+            'name': ['ESWT', '도수치료']
         })
 
-        extra_data['transaction_type'] = pd.DataFrame({
-            'id': [1, 2, 3, 4],
-            'name': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus']
+        extra_data['providers'] = pd.DataFrame({
+            'id': [1],
+            'name': ['김정은']
         })
         def encrypt_password(password):
             # Generate a salt and hash the password
@@ -200,90 +164,31 @@ async def main():
             # make dataframe for each table
             await danaul_db.insert_df(table, data_df)
 
-    async def insert_items():
-        items_df = pd.DataFrame({
-            'item_id':       ['DEFAULT', 'DEFAULT'],
-            'active':        [True, True],
-            'item_name':     ['노시셉톨', '써지겔'],
-            'category_id':   [1, 1],
-            'description':   ['', '']
+    async def insert_treatments():
+        treatments_df = pd.DataFrame({
+            'treatment_id': ['DEFAULT', 'DEFAULT'],
+            'active': [True, True],
+            'treatment_name': ['ESWT20', 'ESWT30'],
+            'category_id': [1, 1],
+            'description': ['', '']
         })
-        print(await danaul_db.insert_df('items', items_df))
+        print(await danaul_db.insert_df('treatments', treatments_df))
 
-    async def insert_skus():
-        skus_df = pd.DataFrame({
-            'sku_id':           ['DEFAULT', 'DEFAULT', 'DEFAULT'],
-            'active':           [True, True, True],
-            'root_sku':         [0, 0, 0],
-            'sub_name':         ['40ml', '120ml', ''],
-            'bit_code':         ['noci40', 'noci120', 'surgigel'],
-            'sku_qty':          [0, 0, 0],
-            'min_qty':          [1, 1, 1],
-            'item_id':          [1, 1, 2],
-            'expiration_date':  ['DEFAULT', 'DEFAULT', 'DEFAULT'],
-            'description':      ['', '', '']
-        })
-        print(await danaul_db.insert_df('skus', skus_df))
-
-    async def insert_trs():
-        # Inserting transactions
-        trs_df = pd.DataFrame({
-            'tr_id': ['DEFAULT'],
-            'user_id': [1],
-            'sku_id': [1],
-            'tr_type_id': [1],
-            'tr_qty': [0],
-            'before_qty': [0],
-            'after_qty': [0],
-            'tr_timestamp': ['DEFAULT'],
+    async def insert_sessions():
+        # Inserting sessions
+        sessions_df = pd.DataFrame({
+            'session_id': ['DEFAULT'],
+            'treatment_id': [0],
+            'treatment_detail': ['trapezius'],
+            'provider_id': [0],
+            'timestamp': ['DEFAULT'],
             'description': ['']
         })
-        print(await danaul_db.insert_df('transactions', trs_df))
+        print(await danaul_db.insert_df('sessions', sessions_df))
 
     await initialize()
-    await insert_items()
-    await insert_skus()
-    await insert_trs()
-
-    # await delete_items()
-
-    # Select from a table
-    async def select_item():
-        stmt = """
-            SELECT
-                i.item_id,
-                i.active,
-                i.item_name,
-                s.sku_id,
-                s.active,
-                s.sku_qty,
-                s.min_qty,
-                s.expiration_date,
-                c.category_name
-            FROM items as i
-            JOIN skus as s using(item_id)
-            JOIN category as c using(category_id)
-               """
-        print(await danaul_db.db_util.select_query(stmt))
-
-    # await select_item()
-
-    # stmt = """
-    #     SELECT
-    #         i.item_id,
-    #         i.item_name,
-    #         s.sku_id,
-    #         s.sku_qty,
-    #         s.min_qty,
-    #         s.expiration_date,
-    #         c.category_name
-    #     FROM item as i
-    #     JOIN skus as s on s.item_id = i.item_id
-    #     JOIN category as c on c.category_id = i.category_id
-    #     WHERE i.item_id = 1
-    #     """
-    # results = await danaul_db.db_util.async_execute(stmt, [])
-    # print(results)
+    await insert_treatments()
+    await insert_sessions()
 
 
 if __name__ == '__main__':
