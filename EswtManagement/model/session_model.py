@@ -7,7 +7,6 @@ from db.ds_lab import Lab
 from common.d_logger import Logs, logging
 from constants import EditLevel
 from common.datetime_utils import *
-from model.sku_model import SkuModel
 from constants import RowFlags
 from ds_exceptions import *
 
@@ -20,7 +19,7 @@ Also, converting model data(dataframe) back into a data class to update db
 """
 
 
-class TrModel(DataModel):
+class SessionModel(DataModel):
     def __init__(self, user_name: str, sku_model: SkuModel):
         self.sku_model = sku_model
         self.init_params()
@@ -37,15 +36,12 @@ class TrModel(DataModel):
         self.col_edit_lvl = {
             'session_id': EditLevel.NotEditable,
             'treatment_id': EditLevel.NotEditable,
-            'tr_type': EditLevel.Creatable,
-            'tr_qty': EditLevel.Creatable,
-            'before_qty': EditLevel.NotEditable,
-            'after_qty': EditLevel.NotEditable,
+            'treatment_detail': EditLevel.UserModifiable,
+            'provider_id': EditLevel.UserModifiable,
             'timestamp': EditLevel.NotEditable,
             'description': EditLevel.UserModifiable,
-            'user_name': EditLevel.NotEditable,
-            'provider_id': EditLevel.NotEditable,
             'user_id': EditLevel.NotEditable,
+            'user_name': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
 
@@ -59,7 +55,7 @@ class TrModel(DataModel):
         :return:
         """
         # set more columns for the view
-        self.model_df['tr_type'] = self.model_df['provider_id'].map(Lab().tr_type_s)
+        self.model_df['provider_name'] = self.model_df['provider_id'].map(Lab().provider_name_s)
         self.model_df['user_name'] = self.model_df['user_id'].map(Lab().user_name_s)
         self.model_df['flag'] = RowFlags.OriginalRow
 

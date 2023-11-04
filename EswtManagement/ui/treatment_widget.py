@@ -9,13 +9,13 @@ from PySide6.QtGui import QFont
 from common.d_logger import Logs, logging
 from ui.di_table_widget import InventoryTableWidget
 from model.treatment_model import TreatmentModel
-from ui.single_treatments.window import Singletreatments.indow
+from ui.single_item_window import SingleItemWindow
 
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 
-class treatments.idget(InventoryTableWidget):
+class TreatmentWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
@@ -77,9 +77,9 @@ class treatments.idget(InventoryTableWidget):
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_btn = QPushButton('추가')
-        add_btn.clicked.connect(lambda: self.do_actions("add_treatments.))
+        add_btn.clicked.connect(lambda: self.do_actions("add_treatment"))
         del_btn = QPushButton('삭제/해제')
-        del_btn.clicked.connect(lambda: self.do_actions("del_treatments.))
+        del_btn.clicked.connect(lambda: self.do_actions("del_treatment"))
         save_btn = QPushButton('저장')
         save_btn.clicked.connect(self.save_model_to_db)
 
@@ -106,12 +106,12 @@ class treatments.idget(InventoryTableWidget):
 
     @Slot(str)
     def enable_edit_mode(self, sender: str):
-        if sender != "treatments.widget":
+        if sender != "treatment_widget":
             self.edit_mode.setEnabled(True)
 
     @Slot(str)
     def disable_edit_mode(self, sender: str):
-        if sender != "treatments.widget":
+        if sender != "treatment_widget":
             self.edit_mode.setEnabled(False)
 
     @ Slot(bool)
@@ -133,11 +133,11 @@ class treatments.idget(InventoryTableWidget):
 
     def edit_mode_starts(self):
         self.source_model.set_editable(True)
-        self.parent.edit_lock_signal.emit("treatments.widget")
+        self.parent.edit_lock_signal.emit("treatment_widget")
 
     def edit_mode_ends(self):
         self.source_model.set_editable(False)
-        self.parent.edit_unlock_signal.emit("treatments.widget")
+        self.parent.edit_unlock_signal.emit("treatment_widget")
 
     @Slot(str)
     def do_actions(self, action: str):
@@ -147,29 +147,29 @@ class treatments.idget(InventoryTableWidget):
         :return:
         """
         logger.debug(f"{action}")
-        if action == "add_treatments.:
-            logger.debug("Adding treatments....")
+        if action == "add_treatment":
+            logger.debug("Adding treatment ...")
             self.add_new_row()
             if not self.delegate_mode:
                 # Input window mode using DataMapperWidget
-                new_treatments.index = self.source_model.index(self.source_model.rowCount()-1, 0)
-                self.treatments.window = Singletreatments.indow(self.proxy_model,
-                                                    new_treatments.index, self)
+                new_treatment_index = self.source_model.index(self.source_model.rowCount()-1, 0)
+                self.treatments.window = SingleItemWindow(self.proxy_model,
+                                                    new_treatment_index, self)
 
-        elif action == "chg_treatments.:
-            logger.debug("Changing treatments....")
+        elif action == "chg_treatment":
+            logger.debug("Changing treatment ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"chg_treatments.{selected_indexes}")
+                logger.debug(f"chg_treatment_{selected_indexes}")
                 # if self.delegate_mode:
                 #     self.change_rows_by_delegate(selected_indexes)
                 if not self.delegate_mode:
-                    self.treatments.window = Singletreatments.indow(self.proxy_model,
+                    self.treatments.window = SingleItemWindow(self.proxy_model,
                                                         selected_indexes, self)
 
-        elif action == "del_treatments.:
-            logger.debug("Deleting treatments....")
+        elif action == "del_treatment":
+            logger.debug("Deleting treatment ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"del_treatments.{selected_indexes}")
+                logger.debug(f"del_treatment_{selected_indexes}")
                 self.delete_rows(selected_indexes)
 
     def save_model_to_db(self):
@@ -185,9 +185,9 @@ class treatments.idget(InventoryTableWidget):
         self.edit_mode_ends()
 
     @Slot(object)
-    def added_new_treatments.by_single_treatments.window(self, index: QModelIndex):
+    def added_new_treatment_by_single_item_window(self, index: QModelIndex):
         """
-        This is called when Singletreatments.indow emits a signal
+        This is called when SingleItemWindow emits a signal
         It validates the newly added treatments. If it fails, remove it.
         index is indicating the treatment_id column of a new item
         :return:
@@ -201,9 +201,9 @@ class treatments.idget(InventoryTableWidget):
                 self.source_model.drop_rows([src_idx])
 
     @Slot(object)
-    def changed_treatments_by_single_treatments.window(self, indexes: List[QModelIndex]):
+    def changed_treatments_by_single_item_window(self, indexes: List[QModelIndex]):
         """
-        This is called when Singletreatments.indow emits a signal
+        This is called when SingleItemWindow emits a signal
         :param indexes:
         :return:
         """

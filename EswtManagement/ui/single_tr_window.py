@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QPushButton, QDataWidgetMapper, QGridLayout, QSizePolicy
 )
 from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel
-from model.session_model import TrModel
+from model.session_model import SessionModel
 from common.d_logger import Logs, logging
 
 
@@ -19,7 +19,7 @@ class SingleTrWindow(QWidget):
         super().__init__()
         self.parent = parent
         self.proxy_model = proxy_model
-        self.source_model: TrModel = self.proxy_model.sourceModel()
+        self.source_model: SessionModel = self.proxy_model.sourceModel()
 
         self.nameLabel = QLabel("제품명:")
         self.nameBox = QLabel(self.source_model.selected_upper_name)
@@ -99,6 +99,6 @@ class SingleTrWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    model = TrModel()
+    model = SessionModel()
     window = SingleTrWindow(model)
     sys.exit(app.exec())

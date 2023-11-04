@@ -11,10 +11,10 @@ from common.async_helper import AsyncHelper
 from db.ds_lab import Lab
 from db.ds_db import InventoryDb
 from model.treatment_model import TreatmentModel
-from model.session_model import TrModel
-from ui.treatments.widget import treatments.idget
+from model.session_model import SessionModel
+from ui.treatment_widget import treatments.idget
 from ui.sku_widget import SkuWidget
-from ui.tr_widget import TrWidget
+from ui.session_widget import SessionWidget
 from common.d_logger import Logs, logging
 from constants import UserPrivilege, ConfigReader
 from ui.emr_import_widget import ImportWidget
@@ -93,12 +93,12 @@ class InventoryWindow(QMainWindow):
         file_menu.addAction(change_user_action)
 
         # View menu
-        self.inactive_treatments.action = QAction('Show inactive treatments', self)
-        self.inactive_treatments.action.setStatusTip('Show inactive treatments')
-        self.inactive_treatments.action.triggered.connect(self.view_inactive_treatments)
+        self.inactive_treatment_action = QAction('Show inactive treatments', self)
+        self.inactive_treatment_action.setStatusTip('Show inactive treatments')
+        self.inactive_treatment_action.triggered.connect(self.view_inactive_treatments)
 
         view_menu = menubar.addMenu('&View')
-        view_menu.addAction(self.inactive_treatments.action)
+        view_menu.addAction(self.inactive_treatment_action)
 
         # Admin menu
         reset_pw_action = QAction('Reset password', self)
@@ -112,7 +112,7 @@ class InventoryWindow(QMainWindow):
         self.user_name = user_name
         self.treatments.model = TreatmentModel(self.user_name)
         self.sku_model = SkuModel(self.user_name, self.treatments.model)
-        self.tr_model = TrModel(self.user_name, self.sku_model)
+        self.tr_model = SessionModel(self.user_name, self.sku_model)
 
         if self.treatments.model.get_user_privilege() == UserPrivilege.Admin:
             self.admin_menu.menuAction().setVisible(True)
@@ -121,19 +121,19 @@ class InventoryWindow(QMainWindow):
 
 
     def setup_widgets(self):
-        self.treatments.widget = treatments.idget(self)
-        self.treatments.widget.set_source_model(self.treatments.model)
+        self.treatment_widget = treatments.idget(self)
+        self.treatment_widget.set_source_model(self.treatments.model)
 
         self.sku_widget = SkuWidget(self)
         self.sku_widget.set_source_model(self.sku_model)
 
-        self.tr_widget = TrWidget(self)
+        self.tr_widget = SessionWidget(self)
         self.tr_widget.set_source_model(self.tr_model)
 
         self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
-        self.treatments.widget.setMinimumWidth(400)
-        self.treatments.widget.setMaximumWidth(500)
+        self.treatment_widget.setMinimumWidth(400)
+        self.treatment_widget.setMaximumWidth(500)
         self.sku_widget.setMinimumWidth(800)
         self.sku_widget.setMaximumWidth(1100)
         self.tr_widget.setMinimumWidth(1200)
@@ -146,7 +146,7 @@ class InventoryWindow(QMainWindow):
         central_widget = QWidget(self)
 
         hbox1 = QHBoxLayout()
-        hbox1.addWidget(self.treatments.widget)
+        hbox1.addWidget(self.treatment_widget)
         hbox1.addWidget(self.sku_widget)
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.tr_widget)
@@ -160,7 +160,7 @@ class InventoryWindow(QMainWindow):
         treatments.dock_widget = QDockWidget('품목', self)
         treatments.dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
                                          Qt.LeftDockWidgetArea)
-        treatments.dock_widget.setWidget(self.treatments.widget)
+        treatments.dock_widget.setWidget(self.treatment_widget)
         self.addDockWidget(Qt.TopDockWidgetArea, treatments.dock_widget)
         sku_dock_widget = QDockWidget('세부품목', self)
         sku_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
@@ -191,7 +191,7 @@ class InventoryWindow(QMainWindow):
         result_str = None
         if action == "treatments.save":
             logger.debug("Saving treatments ...")
-            result_str = await self.treatments.widget.save_to_db()
+            result_str = await self.treatment_widget.save_to_db()
             logger.debug("Updating treatments ...")
             await self.treatments.model.update()
             await self.sku_model.update()
@@ -282,10 +282,10 @@ class InventoryWindow(QMainWindow):
     def view_inactive_treatments(self):
         if Lab().show_inactive_treatments:
             Lab().show_inactive_treatments = False
-            self.inactive_treatments.action.setText('Show inactive treatments')
+            self.inactive_treatment_action.setText('Show inactive treatments')
         else:
             Lab().show_inactive_treatments = True
-            self.inactive_treatments.action.setText('Hide inactive treatments')
+            self.inactive_treatment_action.setText('Hide inactive treatments')
 
         self.update_all()
 

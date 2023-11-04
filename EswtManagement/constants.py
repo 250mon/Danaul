@@ -2,7 +2,7 @@ from enum import Enum
 from functools import total_ordering
 from operator import methodcaller
 
-CONFIG_FILE = '../ds_config'
+CONFIG_FILE = '/ds_config'
 ADMIN_GROUP = ['admin', 'jye']
 MAX_TRANSACTION_COUNT = 10
 DEFAULT_MIN_QTY = 1

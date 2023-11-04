@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
 from common.d_logger import Logs, logging
 from db.ds_lab import Lab
-from model.session_model import TrModel
+from model.session_model import SessionModel
 from ui.di_table_widget import InventoryTableWidget
 from ui.single_tr_window import SingleTrWindow
 from constants import UserPrivilege
@@ -17,16 +17,16 @@ logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
 
-class TrWidget(InventoryTableWidget):
+class SessionWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
 
-    def set_source_model(self, model: TrModel):
+    def set_source_model(self, model: SessionModel):
         self.source_model = model
         self._apply_model()
 
-    def set_source_model(self, model: TrModel):
+    def set_source_model(self, model: SessionModel):
         """
         Override method for using tr_model's methods (validate_new_row)
         :param model:
@@ -67,7 +67,7 @@ class TrWidget(InventoryTableWidget):
         self.set_col_width("treatment_id", 50)
         self.set_col_width("timestamp", 200)
         self.set_col_width("description", 600)
-        # Unlike treatments.widget and sku_widget, tr_widget always allows editing
+        # Unlike treatment_widget and sku_widget, tr_widget always allows editing
         # because there is no select mode
         self.source_model.set_editable(True)
 

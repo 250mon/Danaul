@@ -38,11 +38,13 @@ CREATE_SESSIONS_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS sessions(
         session_id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL,
         treatment_id INT NOT NULL,
         treatment_detail TEXT,
         provider_id INT NOT NULL,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         description TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (treatment_id) REFERENCES treatments(treatment_id),
         FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
     );"""

@@ -24,7 +24,7 @@ class ComboBoxDelegate(DefaultDelegate):
                       index: QModelIndex) -> None:
         data_val = index.data(Qt.EditRole)
         # idx is the index of the treatments.in the list
-        idx = self.combobox_treatments.index(data_val)
+        idx = self.combobox_treatment_index(data_val)
         if idx:
             # set the current index of combobox to the idx
             editor.setCurrentIndex(idx)

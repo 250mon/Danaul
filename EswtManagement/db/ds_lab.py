@@ -212,7 +212,7 @@ async def main(lab):
     # lab.trs_df['tr_type'] = lab.trs_df['provider_id'].map(tr_type_s)
     # print(lab.trs_df)
 
-    # treatments.= await lab.get_treatments.from_db_by_id(1)
+    # treatments.= await lab.get_treatment_from_db_by_id(1)
     # print(treatments.treatment_name)
 
     # transaction = await lab.get_transaction_from_db_by_id(1)

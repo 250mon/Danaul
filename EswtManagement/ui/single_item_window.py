@@ -14,9 +14,9 @@ from common.d_logger import Logs, logging
 logger = Logs().get_logger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 
-class Singletreatments.indow(QWidget):
-    add_treatments.signal = Signal(object)
-    chg_treatments.signal = Signal(object)
+class SingleItemWindow(QWidget):
+    add_item_signal = Signal(object)
+    chg_item_signal = Signal(object)
 
     def __init__(self, proxy_model: QSortFilterProxyModel,
                  indexes: List[QModelIndex] or QModelIndex,
@@ -26,18 +26,18 @@ class Singletreatments.indow(QWidget):
         self.proxy_model = proxy_model
 
         # if the selected index is a single index, it means
-        # that we are editing a newly added treatments.here.
+        # that we are editing a newly added item_here.
         if isinstance(indexes, List):
             logger.debug("change treatments mode")
-            self.new_treatments.mode = False
+            self.new_item_mode = False
             self.model_indexes = indexes
         else:
-            logger.debug("new treatments.mode")
-            self.new_treatments.mode = True
+            logger.debug("new item_mode")
+            self.new_item_mode = True
             self.model_indexes = [indexes]
 
         self.nameLabel = QLabel("제품명:")
-        if self.new_treatments.mode:
+        if self.new_item_mode:
             self.nameLineEdit = QLineEdit()
             # self.nameLineEdit.setReadOnly(True)
         else:
@@ -63,7 +63,7 @@ class Singletreatments.indow(QWidget):
         self.okButton = QPushButton("&Ok")
         self.exitButton = QPushButton("&Exit")
 
-        if self.new_treatments.mode:
+        if self.new_item_mode:
             self.nameLabel.setBuddy(self.nameLineEdit)
         else:
             self.nameLabel.setBuddy(self.nameBox)
@@ -73,10 +73,10 @@ class Singletreatments.indow(QWidget):
         self.addMapper()
 
         # wire the signals into the parent widget
-        if hasattr(self.parent, "added_new_treatments.by_single_treatments.window"):
-            self.add_treatments.signal.connect(self.parent.added_new_treatments.by_single_treatments.window)
-        if hasattr(self.parent, "changed_treatments_by_single_treatments.window"):
-            self.chg_treatments.signal.connect(self.parent.changed_treatments_by_single_treatments.window)
+        if hasattr(self.parent, "added_new_item_by_single_item_window"):
+            self.add_item_signal.connect(self.parent.added_new_item_by_single_item_window)
+        if hasattr(self.parent, "changed_treatments_by_single_item_window"):
+            self.chg_item_signal.connect(self.parent.changed_treatments_by_single_item_window)
 
         self.initializeUI()
 
@@ -85,7 +85,7 @@ class Singletreatments.indow(QWidget):
         self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
         self.mapper.setModel(self.proxy_model)
         self.mapper.addMapping(self.activeComboBox, 1)
-        if self.new_treatments.mode:
+        if self.new_item_mode:
             self.mapper.addMapping(self.nameLineEdit, 2)
         self.mapper.addMapping(self.categoryComboBox, 3)
         self.mapper.addMapping(self.descriptionTextEdit, 4)
@@ -99,13 +99,13 @@ class Singletreatments.indow(QWidget):
 
         # if model_indexes is not given, it means adding a new row
         # otherwise the rows of model_indexes are being modified
-        if self.new_treatments.mode:
+        if self.new_item_mode:
             self.mapper.toLast()
         else:
             self.mapper.setCurrentIndex(self.model_indexes[0].row())
 
     def updateButtons(self, row):
-        if self.new_treatments.mode:
+        if self.new_item_mode:
             self.previousButton.setEnabled(False)
             self.nextButton.setEnabled(False)
         else:
@@ -115,19 +115,19 @@ class Singletreatments.indow(QWidget):
             self.nextButton.setEnabled(row < self.model_indexes[-1].row())
 
     def ok_clicked(self):
-        if self.new_treatments.mode:
-            logger.debug(f"Added treatments.Index: {self.model_indexes[0]}")
+        if self.new_item_mode:
+            logger.debug(f"Added item_Index: {self.model_indexes[0]}")
             self.mapper.submit()
-            self.add_treatments.signal.emit(self.model_indexes[0])
+            self.add_item_signal.emit(self.model_indexes[0])
         else:
             logger.debug(f"Changed treatments Indexes: {self.model_indexes}")
             self.mapper.submit()
-            self.chg_treatments.signal.emit(self.model_indexes)
+            self.chg_item_signal.emit(self.model_indexes)
         # adding a new item
 
     def exit_clicked(self):
-        if self.new_treatments.mode:
-            self.add_treatments.signal.emit(self.model_indexes[0])
+        if self.new_item_mode:
+            self.add_item_signal.emit(self.model_indexes[0])
         self.close()
 
     def initializeUI(self):
@@ -142,7 +142,7 @@ class Singletreatments.indow(QWidget):
 
         gridbox = QGridLayout()
         gridbox.addWidget(self.nameLabel, 0, 0, 1, 1)
-        if self.new_treatments.mode:
+        if self.new_item_mode:
             gridbox.addWidget(self.nameLineEdit, 0, 1, 1, 1)
         else:
             gridbox.addWidget(self.nameBox, 0, 1, 1, 1)
@@ -163,5 +163,5 @@ class Singletreatments.indow(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     model = TreatmentModel()
-    window = Singletreatments.indow(model)
+    window = SingleItemWindow(model)
     sys.exit(app.exec())
