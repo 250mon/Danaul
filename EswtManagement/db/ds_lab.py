@@ -3,7 +3,7 @@ import re
 import asyncio
 from typing import List
 from datetime import date
-from db.ds_db import InventoryDb
+from db.ds_db import TreatmentsDb
 import pandas as pd
 from common.d_logger import Logs, logging
 from constants import MAX_TRANSACTION_COUNT
@@ -11,12 +11,12 @@ from common.singleton import Singleton
 import db.db_schema
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-
 
 class Lab(metaclass=Singleton):
-    def __init__(self, di_db: InventoryDb):
+    logger = Logs().get_logger(os.path.basename(__file__))
+    logger.setLevel(logging.DEBUG)
+
+    def __init__(self, di_db: TreatmentsDb):
         self.di_db = di_db
         self.di_db_util = self.di_db.db_util
         self.max_transaction_count = MAX_TRANSACTION_COUNT
@@ -47,7 +47,7 @@ class Lab(metaclass=Singleton):
                         in self.table_df.keys()]
             data_dfs: List = await asyncio.gather(*get_data)
             for df in data_dfs:
-                logger.debug(f"Retrieved DB data \n{df}")
+                self.logger.debug(f"Retrieved DB data \n{df}")
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data_dfs.pop()
 
@@ -64,7 +64,7 @@ class Lab(metaclass=Singleton):
         if count > 0:
             self.max_transaction_count = count
         else:
-            logger.warn(f""
+            self.logger.warn(f""
                         f"count({count}) is not a positive integer")
 
     def _set_db_column_names(self):
@@ -75,7 +75,7 @@ class Lab(metaclass=Singleton):
         self.table_column_names['sessions'] = col_name.findall(db.inventory_schema.CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
-        logger.debug(f"{table}")
+        self.logger.debug(f"{table}")
         where_clause = ""
         if not self.show_inactive_treatments:
             if table == "treatments":
@@ -111,7 +111,7 @@ class Lab(metaclass=Singleton):
             query = f"SELECT * FROM {table}"
 
         query = query + where_clause
-        logger.debug(f"{query}")
+        self.logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)
         # logger.debug(f"{db_results[:2]}")
@@ -148,7 +148,7 @@ class Lab(metaclass=Singleton):
         self.user_id_s = make_series('users', False)
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
-        logger.debug(f"table {table}")
+        self.logger.debug(f"table {table}")
         self.table_df[table] = await self._get_df_from_db(table, **kwargs)
 
     async def insert_df(self, table: str, new_df: pd.DataFrame):
@@ -234,6 +234,6 @@ async def main(lab):
     #     print(tr.session_id)
 
 if __name__ == '__main__':
-    danaul_db = InventoryDb('../ds_config')
+    danaul_db = TreatmentsDb()
     lab = Lab(danaul_db)
     asyncio.run(main(lab))

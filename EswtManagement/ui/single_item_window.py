@@ -11,8 +11,8 @@ from model.treatment_model import TreatmentModel
 from common.d_logger import Logs, logging
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
+self.logger = Logs().get_logger(os.path.basename(__file__))
+self.logger.setLevel(logging.DEBUG)
 
 class SingleItemWindow(QWidget):
     add_item_signal = Signal(object)
@@ -28,11 +28,11 @@ class SingleItemWindow(QWidget):
         # if the selected index is a single index, it means
         # that we are editing a newly added item_here.
         if isinstance(indexes, List):
-            logger.debug("change treatments mode")
+            self.logger.debug("change treatments mode")
             self.new_item_mode = False
             self.model_indexes = indexes
         else:
-            logger.debug("new item_mode")
+            self.logger.debug("new item_mode")
             self.new_item_mode = True
             self.model_indexes = [indexes]
 
@@ -116,11 +116,11 @@ class SingleItemWindow(QWidget):
 
     def ok_clicked(self):
         if self.new_item_mode:
-            logger.debug(f"Added item_Index: {self.model_indexes[0]}")
+            self.logger.debug(f"Added item_Index: {self.model_indexes[0]}")
             self.mapper.submit()
             self.add_item_signal.emit(self.model_indexes[0])
         else:
-            logger.debug(f"Changed treatments Indexes: {self.model_indexes}")
+            self.logger.debug(f"Changed treatments Indexes: {self.model_indexes}")
             self.mapper.submit()
             self.chg_item_signal.emit(self.model_indexes)
         # adding a new item

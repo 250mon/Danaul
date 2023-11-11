@@ -8,8 +8,8 @@ from common.d_logger import Logs, logging
 from constants import RowFlags, EditLevel
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
+self.logger = Logs().get_logger(os.path.basename(__file__))
+self.logger.setLevel(logging.DEBUG)
 
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
@@ -120,7 +120,7 @@ class TreatmentModel(DataModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
-        logger.debug(f"index({index}) value({value})")
+        self.logger.debug(f"index({index}) value({value})")
 
         col_name = self.get_col_name(index.column())
         if col_name == 'active':
@@ -138,7 +138,7 @@ class TreatmentModel(DataModel):
         elif col_name == 'treatment_name':
             # when a new row is added, treatment_name needs to be checked if any duplicate
             if not self.model_df[self.model_df.treatment_name == value].empty:
-                logger.debug(f"treatments.name({value}) is already in use")
+                self.logger.debug(f"treatments.name({value}) is already in use")
                 return False
 
         return super().setData(index, value, role)
@@ -174,8 +174,8 @@ class TreatmentModel(DataModel):
         if (new_treatment_name is not None and
                 new_treatment_name != "" and
                 new_treatment_name not in self.model_df['treatment_name']):
-            logger.debug(f"treatment_name({new_treatment_name}) is valid")
+            self.logger.debug(f"treatment_name({new_treatment_name}) is valid")
             return True
         else:
-            logger.debug(f"treatment_name({new_treatment_name}) is not valid")
+            self.logger.debug(f"treatment_name({new_treatment_name}) is not valid")
             return False

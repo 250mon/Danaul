@@ -9,56 +9,47 @@ from common.d_logger import Logs
 from constants import ConfigReader
 import logging
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
 
-
-async def connect_pg():
-    config = ConfigReader()
-    try:
-        conn = await asyncpg.connect(host=config.get_options("Host"),
-                                     port=config.get_options("Port"),
-                                     user=config.get_options("User"),
-                                     database=config.get_options("Database"),
-                                     password=config.get_options("Password"))
-        return conn
-    except Exception as e:
-        logger.exception('Error while connecting to DB', e)
-        raise e
-
-
-
-class ConnectPg():
-    def __init__(self):
-        self.config = ConfigReader()
+class ConnectPg:
+    def __init__(self, config):
+        self.config = config
         self._conn = None
 
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+        self.logger.setLevel(logging.DEBUG)
+
     async def __aenter__(self):
-        logger.debug("Trying to connect to db ...")
-        logger.debug("Entering context manager, waiting for connection")
+        self.logger.debug("Trying to connect to db ...")
+        self.logger.debug("Entering context manager, waiting for connection")
         try:
             self._conn = await asyncpg.connect(host=self.config.get_options("Host"),
                                                port=self.config.get_options("Port"),
                                                user=self.config.get_options("User"),
                                                database=self.config.get_options("Database"),
                                                password=self.config.get_options("Password"))
-            logger.debug("Successfully connected!!!")
+            self.logger.debug("Successfully connected!!!")
             return self._conn
         except Exception as e:
-            logger.exception('Error while connecting to DB', e)
+            self.logger.exception('Error while connecting to DB', e)
             return None
 
     async def __aexit__(self,
                         exc_type: Optional[Type[BaseException]],
                         exc_val: Optional[BaseException],
                         exc_tb: Optional[TracebackType]):
-        logger.debug("Exiting context manager")
+        self.logger.debug("Exiting context manager")
         if self._conn:
-            logger.debug("Closed connection")
+            self.logger.debug("Closed connection")
             await self._conn.close()
 
 
 class DbUtil:
+    def __init__(self, config):
+        self.config = config
+
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+        self.logger.setLevel(logging.DEBUG)
+
     async def create_tables(self, statements: List[str]):
         """
         Create tables
@@ -69,19 +60,19 @@ class DbUtil:
         results = []
         async with ConnectPg() as conn:
             if conn is None:
-                logger.debug("Error while connecting to DB during creating tables")
+                self.logger.debug("Error while connecting to DB during creating tables")
                 return
 
-            logger.info("Creating the tables")
+            self.logger.info("Creating the tables")
             for statement in statements:
                 try:
-                    logger.info(f"{statement}")
+                    self.logger.info(f"{statement}")
                     status = await conn.execute(statement)
                     results.append(status)
-                    logger.debug(status)
+                    self.logger.debug(status)
                 except Exception as e:
-                    logger.exception(f'create_tables: Error while creating table: {statement}', e)
-            logger.info("Finished creating the tables")
+                    self.logger.exception(f'create_tables: Error while creating table: {statement}', e)
+            self.logger.info("Finished creating the tables")
         return results
 
     async def drop_tables(self, table_names: List[str]):
@@ -94,20 +85,20 @@ class DbUtil:
         results = []
         async with ConnectPg() as conn:
             if conn is None:
-                logger.debug("Error while connecting to DB during removing tables")
+                self.logger.debug("Error while connecting to DB during removing tables")
                 return None
 
-            logger.info("Removing the tables")
+            self.logger.info("Removing the tables")
             for table in table_names:
                 try:
                     sql_stmt = f'DROP TABLE {table} CASCADE;'
                     result = await conn.execute(sql_stmt)
                     results.append(result)
                 except UndefinedTableError as ute:
-                    logger.exception('drop_table: Trying to drop an undefined table', ute)
+                    self.logger.exception('drop_table: Trying to drop an undefined table', ute)
                 except Exception as e:
-                    logger.exception('drop_table: Error while dropping tables', e)
-        logger.info("Finished removing the tables")
+                    self.logger.exception('drop_table: Error while dropping tables', e)
+        self.logger.info("Finished removing the tables")
         return results
 
     async def select_query(self, query: str, args: List = None):
@@ -118,7 +109,7 @@ class DbUtil:
         """
         async with ConnectPg() as conn:
             if conn is None:
-                logger.debug("Error while connecting to DB during querying tables")
+                self.logger.debug("Error while connecting to DB during querying tables")
                 return None
 
             try:
@@ -129,7 +120,7 @@ class DbUtil:
                     results: List[Record] = await query.fetch()
                 return results
             except Exception as e:
-                logger.exception(f'select_query: Error while executing {query}', e)
+                self.logger.exception(f'select_query: Error while executing {query}', e)
                 return None
 
 
@@ -144,16 +135,16 @@ class DbUtil:
         """
         async with ConnectPg() as conn:
             if conn is None:
-                logger.debug("Error while connecting to DB during sync_executing")
+                self.logger.debug("Error while connecting to DB during sync_executing")
                 return "Connection failed"
 
-            logger.info("Synchronous executing")
+            self.logger.info("Synchronous executing")
             try:
                 results = await conn.executemany(statement, args)
-                logger.info(f"results::\n{results}")
+                self.logger.info(f"results::\n{results}")
                 return results
             except Exception as e:
-                logger.exception('executemany: Error during synchronous executing', e)
+                self.logger.exception('executemany: Error during synchronous executing', e)
                 return e
 
 
@@ -168,11 +159,11 @@ class DbUtil:
         """
         async def execute(stmt, arg, pool):
             async with pool.acquire() as conn:
-                logger.debug(stmt)
-                logger.debug(arg)
+                self.logger.debug(stmt)
+                self.logger.debug(arg)
                 return await conn.execute(stmt, *arg)
 
-        logger.info("Asynchronous executing")
+        self.logger.info("Asynchronous executing")
         config = ConfigReader()
         async with asyncpg.create_pool(host=config.get_options("Host"),
                                        port=config.get_options("Port"),
@@ -181,7 +172,7 @@ class DbUtil:
                                        password=config.get_options("Password")) as pool:
             queries = [execute(statement, arg, pool) for arg in args]
             results = await asyncio.gather(*queries, return_exceptions=True)
-            logger.debug(f":\n{results}")
+            self.logger.debug(f":\n{results}")
             return results
 
     async def delete(self, table, col_name, args: List[Tuple]):
@@ -199,18 +190,18 @@ class DbUtil:
                 otherwise, exception
         """
         if not isinstance(args, List):
-            logger.error(f"args' type{type(args)} must be List[Tuple]")
+            self.logger.error(f"args' type{type(args)} must be List[Tuple]")
             return None
         if not isinstance(args[0], Tuple):
-            logger.error(f"args element's type{type(args[0])} must be Tuple")
+            self.logger.error(f"args element's type{type(args[0])} must be Tuple")
             return None
 
         stmt = f"DELETE FROM {table} WHERE {col_name} = $1"
 
-        logger.debug(f"Delete rows ...")
-        logger.debug(args)
+        self.logger.debug(f"Delete rows ...")
+        self.logger.debug(args)
 
         # results = await self.pool_execute(stmt, args)
         results = await self.executemany(stmt, args)
-        logger.debug(f":\n{results}")
+        self.logger.debug(f":\n{results}")
         return results

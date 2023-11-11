@@ -10,9 +10,6 @@ from db.ds_lab import Lab
 from common.d_logger import Logs, logging
 from constants import EditLevel, RowFlags, UserPrivilege, ADMIN_GROUP
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
@@ -35,6 +32,9 @@ class DataModel(PandasModel):
 
         self.selected_upper_id = None
         self.selected_upper_id = None
+
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+        self.logger.setLevel(logging.DEBUG)
 
     def get_user_privilege(self):
         if self.user_name in ADMIN_GROUP:
@@ -83,7 +83,7 @@ class DataModel(PandasModel):
         #     return None
         # elif col not in self.column_names:
         #     return None
-        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].treatments.)
+        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
 
     def set_flag(self, index: QModelIndex, flag: int):
         """
@@ -116,7 +116,7 @@ class DataModel(PandasModel):
         Makes DataFrame out of data received from DB
         :return:
         """
-        logger.debug(f"setting the df of Lab to {self.table_name}_model_f")
+        self.logger.debug(f"setting the df of Lab to {self.table_name}_model_f")
         self.model_df = Lab().table_df[self.table_name]
 
         # we store the columns list here for later use of db update
@@ -133,7 +133,7 @@ class DataModel(PandasModel):
         Update the model_df and the view
         :return:
         """
-        logger.debug(f"Update the model_df and the view")
+        self.logger.debug(f"Update the model_df and the view")
         self._set_model_df()
         self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
@@ -146,9 +146,9 @@ class DataModel(PandasModel):
         the subclasses
         :return:
         """
-        logger.debug("Downloading data from DB")
+        self.logger.debug("Downloading data from DB")
         await Lab().update_lab_df_from_db(self.table_name, **kwargs)
-        logger.debug("Updating the model and view")
+        self.logger.debug("Updating the model and view")
         self.update_model_df_from_db()
 
     def get_default_delegate_info(self) -> List[int]:
@@ -226,7 +226,7 @@ class DataModel(PandasModel):
         flag = self.get_data_from_index(index, 'flag')
         # Unless it is a deleted row, proceed to set the data
         if flag & RowFlags.DeletedRow > 0:
-            logger.debug("Cannot change data in the deleted row")
+            self.logger.debug("Cannot change data in the deleted row")
             return
 
         result = super().setData(index, value, role)
@@ -264,7 +264,7 @@ class DataModel(PandasModel):
             next_new_id = 1
         else:
             next_new_id = self.model_df.iloc[:, 0].max() + 1
-        logger.debug(f"New model_df_row id({next_new_id})")
+        self.logger.debug(f"New model_df_row id({next_new_id})")
 
         try:
             new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
@@ -295,7 +295,7 @@ class DataModel(PandasModel):
         :param indexes:
         :return:
         """
-        logger.debug(f"dropping... indexes({indexes})")
+        self.logger.debug(f"dropping... indexes({indexes})")
         if isinstance(indexes[0], QModelIndex):
             indexes = [i.row() for i in indexes]
 
@@ -303,7 +303,7 @@ class DataModel(PandasModel):
         self.model_df.drop(pd.Index(indexes), inplace=True)
         self.endRemoveRows()
 
-        logger.debug(f"model_df dropped rows {indexes}")
+        self.logger.debug(f"model_df dropped rows {indexes}")
 
     def diff_row(self, index: QModelIndex) -> bool:
         """
@@ -314,7 +314,7 @@ class DataModel(PandasModel):
         """
         original_row_count = Lab().table_df[self.table_name].shape[0]
         if index.row() >= original_row_count:
-            logger.error(f"index.row({index.row()} is out of "
+            self.logger.error(f"index.row({index.row()} is out of "
                          f'range of model_df row count {original_row_count} ')
             exit(1)
         original_row = Lab().table_df[self.table_name].iloc[[index.row()], :]
@@ -375,7 +375,7 @@ class DataModel(PandasModel):
         """
         row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
         if len(row_list) > 0:
-            logger.debug(f"rows to delete: {row_list}")
+            self.logger.debug(f"rows to delete: {row_list}")
             indexes = [self.index(row, 0) for row in row_list]
             self.set_del_flag(indexes)
         return len(row_list)
@@ -415,41 +415,41 @@ class DataModel(PandasModel):
                 return_msg += ('\n' + op_type + ': ' + msg)
             return return_msg
 
-        logger.debug("Saving to DB ...")
+        self.logger.debug("Saving to DB ...")
 
         total_results = {}
 
         del_df = self.get_deleted_df()
         if not del_df.empty:
             self.drop_rows(del_df.index.to_list())
-            logger.debug(f"\n{del_df}")
+            self.logger.debug(f"\n{del_df}")
             # DB data is to be deleted from here
             df_to_upload = del_df.loc[:, self.db_column_names]
-            logger.debug(f"\n{df_to_upload}")
+            self.logger.debug(f"\n{df_to_upload}")
             results_del = await Lab().delete_df(self.table_name, df_to_upload)
             total_results['삭제'] = results_del
-            logger.debug(f"result of deleting = {results_del}")
+            self.logger.debug(f"result of deleting = {results_del}")
 
         new_df = self.get_new_df()
         if not new_df.empty:
             new_df.loc[:, [self.get_col_name(0)]] = 'DEFAULT'
-            logger.debug(f"\n{new_df}")
+            self.logger.debug(f"\n{new_df}")
             df_to_upload = new_df.loc[:, self.db_column_names]
             # set id default to let DB assign an id without collision
             # df_to_upload.loc[:, self.get_col_name(0)] = 'DEFAULT'
-            logger.debug(f"\n{df_to_upload}")
+            self.logger.debug(f"\n{df_to_upload}")
             results_new = await Lab().insert_df(self.table_name, df_to_upload)
             total_results['추가'] = results_new
-            logger.debug(f"result of inserting new rows = {results_new}")
+            self.logger.debug(f"result of inserting new rows = {results_new}")
 
         chg_df = self.get_changed_df()
         if not chg_df.empty:
-            logger.debug(f"\n{chg_df}")
+            self.logger.debug(f"\n{chg_df}")
             df_to_upload = chg_df.loc[:, self.db_column_names]
-            logger.debug(f"\n{df_to_upload}")
+            self.logger.debug(f"\n{df_to_upload}")
             results_chg = await Lab().update_df(self.table_name, df_to_upload)
             total_results['수정'] = results_chg
-            logger.debug(f"result of changing = {results_chg}")
+            self.logger.debug(f"result of changing = {results_chg}")
 
         self.clear_uneditable_rows()
         self.clear_new_rows()

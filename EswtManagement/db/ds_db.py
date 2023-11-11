@@ -3,6 +3,7 @@ import asyncio
 import pandas as pd
 import bcrypt
 from typing import List
+from constants import ConfigReader
 from db.db_utils import DbUtil
 from db.db_schema import (
     CREATE_CATEGORY_TABLE,
@@ -14,13 +15,12 @@ from db.db_schema import (
 from common.d_logger import Logs, logging
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
+class TreatmentsDb:
+    def __init__(self, config=ConfigReader()):
+        self.db_util = DbUtil(config)
 
-
-class InventoryDb:
-    def __init__(self):
-        self.db_util = DbUtil()
+        self.logger = Logs(config).get_logger(os.path.basename(__file__))
+        self.logger.setLevel(logging.DEBUG)
 
     async def create_tables(self):
         statements = [CREATE_CATEGORY_TABLE,
@@ -53,8 +53,8 @@ class InventoryDb:
             stmt_value_part = ','.join(place_holders)
             stmt = f"INSERT INTO {table_name} VALUES({stmt_value_part})"
             return stmt
-        logger.debug(f"Insert into {table}...")
-        logger.debug(f"\n{df}")
+        self.logger.debug(f"Insert into {table}...")
+        self.logger.debug(f"\n{df}")
         args = df.values.tolist()
         stmt = make_stmt(table, args[0])
 
@@ -62,7 +62,7 @@ class InventoryDb:
         non_default_df = df.loc[:, df.iloc[0, :] != 'DEFAULT']
         args = non_default_df.values.tolist()
 
-        logger.debug(f"{stmt} {args}")
+        self.logger.debug(f"{stmt} {args}")
         # return await self.db_util.pool_execute(stmt, args)
         return await self.db_util.executemany(stmt, args)
 
@@ -82,14 +82,14 @@ class InventoryDb:
         args = [(tx.active, tx.treatment_name, tx.category_id, tx.description)
                 for tx in treatments_df.itertuples()]
 
-        logger.debug("Upsert treatments ...")
-        logger.debug(args)
+        self.logger.debug("Upsert treatments ...")
+        self.logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
         col_name, id_series = next(del_df.treatments())
         args = [(_id,) for _id in id_series]
-        logger.debug(f"Delete {col_name} = {args} from {table} ...")
+        self.logger.debug(f"Delete {col_name} = {args} from {table} ...")
         return await self.db_util.delete(table, col_name, args)
 
     async def update_df(self, table: str, up_df: pd.DataFrame):
@@ -99,8 +99,8 @@ class InventoryDb:
         ph_str = ','.join(place_holders)
         stmt = f"UPDATE {table} SET {ph_str} WHERE {id_name}=$1"
         args = [_tuple[1:] for _tuple in up_df.itertuples()]
-        logger.debug(f"{stmt}")
-        logger.debug(args)
+        self.logger.debug(f"{stmt}")
+        self.logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
     async def update_sessions_df(self, sessions_df: pd.DataFrame):
@@ -118,17 +118,17 @@ class InventoryDb:
         args = [(session.session_id, session.treatment_id, session.treatment_detail,
                  session.provider_id, session.timestamp, session.description)
                 for session in sessions_df.itertuples()]
-        logger.debug("Update sessions ...")
-        logger.debug(args)
+        self.logger.debug("Update sessions ...")
+        self.logger.debug(args)
         return await self.db_util.executemany(stmt, args)
 
     async def delete_sessions_df(self, sessions_df: pd.DataFrame):
         args = [(session_row.session_id,) for session_row in sessions_df.itertuples()]
-        logger.debug(f"Delete ids {args} from sessions table ...")
+        self.logger.debug(f"Delete ids {args} from sessions table ...")
         return await self.db_util.delete('sessions', 'session_id', args)
 
 async def main():
-    danaul_db = InventoryDb()
+    danaul_db = TreatmentsDb(ConfigReader('../ds_config'))
 
     # Initialize db by dropping all the tables and then
     # creating them all over again.

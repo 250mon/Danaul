@@ -2,12 +2,10 @@ import os
 import logging
 from datetime import datetime
 from common.singleton import Singleton
-from constants import ConfigReader
 
 
 class Logs(metaclass=Singleton):
-    def __init__(self):
-        config = ConfigReader()
+    def __init__(self, config=None):
         self.log_output = config.get_options('Log_Output')
         self.output_filename = config.get_options('Log_Output_FileName')
         self.f_log_level = self.convert_levels(config.get_options('File_Log_Level'))
