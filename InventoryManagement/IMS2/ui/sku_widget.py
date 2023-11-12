@@ -10,13 +10,11 @@ from ui.di_table_widget import InventoryTableWidget
 from model.sku_model import SkuModel
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-
-
 class SkuWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.parent: QMainWindow = parent
 
     def set_source_model(self, model: SkuModel):
@@ -105,10 +103,10 @@ class SkuWidget(InventoryTableWidget):
     @ Slot()
     def edit_mode_clicked(self):
         if self.edit_mode.isChecked():
-            logger.debug("Now enter into edit mode")
+            self.logger.debug("Now enter into edit mode")
             self.edit_mode_starts()
         elif self.source_model.is_model_editing():
-            logger.debug("The model is in the middle of editing."
+            self.logger.debug("The model is in the middle of editing."
                          ' Should save before exit the mode')
             QMessageBox.information(self,
                                     '편집모드 중 종료',
@@ -116,7 +114,7 @@ class SkuWidget(InventoryTableWidget):
                                     QMessageBox.Close)
             self.edit_mode.setChecked(True)
         else:
-            logger.debug("Now edit mode ends")
+            self.logger.debug("Now edit mode ends")
             self.edit_mode_ends()
 
     def edit_mode_starts(self):
@@ -134,12 +132,12 @@ class SkuWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        logger.debug(f"{action}")
+        self.logger.debug(f"{action}")
         if action == "add_sku":
-            logger.debug("Adding sku ...")
+            self.logger.debug("Adding sku ...")
             self.add_new_row()
         elif action == "del_sku":
-            logger.debug("Deleting sku ...")
+            self.logger.debug("Deleting sku ...")
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
 

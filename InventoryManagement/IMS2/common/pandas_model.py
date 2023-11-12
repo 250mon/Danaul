@@ -5,11 +5,7 @@ from typing import Dict
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
 from constants import EditLevel
-from common.d_logger import Logs, logging
-
-
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
+from common.d_logger import Logs
 
 
 class PandasModel(QAbstractTableModel):
@@ -19,6 +15,9 @@ class PandasModel(QAbstractTableModel):
 
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
+
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.model_df = dataframe
         self.edit_level = EditLevel.UserModifiable
         self.is_editable = False
@@ -93,7 +92,7 @@ class PandasModel(QAbstractTableModel):
 
     def flags(self, index: QModelIndex):
         if not index.isValid():
-            logger.debug(f"CHECK!!! index({index}) is not valid")
+            self.logger.debug(f"CHECK!!! index({index}) is not valid")
             return Qt.NoItemFlags
 
         if not self.is_editable:
@@ -118,22 +117,22 @@ class PandasModel(QAbstractTableModel):
         self.is_editable= is_editable
 
     def set_editable_row(self, row: int):
-        logger.debug(f"row{row} => "
+        self.logger.debug(f"row{row} => "
                      f'editable_rows_{self.editable_rows_set}')
         self.editable_rows_set.add(row)
 
     def unset_editable_row(self, row: int):
-        logger.debug(f"row{row} from "
+        self.logger.debug(f"row{row} from "
                      f'editable_rows_{self.editable_rows_set}')
         if row in self.editable_rows_set:
             self.editable_rows_set.remove(row)
         else:
-            logger.warn(f"unset_editable_row: cannot find "
+            self.logger.warn(f"unset_editable_row: cannot find "
                         f'row {row} int the set')
 
     def clear_editable_rows(self):
         if len(self.editable_rows_set) > 0:
-            logger.debug(f"remove all rows from "
+            self.logger.debug(f"remove all rows from "
                          f'editable_rows_{self.editable_rows_set}')
             self.editable_rows_set.clear()
 
@@ -143,21 +142,21 @@ class PandasModel(QAbstractTableModel):
         :param row:
         :return:
         """
-        logger.debug(f"row{row} => new_rows_{self.new_rows_set}")
+        self.logger.debug(f"row{row} => new_rows_{self.new_rows_set}")
         self.new_rows_set.add(row)
 
     def unset_new_row(self, row: int):
-        logger.debug(f"remove row {row} from "
+        self.logger.debug(f"remove row {row} from "
                      f'new_rows_{self.new_rows_set}')
         if row in self.new_rows_set:
             self.new_rows_set.remove(row)
         else:
-            logger.warn(f"unset_editable_new_row: cannot find row {row} int the set")
+            self.logger.warn(f"unset_editable_new_row: cannot find row {row} int the set")
 
     def clear_new_rows(self):
         if len(self.new_rows_set) > 0:
             self.new_rows_set.clear()
-            logger.debug(f"set_editable_new_row : clearing")
+            self.logger.debug(f"set_editable_new_row : clearing")
 
     def set_uneditable_row(self, row: int):
         """
@@ -165,21 +164,21 @@ class PandasModel(QAbstractTableModel):
         :param row:
         :return:
         """
-        logger.debug(f"row{row} => "
+        self.logger.debug(f"row{row} => "
                      f'uneditable_rows_{self.uneditable_rows_set}')
         self.uneditable_rows_set.add(row)
 
     def unset_uneditable_row(self, row: int):
-        logger.debug(f"remove row {row} from "
+        self.logger.debug(f"remove row {row} from "
                      f'uneditable_rows_{self.uneditable_rows_set}')
         if row in self.uneditable_rows_set:
             self.uneditable_rows_set.remove(row)
         else:
-            logger.warn(f"unset_uneditable_row: cannot find row {row} int the set")
+            self.logger.warn(f"unset_uneditable_row: cannot find row {row} int the set")
 
     def clear_uneditable_rows(self):
         if len(self.uneditable_rows_set) > 0:
-            logger.debug(f"remove all rows from "
+            self.logger.debug(f"remove all rows from "
                          f'uneditable_rows_{self.uneditable_rows_set}')
             self.uneditable_rows_set.clear()
 

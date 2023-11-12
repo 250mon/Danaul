@@ -4,15 +4,13 @@ from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex
 from model.di_data_model import DataModel
 from db.ds_lab import Lab
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from constants import EditLevel
 from common.datetime_utils import *
 from model.sku_model import SkuModel
 from constants import RowFlags
 from ds_exceptions import *
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
 
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
@@ -22,6 +20,8 @@ Also, converting model data(dataframe) back into a data class to update db
 
 class TrModel(DataModel):
     def __init__(self, user_name: str, sku_model: SkuModel):
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.sku_model = sku_model
         self.init_params()
         self.selected_upper_id = None
@@ -65,21 +65,21 @@ class TrModel(DataModel):
 
     def set_upper_model_id(self, sku_id: int or None):
         self.selected_upper_id = sku_id
-        logger.debug(f"sku_id({self.selected_upper_id}) is set")
+        self.logger.debug(f"sku_id({self.selected_upper_id}) is set")
 
         if sku_id is not None:
             self.selected_upper_name = self.sku_model.get_data_from_id(sku_id, 'sku_name')
-            logger.debug(f"sku_name({self.selected_upper_name}) is set")
+            self.logger.debug(f"sku_name({self.selected_upper_name}) is set")
         else:
             self.selected_upper_name = ""
 
     def set_beg_timestamp(self, beg: QDate):
         self.beg_timestamp = beg
-        logger.debug(f"beg_timestamp({self.beg_timestamp})")
+        self.logger.debug(f"beg_timestamp({self.beg_timestamp})")
 
     def set_end_timestamp(self, end: QDate):
         self.end_timestamp = end
-        logger.debug(f"end_timestamp({self.end_timestamp})")
+        self.logger.debug(f"end_timestamp({self.end_timestamp})")
 
     async def update(self):
         """
@@ -88,11 +88,11 @@ class TrModel(DataModel):
         """
         # end day needs to be added 1 day otherwise query results only includes those thata
         # were created until the day 00h 00mm 00sec
-        logger.debug(f"downloading data from DB")
+        self.logger.debug(f"downloading data from DB")
         kwargs = {'sku_id': self.selected_upper_id,
                   'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
                   'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")}
-        logger.debug(f"\n{kwargs}")
+        self.logger.debug(f"\n{kwargs}")
         await super().update(**kwargs)
 
         # await Lab().update_lab_df_from_db(self.table_name, **kwargs)
@@ -153,8 +153,8 @@ class TrModel(DataModel):
                 try:
                     ret = int(data_to_display)
                 except Exception as e:
-                    logger.error(e)
-                    logger.error(f"{col_name} {data_to_display}")
+                    self.logger.error(e)
+                    self.logger.error(f"{col_name} {data_to_display}")
                 return int(data_to_display)
             elif col_name == 'tr_timestamp':
                 # data type is datetime.date
@@ -187,7 +187,7 @@ class TrModel(DataModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
-        logger.debug(f"index({index}), value({value})")
+        self.logger.debug(f"index({index}), value({value})")
 
         col_name = self.get_col_name(index.column())
         if col_name == 'tr_type':
@@ -207,7 +207,7 @@ class TrModel(DataModel):
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise raise an exception
         """
-        logger.debug(f"new_id({next_new_id})\n")
+        self.logger.debug(f"new_id({next_new_id})\n")
         if self.selected_upper_id is None:
             error = "sku_id is empty"
             raise NonExistentSkuIdError(error)
@@ -226,7 +226,7 @@ class TrModel(DataModel):
             idx = id_s.idxmax()
             last_qty = self.model_df.iloc[idx, self.get_col_number("after_qty")].item()
         except Exception as e:
-            logger.debug(e)
+            self.logger.debug(e)
             # key error where tr_id is not present
             sku_df = self.sku_model.model_df
             last_qty = sku_df.loc[sku_df["sku_id"] == self.selected_upper_id, "sku_qty"].item()
@@ -258,7 +258,7 @@ class TrModel(DataModel):
         self.selected_upper_id = None
 
         next_new_id = self.model_df.iloc[:, 0].max() + 1
-        logger.debug(f"New model_df_row id is {next_new_id}")
+        self.logger.debug(f"New model_df_row id is {next_new_id}")
 
         result_s = pd.Series([False] * joined_df.shape[0], index=joined_df.index)
         for row in joined_df.itertuples():
@@ -309,7 +309,7 @@ class TrModel(DataModel):
         before_qty = index.siblingAtColumn(self.get_col_number('before_qty')).data()
 
         if tr_qty <= 0:
-            logger.debug(f"tr_qty is not positive integer {tr_qty}")
+            self.logger.debug(f"tr_qty is not positive integer {tr_qty}")
             return False
 
         result = True
@@ -329,8 +329,8 @@ class TrModel(DataModel):
                 self.plus_qty_to_models('-', before_qty, tr_qty, index)
 
         debug_msg = "valid" if result is True else "not valid"
-        logger.debug(f"before_qty({before_qty}) tr_qty({tr_qty})")
-        logger.debug(f"Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
+        self.logger.debug(f"before_qty({before_qty}) tr_qty({tr_qty})")
+        self.logger.debug(f"Sku({sku_id}) Tr({tr_type}) is {debug_msg}")
         # not allow a user to change tr_qty after this point
         self.clear_new_rows()
 
@@ -345,7 +345,7 @@ class TrModel(DataModel):
 
         after_qty_idx = index.siblingAtColumn(self.get_col_number('after_qty'))
         self.setData(after_qty_idx, after_qty)
-        logger.debug(f"before_qty({before_qty}){op}tr_qty({tr_qty}) => after_qty({after_qty})")
+        self.logger.debug(f"before_qty({before_qty}){op}tr_qty({tr_qty}) => after_qty({after_qty})")
 
     def update_sku_qty(self):
         """
@@ -356,7 +356,7 @@ class TrModel(DataModel):
             qty_update_df.reset_index(inplace=True)
             idx_s = qty_update_df.groupby('sku_id')['tr_id'].idxmax()
             qty_df = qty_update_df.loc[idx_s, ["sku_id", "after_qty"]]
-            logger.debug(f"qty_df to update\n{qty_df}")
+            self.logger.debug(f"qty_df to update\n{qty_df}")
             return qty_df
 
         new_tr_df = self.get_new_df()

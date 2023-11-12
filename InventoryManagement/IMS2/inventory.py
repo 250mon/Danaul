@@ -16,16 +16,14 @@ from model.tr_model import TrModel
 from ui.item_widget import ItemWidget
 from ui.sku_widget import SkuWidget
 from ui.tr_widget import TrWidget
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from constants import CONFIG_FILE, UserPrivilege, ConfigReader
 from model.emr_tr_reader import EmrTransactionReader
 from ui.emr_import_widget import ImportWidget
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-
-Lab(InventoryDb(CONFIG_FILE))
+ConfigReader().read_config_file(CONFIG_FILE)
+Lab(InventoryDb())
 
 
 class InventoryWindow(QMainWindow):
@@ -38,9 +36,12 @@ class InventoryWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        is_test: str = ConfigReader(CONFIG_FILE).get_options("Testmode")
 
-        self.login_widget = LoginWidget(CONFIG_FILE, self)
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
+        is_test: str = ConfigReader().get_options("Testmode")
+
+        self.login_widget = LoginWidget(self)
         self.login_widget.start_main.connect(self.initUI)
         self.update_all_signal.connect(self.update_all)
         self.import_trs_signal.connect(self.import_transactions)
@@ -189,24 +190,24 @@ class InventoryWindow(QMainWindow):
         :param df:
         :return:
         """
-        logger.debug(f"{action}")
+        self.logger.debug(f"{action}")
         result_str = None
         if action == "item_save":
-            logger.debug("Saving items ...")
+            self.logger.debug("Saving items ...")
             result_str = await self.item_widget.save_to_db()
-            logger.debug("Updating items ...")
+            self.logger.debug("Updating items ...")
             await self.item_model.update()
             await self.sku_model.update()
             self.tr_model.selected_upper_id = None
             await self.tr_model.update()
         elif action == "sku_save":
-            logger.debug("Saving skus ...")
+            self.logger.debug("Saving skus ...")
             result_str = await self.sku_widget.save_to_db()
             await self.sku_model.update()
             self.tr_model.selected_upper_id = None
             await self.tr_model.update()
         elif action == "tr_save":
-            logger.debug("Saving transactions ...")
+            self.logger.debug("Saving transactions ...")
             await self.sku_widget.save_to_db()
             result_str = await self.tr_widget.save_to_db()
             await self.sku_model.update()
@@ -255,7 +256,7 @@ class InventoryWindow(QMainWindow):
     def read_emrfile(self, file_name):
         reader = EmrTransactionReader(file_name, self)
         if reader is None:
-            logger.debug("Invalid file")
+            self.logger.debug("Invalid file")
             return
 
         emr_df = reader.read_df_from()
@@ -270,9 +271,9 @@ class InventoryWindow(QMainWindow):
     @Slot(pd.DataFrame)
     def import_transactions(self, emr_df):
         if emr_df is None or emr_df.empty:
-            logger.debug("emr_df is empty")
+            self.logger.debug("emr_df is empty")
         else:
-            logger.debug(f"\n{emr_df}")
+            self.logger.debug(f"\n{emr_df}")
             result_s = self.tr_model.append_new_rows_from_emr(emr_df)
             if not result_s.empty:
                 QMessageBox.information(self,
@@ -325,4 +326,5 @@ def main():
 try:
     main()
 except Exception as e:
-    logger.Exception("Unexpected exception! %s", e)
+    logger = Logs().get_logger(os.path.basename(__file__))
+    logger.error("Unexpected exception! %s", e)

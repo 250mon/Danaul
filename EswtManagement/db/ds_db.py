@@ -5,29 +5,23 @@ import bcrypt
 from typing import List
 from constants import ConfigReader
 from db.db_utils import DbUtil
-from db.db_schema import (
-    CREATE_CATEGORY_TABLE,
-    CREATE_TREATMENT_TABLE,
-    CREATE_PROVIDER_TABLE,
-    CREATE_USER_TABLE,
-    CREATE_SESSIONS_TABLE,
-)
+from db.db_schema import *
 from common.d_logger import Logs, logging
 
 
 class TreatmentsDb:
-    def __init__(self, config=ConfigReader()):
-        self.db_util = DbUtil(config)
+    def __init__(self):
+        self.logger = Logs().get_logger(os.path.basename(__file__))
 
-        self.logger = Logs(config).get_logger(os.path.basename(__file__))
-        self.logger.setLevel(logging.DEBUG)
+        self.db_util = DbUtil()
 
     async def create_tables(self):
+        self.logger.info("Creating tables ...")
         statements = [CREATE_CATEGORY_TABLE,
                       CREATE_TREATMENT_TABLE,
                       CREATE_PROVIDER_TABLE,
                       CREATE_USER_TABLE,
-                      CREATE_SESSIONS_TABLE]
+                      CREATE_SESSION_TABLE]
         return await self.db_util.create_tables(statements)
 
     async def drop_tables(self):
@@ -128,13 +122,14 @@ class TreatmentsDb:
         return await self.db_util.delete('sessions', 'session_id', args)
 
 async def main():
-    danaul_db = TreatmentsDb(ConfigReader('../ds_config'))
+    danaul_db = TreatmentsDb()
 
     # Initialize db by dropping all the tables and then
     # creating them all over again.
     # After creating the tables, inserting initial data
     async def initialize():
         await danaul_db.initialize_db()
+        return
 
         extra_data = {}
         # initial insert
@@ -147,6 +142,7 @@ async def main():
             'id': [1],
             'name': ['김정은']
         })
+
         def encrypt_password(password):
             # Generate a salt and hash the password
             salt = bcrypt.gensalt()
@@ -187,9 +183,10 @@ async def main():
         print(await danaul_db.insert_df('sessions', sessions_df))
 
     await initialize()
-    await insert_treatments()
-    await insert_sessions()
+    # await insert_treatments()
+    # await insert_sessions()
 
 
 if __name__ == '__main__':
+    ConfigReader().read_config_file('../ds_config')
     asyncio.run(main())

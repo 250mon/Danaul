@@ -1,6 +1,7 @@
 from enum import Enum
 from functools import total_ordering
 from operator import methodcaller
+from common.singleton import Singleton
 
 CONFIG_FILE = 'di_config'
 ADMIN_GROUP = ['admin', 'jye']
@@ -33,10 +34,9 @@ class EditLevel(Enum):
         return NotImplemented
 
 
-class ConfigReader:
-    def __init__(self, file_path="config"):
+class ConfigReader(metaclass=Singleton):
+    def __init__(self):
         self.options = {}
-        self.read_config_file(file_path)
 
     def read_config_file(self, file_path):
         try:
@@ -54,4 +54,8 @@ class ConfigReader:
             print(e)
 
     def get_options(self, option_name: str):
-        return self.options.get(option_name, None)
+        options = self.options.get(option_name, None)
+        if options is None:
+            self.read_config_file(CONFIG_FILE)
+            options = self.options.get(option_name, None)
+        return options

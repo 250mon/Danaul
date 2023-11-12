@@ -7,7 +7,6 @@ from types import TracebackType
 from typing import Optional, Type, List, Tuple
 from common.d_logger import Logs
 from constants import ConfigReader
-import logging
 
 
 class ConnectPg:
@@ -15,40 +14,31 @@ class ConnectPg:
         self.config = config
         self._conn = None
 
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-        self.logger.setLevel(logging.DEBUG)
-
     async def __aenter__(self):
-        self.logger.debug("Trying to connect to db ...")
-        self.logger.debug("Entering context manager, waiting for connection")
         try:
             self._conn = await asyncpg.connect(host=self.config.get_options("Host"),
                                                port=self.config.get_options("Port"),
                                                user=self.config.get_options("User"),
                                                database=self.config.get_options("Database"),
                                                password=self.config.get_options("Password"))
-            self.logger.debug("Successfully connected!!!")
             return self._conn
         except Exception as e:
-            self.logger.exception('Error while connecting to DB', e)
-            return None
+            raise e
 
     async def __aexit__(self,
                         exc_type: Optional[Type[BaseException]],
                         exc_val: Optional[BaseException],
                         exc_tb: Optional[TracebackType]):
-        self.logger.debug("Exiting context manager")
+        # self.logger.debug("Exiting context manager")
         if self._conn:
-            self.logger.debug("Closed connection")
+            # self.logger.debug("Closed connection")
             await self._conn.close()
 
 
 class DbUtil:
-    def __init__(self, config):
-        self.config = config
-
+    def __init__(self):
         self.logger = Logs().get_logger(os.path.basename(__file__))
-        self.logger.setLevel(logging.DEBUG)
+        self.config = ConfigReader()
 
     async def create_tables(self, statements: List[str]):
         """
@@ -57,22 +47,26 @@ class DbUtil:
         :param statements: sql statments
         :return:
         """
+        self.logger.debug("Creating tables")
         results = []
-        async with ConnectPg() as conn:
-            if conn is None:
-                self.logger.debug("Error while connecting to DB during creating tables")
-                return
+        try:
+            async with ConnectPg(self.config) as conn:
+                if conn is None:
+                    self.logger.debug("Error while connecting to DB during creating tables")
+                    return
 
-            self.logger.info("Creating the tables")
-            for statement in statements:
-                try:
-                    self.logger.info(f"{statement}")
-                    status = await conn.execute(statement)
-                    results.append(status)
-                    self.logger.debug(status)
-                except Exception as e:
-                    self.logger.exception(f'create_tables: Error while creating table: {statement}', e)
-            self.logger.info("Finished creating the tables")
+                for statement in statements:
+                    try:
+                        self.logger.info(f"{statement}")
+                        status = await conn.execute(statement)
+                        results.append(status)
+                        self.logger.debug(status)
+                    except Exception as e:
+                        self.logger.error(f'create_tables: Error while creating table: {statement}', e)
+                self.logger.info("Tables created")
+        except Exception as e:
+            self.logger.error(e)
+
         return results
 
     async def drop_tables(self, table_names: List[str]):
@@ -82,23 +76,27 @@ class DbUtil:
         :return:  the list of results of dropping the tables or
                   None if connection fails
         """
+        self.logger.debug(f"Dropping tables {table_names}")
         results = []
-        async with ConnectPg() as conn:
-            if conn is None:
-                self.logger.debug("Error while connecting to DB during removing tables")
-                return None
+        try:
+            async with ConnectPg(self.config) as conn:
+                if conn is None:
+                    self.logger.debug("Error while connecting to DB during removing tables")
+                    return None
 
-            self.logger.info("Removing the tables")
-            for table in table_names:
-                try:
-                    sql_stmt = f'DROP TABLE {table} CASCADE;'
-                    result = await conn.execute(sql_stmt)
-                    results.append(result)
-                except UndefinedTableError as ute:
-                    self.logger.exception('drop_table: Trying to drop an undefined table', ute)
-                except Exception as e:
-                    self.logger.exception('drop_table: Error while dropping tables', e)
-        self.logger.info("Finished removing the tables")
+                for table in table_names:
+                    try:
+                        sql_stmt = f'DROP TABLE {table} CASCADE;'
+                        result = await conn.execute(sql_stmt)
+                        results.append(result)
+                    except UndefinedTableError as ute:
+                        self.logger.error('drop_table: Trying to drop an undefined table', ute)
+                    except Exception as e:
+                        self.logger.error('drop_table: Error while dropping tables', e)
+            self.logger.info("Tables removed")
+        except Exception as e:
+            self.logger.error(e)
+
         return results
 
     async def select_query(self, query: str, args: List = None):
@@ -107,22 +105,25 @@ class DbUtil:
         :param query
         :return: all results if successful, otherwise None
         """
-        async with ConnectPg() as conn:
-            if conn is None:
-                self.logger.debug("Error while connecting to DB during querying tables")
-                return None
+        results = []
+        try:
+            async with ConnectPg(self.config) as conn:
+                if conn is None:
+                    self.logger.debug("Error while connecting to DB during querying tables")
+                    return None
 
-            try:
-                query = await conn.prepare(query)
-                if args:
-                    results: List[Record] = await query.fetch(*args)
-                else:
-                    results: List[Record] = await query.fetch()
-                return results
-            except Exception as e:
-                self.logger.exception(f'select_query: Error while executing {query}', e)
-                return None
+                try:
+                    query = await conn.prepare(query)
+                    if args:
+                        results: List[Record] = await query.fetch(*args)
+                    else:
+                        results: List[Record] = await query.fetch()
+                except Exception as e:
+                    self.logger.error(f'select_query: Error while executing {query}', e)
+        except Exception as e:
+            self.logger.error(e)
 
+        return results
 
     async def executemany(self, statement: str, args: List[Tuple]):
         """
@@ -133,20 +134,23 @@ class DbUtil:
             if successful, None
             otherwise, exception or string
         """
-        async with ConnectPg() as conn:
-            if conn is None:
-                self.logger.debug("Error while connecting to DB during sync_executing")
-                return "Connection failed"
+        results = None
+        try:
+            async with ConnectPg(self.config) as conn:
+                if conn is None:
+                    self.logger.debug("Error while connecting to DB during sync_executing")
+                    return "Connection failed"
 
-            self.logger.info("Synchronous executing")
-            try:
-                results = await conn.executemany(statement, args)
-                self.logger.info(f"results::\n{results}")
-                return results
-            except Exception as e:
-                self.logger.exception('executemany: Error during synchronous executing', e)
-                return e
+                self.logger.debug("Synchronous executing")
+                try:
+                    results = await conn.executemany(statement, args)
+                    self.logger.debug(f"results::\n{results}")
+                except Exception as e:
+                    self.logger.error('executemany: Error during synchronous executing', e)
+        except Exception as e:
+            self.logger.error(e)
 
+        return results
 
     async def pool_execute(self, statement: str, args: List[Tuple]):
         """
@@ -163,17 +167,21 @@ class DbUtil:
                 self.logger.debug(arg)
                 return await conn.execute(stmt, *arg)
 
-        self.logger.info("Asynchronous executing")
-        config = ConfigReader()
-        async with asyncpg.create_pool(host=config.get_options("Host"),
-                                       port=config.get_options("Port"),
-                                       user=config.get_options("User"),
-                                       database=config.get_options("Database"),
-                                       password=config.get_options("Password")) as pool:
-            queries = [execute(statement, arg, pool) for arg in args]
-            results = await asyncio.gather(*queries, return_exceptions=True)
-            self.logger.debug(f":\n{results}")
-            return results
+        self.logger.debug("Asynchronous executing")
+        results = []
+        try:
+            async with asyncpg.create_pool(host=self.config.get_options("Host"),
+                                           port=self.config.get_options("Port"),
+                                           user=self.config.get_options("User"),
+                                           database=self.config.get_options("Database"),
+                                           password=self.config.get_options("Password")) as pool:
+                queries = [execute(statement, arg, pool) for arg in args]
+                results = await asyncio.gather(*queries, return_exceptions=True)
+                self.logger.debug(f":\n{results}")
+        except Exception as e:
+            self.logger.error(e)
+
+        return results
 
     async def delete(self, table, col_name, args: List[Tuple]):
         """
@@ -201,7 +209,6 @@ class DbUtil:
         self.logger.debug(f"Delete rows ...")
         self.logger.debug(args)
 
-        # results = await self.pool_execute(stmt, args)
         results = await self.executemany(stmt, args)
         self.logger.debug(f":\n{results}")
         return results

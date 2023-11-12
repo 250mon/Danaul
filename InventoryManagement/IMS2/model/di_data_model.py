@@ -7,19 +7,21 @@ from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtGui import QColor, QBrush
 from common.pandas_model import PandasModel
 from db.ds_lab import Lab
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from constants import EditLevel, RowFlags, UserPrivilege, ADMIN_GROUP
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
 
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
+
+logger = Logs().get_logger(os.path.basename(__file__))
+
 class DataModel(PandasModel):
     def __init__(self, user_name):
         super().__init__()
+
         # for access control
         self.user_name = user_name
         if self.user_name in ADMIN_GROUP:

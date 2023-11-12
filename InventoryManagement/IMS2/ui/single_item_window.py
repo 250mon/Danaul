@@ -11,9 +11,6 @@ from model.item_model import ItemModel
 from common.d_logger import Logs, logging
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-
 class SingleItemWindow(QWidget):
     add_item_signal = Signal(object)
     chg_item_signal = Signal(object)
@@ -22,17 +19,19 @@ class SingleItemWindow(QWidget):
                  indexes: List[QModelIndex] or QModelIndex,
                  parent=None):
         super().__init__()
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.parent = parent
         self.proxy_model = proxy_model
 
         # if the selected index is a single index, it means
         # that we are editing a newly added item here.
         if isinstance(indexes, List):
-            logger.debug("change items mode")
+            self.logger.debug("change items mode")
             self.new_item_mode = False
             self.model_indexes = indexes
         else:
-            logger.debug("new item mode")
+            self.logger.debug("new item mode")
             self.new_item_mode = True
             self.model_indexes = [indexes]
 
@@ -116,11 +115,11 @@ class SingleItemWindow(QWidget):
 
     def ok_clicked(self):
         if self.new_item_mode:
-            logger.debug(f"Added Item Index: {self.model_indexes[0]}")
+            self.logger.debug(f"Added Item Index: {self.model_indexes[0]}")
             self.mapper.submit()
             self.add_item_signal.emit(self.model_indexes[0])
         else:
-            logger.debug(f"Changed Items Indexes: {self.model_indexes}")
+            self.logger.debug(f"Changed Items Indexes: {self.model_indexes}")
             self.mapper.submit()
             self.chg_item_signal.emit(self.model_indexes)
         # adding a new item

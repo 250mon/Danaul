@@ -35,9 +35,8 @@ class EditLevel(Enum):
 
 
 class ConfigReader(metaclass=Singleton):
-    def __init__(self, config_file_path=CONFIG_FILE):
+    def __init__(self):
         self.options = {}
-        self.read_config_file(config_file_path)
 
     def read_config_file(self, file_path):
         try:

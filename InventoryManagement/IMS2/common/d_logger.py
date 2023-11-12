@@ -2,19 +2,21 @@ import os
 import logging
 from datetime import datetime
 from common.singleton import Singleton
-from constants import ConfigReader, CONFIG_FILE
+from constants import ConfigReader
 
 
 class Logs(metaclass=Singleton):
     def __init__(self):
-        config = ConfigReader(CONFIG_FILE)
+        config = ConfigReader()
+        self.log_level = config.get_options('Log_Level')
         self.log_output = config.get_options('Log_Output')
         self.output_filename = config.get_options('Log_Output_FileName')
-        self.f_log_level = self.convert_levels(config.get_options('File_Log_Level'))
-        self.c_log_level = self.convert_levels(config.get_options('Console_Log_Level'))
+        self.f_log_level = config.get_options('File_Log_Level')
+        self.c_log_level = config.get_options('Console_Log_Level')
 
     def get_logger(self, name):
         logger = logging.getLogger(name)
+        logger.setLevel(self.log_level)
         self.init_logger(logger)
         return logger
 
@@ -42,6 +44,3 @@ class Logs(metaclass=Singleton):
                                               '%(lineno)d:%(funcName)s: %(message)s'))
             fh.setLevel(self.f_log_level)
             logger.addHandler(fh)
-
-    def convert_levels(self, str_lvl: str):
-        return getattr(logging, str_lvl)

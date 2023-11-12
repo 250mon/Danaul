@@ -4,12 +4,9 @@ from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex, Signal
 from model.di_data_model import DataModel
 from db.ds_lab import Lab
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from constants import RowFlags, EditLevel
 
-
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
 
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
@@ -21,6 +18,8 @@ class ItemModel(DataModel):
     item_model_changed_signal = Signal(object)
 
     def __init__(self, user_name):
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.init_params()
         super().__init__(user_name)
 
@@ -120,7 +119,7 @@ class ItemModel(DataModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
-        logger.debug(f"index({index}) value({value})")
+        self.logger.debug(f"index({index}) value({value})")
 
         col_name = self.get_col_name(index.column())
         if col_name == 'active':
@@ -138,7 +137,7 @@ class ItemModel(DataModel):
         elif col_name == 'item_name':
             # when a new row is added, item_name needs to be checked if any duplicate
             if not self.model_df[self.model_df.item_name == value].empty:
-                logger.debug(f"item name({value}) is already in use")
+                self.logger.debug(f"item name({value}) is already in use")
                 return False
 
         return super().setData(index, value, role)
@@ -174,8 +173,8 @@ class ItemModel(DataModel):
         if (new_item_name is not None and
                 new_item_name != "" and
                 new_item_name not in self.model_df['item_name']):
-            logger.debug(f"item_name({new_item_name}) is valid")
+            self.logger.debug(f"item_name({new_item_name}) is valid")
             return True
         else:
-            logger.debug(f"item_name({new_item_name}) is not valid")
+            self.logger.debug(f"item_name({new_item_name}) is not valid")
             return False

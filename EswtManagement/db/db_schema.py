@@ -22,7 +22,7 @@ CREATE_PROVIDER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS providers(
         provider_id SERIAL PRIMARY KEY,
-        provider_name TEXT NOT NULL,
+        provider_name TEXT NOT NULL
     );"""
 
 CREATE_USER_TABLE = \
@@ -34,7 +34,7 @@ CREATE_USER_TABLE = \
         UNIQUE(user_name)
     );"""
 
-CREATE_SESSIONS_TABLE = \
+CREATE_SESSION_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS sessions(
         session_id SERIAL PRIMARY KEY,

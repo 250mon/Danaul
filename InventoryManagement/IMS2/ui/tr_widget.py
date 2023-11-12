@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from db.ds_lab import Lab
 from model.tr_model import TrModel
 from ui.di_table_widget import InventoryTableWidget
@@ -13,13 +13,11 @@ from ui.single_tr_window import SingleTrWindow
 from constants import UserPrivilege
 
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-
-
 class TrWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.parent: QMainWindow = parent
 
     def set_source_model(self, model: TrModel):
@@ -181,22 +179,22 @@ class TrWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        logger.debug(f"{action}")
+        self.logger.debug(f"{action}")
 
         if action == "buy":
-            logger.debug("buying ...")
+            self.logger.debug("buying ...")
             self.add_new_row(tr_type='Buy')
         elif action == "sell":
-            logger.debug("selling ...")
+            self.logger.debug("selling ...")
             self.add_new_row(tr_type='Sell')
         elif action == "adj+":
-            logger.debug("adjusting plus ...")
+            self.logger.debug("adjusting plus ...")
             self.add_new_row(tr_type='AdjustmentPlus')
         elif action == "adj-":
-            logger.debug("adjusting minus ...")
+            self.logger.debug("adjusting minus ...")
             self.add_new_row(tr_type='AdjustmentMinus')
         elif action == "del_tr":
-            logger.debug("Deleting tr ...")
+            self.logger.debug("Deleting tr ...")
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
 
@@ -240,7 +238,7 @@ class TrWidget(InventoryTableWidget):
         If it fails to pass the validation, remove it.
         :return:
         """
-        logger.debug(f"tr {index.row()} added")
+        self.logger.debug(f"tr {index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
         if not self.source_model.validate_new_row(src_idx):
@@ -274,7 +272,7 @@ class TrWidget(InventoryTableWidget):
         :param sku_id:
         :return:
         """
-        logger.debug(f"sku_id({sku_id})")
+        self.logger.debug(f"sku_id({sku_id})")
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
         # set selected_sku_id

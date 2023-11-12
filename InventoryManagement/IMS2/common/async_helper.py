@@ -1,12 +1,9 @@
 import os
 import asyncio
-import pandas as pd
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QObject, Signal, Slot, QEvent
 from common.d_logger import Logs, logging
 
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
 
 class AsyncHelper(QObject):
 
@@ -29,6 +26,8 @@ class AsyncHelper(QObject):
 
     def __init__(self, worker, entry):
         super().__init__()
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.reenter_qt = self.ReenterQtObject()
         self.entry = entry
         self.loop = asyncio.new_event_loop()
@@ -44,7 +43,7 @@ class AsyncHelper(QObject):
     def on_worker_started(self, action: str):
         """ To use asyncio and Qt together, one must run the asyncio
             event loop as a "guest" inside the Qt "host" event loop. """
-        logger.debug(f"on_worker_started... {action}")
+        self.logger.debug(f"on_worker_started... {action}")
         if not self.entry:
             raise Exception("No entry point for the asyncio event loop was set.")
         asyncio.set_event_loop(self.loop)

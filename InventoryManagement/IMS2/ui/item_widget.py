@@ -6,18 +6,17 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from ui.di_table_widget import InventoryTableWidget
 from model.item_model import ItemModel
 from ui.single_item_window import SingleItemWindow
-
-logger = Logs().get_logger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
 
 
 class ItemWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
+        self.logger = Logs().get_logger(os.path.basename(__file__))
+
         self.parent: QMainWindow = parent
         self.delegate_mode = True
 
@@ -117,10 +116,10 @@ class ItemWidget(InventoryTableWidget):
     @ Slot(bool)
     def edit_mode_clicked(self, checked):
         if checked:
-            logger.debug("Now enter into edit mode")
+            self.logger.debug("Now enter into edit mode")
             self.edit_mode_starts()
         elif self.source_model.is_model_editing():
-            logger.debug("The model is in the middle of editing."
+            self.logger.debug("The model is in the middle of editing."
                          ' Should save before exit the mode')
             QMessageBox.information(self,
                                     '편집모드 중 종료',
@@ -128,7 +127,7 @@ class ItemWidget(InventoryTableWidget):
                                     QMessageBox.Close)
             self.edit_mode.setChecked(True)
         else:
-            logger.debug("Now edit mode ends")
+            self.logger.debug("Now edit mode ends")
             self.edit_mode_ends()
 
     def edit_mode_starts(self):
@@ -146,9 +145,9 @@ class ItemWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        logger.debug(f"{action}")
+        self.logger.debug(f"{action}")
         if action == "add_item":
-            logger.debug("Adding item ...")
+            self.logger.debug("Adding item ...")
             self.add_new_row()
             if not self.delegate_mode:
                 # Input window mode using DataMapperWidget
@@ -157,9 +156,9 @@ class ItemWidget(InventoryTableWidget):
                                                     new_item_index, self)
 
         elif action == "chg_item":
-            logger.debug("Changing item ...")
+            self.logger.debug("Changing item ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"chg_item {selected_indexes}")
+                self.logger.debug(f"chg_item {selected_indexes}")
                 # if self.delegate_mode:
                 #     self.change_rows_by_delegate(selected_indexes)
                 if not self.delegate_mode:
@@ -167,9 +166,9 @@ class ItemWidget(InventoryTableWidget):
                                                         selected_indexes, self)
 
         elif action == "del_item":
-            logger.debug("Deleting item ...")
+            self.logger.debug("Deleting item ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"del_item {selected_indexes}")
+                self.logger.debug(f"del_item {selected_indexes}")
                 self.delete_rows(selected_indexes)
 
     def save_model_to_db(self):
@@ -193,7 +192,7 @@ class ItemWidget(InventoryTableWidget):
         :return:
         """
         if self.source_model.is_flag_column(index):
-            logger.debug(f"item {index.row()} added")
+            self.logger.debug(f"item {index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
         if hasattr(self.source_model, "validate_new_row"):
@@ -210,7 +209,7 @@ class ItemWidget(InventoryTableWidget):
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 self.source_model.set_chg_flag(idx)
-                logger.debug(f"items {idx.row()} changed")
+                self.logger.debug(f"items {idx.row()} changed")
 
 
     @Slot(QModelIndex)
