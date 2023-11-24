@@ -1,0 +1,39 @@
+version: 1
+disable_existing_loggers: False
+
+# Configuring the default (root) logger is highly recommended
+root:
+    level: WARNING
+    handlers: [console]
+
+# Configuration for logger set with logging.getLogger(NAME)
+loggers:
+    db:
+        level: DEBUG
+        handlers: [console]
+        propagate: no
+    main:
+        level: DEBUG
+        handlers: [file]
+        propagate: no
+
+formatters:
+    simple:
+        format: "%(levelname)s:%(filename)s: %(lineno)d:%(funcName)s: %(message)s"
+    timed:
+        format: "%(asctime)s:%(levelname)s:%(filename)s: %(lineno)d:%(funcName)s: %(message)s"
+
+
+handlers:
+    console:
+        class: logging.StreamHandler
+        formatter: simple
+        stream: ext://sys.stdout
+        level: DEBUG
+    file:
+        class: logging.hadlers.RotatingFileHandler
+        formatter: timed
+        filename: ./log/debug.log
+        maxBytes: 1024
+        backupCount: 3
+        level: DEBUG
