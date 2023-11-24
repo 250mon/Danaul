@@ -9,13 +9,14 @@ from model.tr_model import TrModel
 from common.d_logger import Logs, logging
 
 
+logger = Logs().get_logger("main")
+
+
 class SingleTrWindow(QWidget):
     create_tr_signal = Signal(object)
 
     def __init__(self, proxy_model: QSortFilterProxyModel, parent=None):
         super().__init__()
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-
         self.parent = parent
         self.proxy_model = proxy_model
         self.source_model: TrModel = self.proxy_model.sourceModel()
@@ -65,7 +66,7 @@ class SingleTrWindow(QWidget):
         self.mapper.toLast()
 
     def ok_clicked(self):
-        self.logger.debug(f"Created Transaction")
+        logger.debug(f"Created Transaction")
         self.mapper.submit()
         index = self.proxy_model.index(self.mapper.currentIndex(), 0)
         self.create_tr_signal.emit(index)

@@ -4,11 +4,13 @@ from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex, Slot
 from PySide6.QtGui import QColor
 from model.di_data_model import DataModel
-from common.d_logger import Logs
+from common.d_logger import Logs, logging
 from common.datetime_utils import *
 from model.item_model import ItemModel
 from constants import RowFlags, EditLevel, DEFAULT_MIN_QTY
 from ds_exceptions import *
+
+logger = Logs().get_logger("main")
 
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
@@ -18,8 +20,6 @@ Also, converting model data(dataframe) back into a data class to update db
 
 class SkuModel(DataModel):
     def __init__(self, user_name: str, item_model: ItemModel):
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-
         self.item_model = item_model
         self.init_params()
         self.selected_upper_id = None
@@ -64,7 +64,7 @@ class SkuModel(DataModel):
 
     def set_upper_model_id(self, item_id: int or None):
         self.selected_upper_id = item_id
-        self.logger.debug(f"item_id({self.selected_upper_id}) is set")
+        logger.debug(f"item_id({self.selected_upper_id}) is set")
 
     def get_default_delegate_info(self) -> List[int]:
         """
@@ -161,7 +161,7 @@ class SkuModel(DataModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
-        self.logger.debug(f"index({index}) value({value})")
+        logger.debug(f"index({index}) value({value})")
 
         col_name = self.get_col_name(index.column())
         if col_name == 'active':
@@ -244,7 +244,7 @@ class SkuModel(DataModel):
 
         default_item_id = self.selected_upper_id
         item_name = self.item_model.get_data_from_id(default_item_id, 'item_name')
-        self.logger.debug(f"item_id({default_item_id}) item_name({item_name}) being created")
+        logger.debug(f"item_id({default_item_id}) item_name({item_name}) being created")
         exp_date = date(9999, 1, 1)
 
         new_model_df = pd.DataFrame([{
@@ -265,7 +265,7 @@ class SkuModel(DataModel):
         return new_model_df
 
     def update_sku_qty_after_transaction(self, sku_id: int, qty: int):
-        self.logger.debug(f"qty({qty})")
+        logger.debug(f"qty({qty})")
         qty_index = self.index(self.model_df[self.model_df["sku_id"] == sku_id].index[0],
                                self.get_col_number("sku_qty"),
                                QModelIndex())

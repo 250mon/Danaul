@@ -3,18 +3,19 @@ import re
 import asyncio
 from typing import List
 from datetime import date
-import pandas as pd
 from db.ds_db import InventoryDb
-from db.inventory_schema import *
-from common.d_logger import Logs
-from constants import MAX_TRANSACTION_COUNT, ConfigReader
+import pandas as pd
+from common.d_logger import Logs, logging
+from constants import MAX_TRANSACTION_COUNT
 from common.singleton import Singleton
+import db.inventory_schema
+
+
+logger = Logs().get_logger("db")
 
 
 class Lab(metaclass=Singleton):
     def __init__(self, di_db: InventoryDb):
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-
         self.di_db = di_db
         self.di_db_util = self.di_db.db_util
         self.max_transaction_count = MAX_TRANSACTION_COUNT
@@ -45,7 +46,7 @@ class Lab(metaclass=Singleton):
                         in self.table_df.keys()]
             data_dfs: List = await asyncio.gather(*get_data)
             for df in data_dfs:
-                self.logger.debug(f"Retrieved DB data \n{df}")
+                logger.debug(f"Retrieved DB data \n{df}")
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data_dfs.pop()
 
@@ -62,18 +63,18 @@ class Lab(metaclass=Singleton):
         if count > 0:
             self.max_transaction_count = count
         else:
-            self.logger.warn(f""
+            logger.warn(f""
                         f"count({count}) is not a positive integer")
 
     def _set_db_column_names(self):
         col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
         self.table_column_names = {}
-        self.table_column_names['items'] = col_name.findall(CREATE_ITEM_TABLE)
-        self.table_column_names['skus'] = col_name.findall(CREATE_SKU_TABLE)
-        self.table_column_names['transactions'] = col_name.findall(CREATE_TRANSACTION_TABLE)
+        self.table_column_names['items'] = col_name.findall(db.inventory_schema.CREATE_ITEM_TABLE)
+        self.table_column_names['skus'] = col_name.findall(db.inventory_schema.CREATE_SKU_TABLE)
+        self.table_column_names['transactions'] = col_name.findall(db.inventory_schema.CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
-        self.logger.debug(f"{table}")
+        logger.debug(f"{table}")
         where_clause = ""
         if not self.show_inactive_items:
             if table == "items":
@@ -109,10 +110,10 @@ class Lab(metaclass=Singleton):
             query = f"SELECT * FROM {table}"
 
         query = query + where_clause
-        self.logger.debug(f"{query}")
+        logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)
-        # self.logger.debug(f"{db_results[:2]}")
+        # logger.debug(f"{db_results[:2]}")
         if db_results is None:
             return pd.DataFrame()
         df = self._db_to_df(db_results)
@@ -146,7 +147,7 @@ class Lab(metaclass=Singleton):
         self.user_id_s = make_series('users', False)
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
-        self.logger.debug(f"table {table}")
+        logger.debug(f"table {table}")
         self.table_df[table] = await self._get_df_from_db(table, **kwargs)
 
     async def insert_df(self, table: str, new_df: pd.DataFrame):
@@ -232,7 +233,6 @@ async def main(lab):
     #     print(tr.tr_id)
 
 if __name__ == '__main__':
-    ConfigReader().read_config_file('../di_config')
-    danaul_db = InventoryDb()
+    danaul_db = InventoryDb('../di_config')
     lab = Lab(danaul_db)
     asyncio.run(main(lab))

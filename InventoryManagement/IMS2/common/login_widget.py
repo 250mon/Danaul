@@ -9,20 +9,21 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QByteArray, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
+from db.db_utils import ConfigReader
 from common.d_logger import Logs, logging
-from constants import ConfigReader
+from constants import CONFIG_FILE
+
+
+logger = Logs().get_logger("main")
 
 
 class LoginWidget(QWidget):
     start_main = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, config_file=CONFIG_FILE, parent=None):
         super().__init__()
         self.parent = parent
-        self.config = ConfigReader()
-
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-
+        self.db_config_file = config_file
         self.initializeUI()
 
     def initializeUI(self):
@@ -35,18 +36,19 @@ class LoginWidget(QWidget):
     def createConnection(self):
         """Set up the connection to the database.
         Check for the tables needed."""
+        config = ConfigReader(self.db_config_file)
         database = QSqlDatabase.addDatabase("QPSQL")
-        database.setHostName(self.config.get_options("Host"))
-        database.setPort(int(self.config.get_options("Port")))
-        database.setUserName(self.config.get_options("User"))
-        database.setPassword(self.config.get_options("Password"))
-        database.setDatabaseName(self.config.get_options("Database"))
+        database.setHostName(config.get_options("Host"))
+        database.setPort(int(config.get_options("Port")))
+        database.setUserName(config.get_options("User"))
+        database.setPassword(config.get_options("Password"))
+        database.setDatabaseName(config.get_options("Database"))
         if not database.open():
-            self.logger.error("Unable to Connect.")
-            self.logger.error(database.lastError())
+            logger.error("Unable to Connect.")
+            logger.error(database.lastError())
             sys.exit(1)  # Error code 1 - signifies error
         else:
-            self.logger.debug("Connected")
+            logger.debug("Connected")
 
         # Check if the tables we need exist in the database
         # tables_needed = {"users"}
@@ -115,16 +117,16 @@ class LoginWidget(QWidget):
         result = None
         if query.next():
             result = query.value(0)
-            self.logger.debug("Got a password!")
+            logger.debug("Got a password!")
         else:
-            self.logger.debug("No password found")
+            logger.debug("No password found")
 
         return result
 
     def insert_user_info(self, user_name, hashed_user_pw):
         query = QSqlQuery()
         pw = QByteArray(hashed_user_pw)
-        self.logger.debug(f"{user_name}, password:{pw}")
+        logger.debug(f"{user_name}, password:{pw}")
         query.prepare("""INSERT INTO users (user_name, user_password) VALUES ($1, $2)
                             ON CONFLICT (user_name)
                             DO
@@ -134,14 +136,14 @@ class LoginWidget(QWidget):
         query.addBindValue(pw)
 
         if query.exec():
-            self.logger.debug("User info inserted!")
+            logger.debug("User info inserted!")
         else:
             QMessageBox.warning(self,
                                 "Warning",
                                 "User name or password is improper!!",
                                 QMessageBox.Close)
-            self.logger.debug("User info not inserted!")
-            self.logger.debug(f"{query.lastError()}")
+            logger.debug("User info not inserted!")
+            logger.debug(f"{query.lastError()}")
 
     def encrypt_password(self, password):
         # Generate a salt and hash the password
@@ -187,7 +189,7 @@ class LoginWidget(QWidget):
                 # Open the SQL management application
                 sleep(0.5)  # Pause slightly before showing the parent window
                 self.start_main.emit(user_name)
-                self.logger.debug("Passed!!!")
+                logger.debug("Passed!!!")
         else:
             QMessageBox.warning(self,
                                 "Information Incorrect",
@@ -257,7 +259,6 @@ class LoginWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ConfigReader('../di_config')
     login_window = LoginWidget()
     login_window.show()
     sys.exit(app.exec())

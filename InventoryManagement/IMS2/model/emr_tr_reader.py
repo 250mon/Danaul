@@ -1,13 +1,13 @@
 import os
 from pathlib import PurePath
 import pandas as pd
-from common.d_logger import Logs
+from common.d_logger import Logs, logging
+
+logger = Logs().get_logger("main")
 
 
-class EmrTransactionReader:
+class EmrTransactionReader():
     def __init__(self, filename, parent):
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-
         self.parent = parent
         self.filename = filename
 
@@ -16,13 +16,13 @@ class EmrTransactionReader:
 
         try:
             if PurePath(self.filename).suffix == '.xlsx':
-                self.logger.debug(f"{self.filename} is being imported ... format xlsx")
+                logger.debug(f"{self.filename} is being imported ... format xlsx")
                 bit_df = pd.read_excel(self.filename)
             elif PurePath(self.filename).suffix == '.csv':
-                self.logger.debug(f"{self.filename} is being imported ... format csv")
+                logger.debug(f"{self.filename} is being imported ... format csv")
                 bit_df = pd.read_csv(self.filename, sep="\t", encoding='utf-16')
             else:
-                self.logger.error(f"Not implemented importing file type {self.filename}")
+                logger.error(f"Not implemented importing file type {self.filename}")
                 return
 
             bit_df = bit_df.loc[:, ['처방코드', '총소모량']]
@@ -45,10 +45,10 @@ class EmrTransactionReader:
             # append a sku_name column to the df to be returned
             sku_df = self.parent.sku_model.model_df[["sku_id", "sku_name"]]
             ret_df = pd.merge(merged_df, sku_df, left_index=True, right_on="sku_id")
-            self.logger.debug(f"\n{ret_df}")
+            logger.debug(f"\n{ret_df}")
             return ret_df
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
             return None
 
 
