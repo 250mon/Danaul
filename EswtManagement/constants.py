@@ -3,7 +3,7 @@ from functools import total_ordering
 from operator import methodcaller
 from common.singleton import Singleton
 
-CONFIG_FILE = 'di_config'
+CONFIG_FILE = 'ds_config'
 ADMIN_GROUP = ['admin', 'jye']
 MAX_TRANSACTION_COUNT = 10
 DEFAULT_MIN_QTY = 1
@@ -54,8 +54,4 @@ class ConfigReader(metaclass=Singleton):
             print(e)
 
     def get_options(self, option_name: str):
-        options = self.options.get(option_name, None)
-        if options is None:
-            self.read_config_file(CONFIG_FILE)
-            options = self.options.get(option_name, None)
-        return options
+        return self.options.get(option_name, None)
