@@ -1,4 +1,3 @@
-import os
 from typing import List
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
@@ -6,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from ui.di_table_widget import InventoryTableWidget
 from model.item_model import ItemModel
 from ui.single_item_window import SingleItemWindow

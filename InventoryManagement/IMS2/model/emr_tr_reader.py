@@ -1,7 +1,6 @@
-import os
 from pathlib import PurePath
 import pandas as pd
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 
 logger = Logs().get_logger("main")
 

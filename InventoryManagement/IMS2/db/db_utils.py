@@ -6,13 +6,12 @@ from types import TracebackType
 from typing import Optional, Type, List, Tuple
 from common.d_logger import Logs
 from constants import ConfigReader
-import logging
 
 logger = Logs().get_logger("db")
 
 
-async def connect_pg(db_config_file):
-    config = ConfigReader(db_config_file)
+async def connect_pg():
+    config = ConfigReader()
     try:
         conn = await asyncpg.connect(host=config.get_options("Host"),
                                      port=config.get_options("Port"),
@@ -27,8 +26,8 @@ async def connect_pg(db_config_file):
 
 
 class ConnectPg:
-    def __init__(self, db_config_file):
-        self.config = ConfigReader(db_config_file)
+    def __init__(self):
+        self.config = ConfigReader()
         self._conn = None
 
     async def __aenter__(self):
@@ -57,8 +56,6 @@ class ConnectPg:
 
 
 class DbUtil:
-    def __init__(self, db_config_file: str):
-        self.db_config_file = db_config_file
 
     async def create_tables(self, statements: List[str]):
         """
@@ -68,7 +65,7 @@ class DbUtil:
         :return:
         """
         results = []
-        async with ConnectPg(self.db_config_file) as conn:
+        async with ConnectPg() as conn:
             if conn is None:
                 logger.debug("Error while connecting to DB during creating tables")
                 return
@@ -93,7 +90,7 @@ class DbUtil:
                   None if connection fails
         """
         results = []
-        async with ConnectPg(self.db_config_file) as conn:
+        async with ConnectPg() as conn:
             if conn is None:
                 logger.debug("Error while connecting to DB during removing tables")
                 return None
@@ -117,7 +114,7 @@ class DbUtil:
         :param query
         :return: all results if successful, otherwise None
         """
-        async with ConnectPg(self.db_config_file) as conn:
+        async with ConnectPg() as conn:
             if conn is None:
                 logger.debug("Error while connecting to DB during querying tables")
                 return None
@@ -143,7 +140,7 @@ class DbUtil:
             if successful, None
             otherwise, exception or string
         """
-        async with ConnectPg(self.db_config_file) as conn:
+        async with ConnectPg() as conn:
             if conn is None:
                 logger.debug("Error while connecting to DB during sync_executing")
                 return "Connection failed"
@@ -174,7 +171,7 @@ class DbUtil:
                 return await conn.execute(stmt, *arg)
 
         logger.info("Asynchronous executing")
-        config = ConfigReader(self.db_config_file)
+        config = ConfigReader()
         async with asyncpg.create_pool(host=config.get_options("Host"),
                                        port=config.get_options("Port"),
                                        user=config.get_options("User"),

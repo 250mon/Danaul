@@ -1,9 +1,7 @@
-import os
 import asyncio
-import pandas as pd
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QObject, Signal, Slot, QEvent
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 
 logger = Logs().get_logger("main")
 

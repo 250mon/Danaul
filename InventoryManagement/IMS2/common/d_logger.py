@@ -14,7 +14,6 @@ class Logs(metaclass=Singleton):
         with open('common/log_config.yaml', 'rt') as f:
             config = yaml.load(f, Loader=yaml.FullLoader)
             logging.config.dictConfig(config)
-            print("logging config applied")
 
     def get_logger(self, name: str) -> logging.Logger:
         return logging.getLogger(name)

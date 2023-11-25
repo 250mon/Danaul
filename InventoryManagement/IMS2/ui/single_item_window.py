@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton, QDataWidgetMapper, QGridLayout
 )
 from PySide6.QtCore import Qt, QModelIndex, Signal, QSortFilterProxyModel
-from db.ds_lab import Lab
+from db.di_lab import Lab
 from model.item_model import ItemModel
 from common.d_logger import Logs, logging
 

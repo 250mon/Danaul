@@ -1,4 +1,4 @@
-import sys, os
+import sys
 import pandas as pd
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
@@ -8,22 +8,20 @@ from PySide6.QtCore import Qt, Signal, Slot, QFile
 from PySide6.QtGui import QAction, QIcon
 from common.login_widget import LoginWidget
 from common.async_helper import AsyncHelper
-from db.ds_lab import Lab
-from db.ds_db import InventoryDb
+from db.di_lab import Lab
 from model.item_model import ItemModel
 from model.sku_model import SkuModel
 from model.tr_model import TrModel
 from ui.item_widget import ItemWidget
 from ui.sku_widget import SkuWidget
 from ui.tr_widget import TrWidget
-from common.d_logger import Logs, logging
-from constants import CONFIG_FILE, UserPrivilege, ConfigReader
+from common.d_logger import Logs
+from constants import UserPrivilege, ConfigReader
 from model.emr_tr_reader import EmrTransactionReader
 from ui.emr_import_widget import ImportWidget
 
 
 logger = Logs().get_logger("main")
-Lab(InventoryDb(CONFIG_FILE))
 
 
 class InventoryWindow(QMainWindow):
@@ -36,9 +34,9 @@ class InventoryWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        is_test: str = ConfigReader(CONFIG_FILE).get_options("Testmode")
+        is_test: str = ConfigReader().get_options("Testmode")
 
-        self.login_widget = LoginWidget(CONFIG_FILE, self)
+        self.login_widget = LoginWidget(self)
         self.login_widget.start_main.connect(self.initUI)
         self.update_all_signal.connect(self.update_all)
         self.import_trs_signal.connect(self.import_transactions)

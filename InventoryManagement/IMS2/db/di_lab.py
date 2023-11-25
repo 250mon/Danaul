@@ -1,11 +1,10 @@
-import os
 import re
 import asyncio
 from typing import List
 from datetime import date
-from db.ds_db import InventoryDb
+from db.di_db import InventoryDb
 import pandas as pd
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from constants import MAX_TRANSACTION_COUNT
 from common.singleton import Singleton
 import db.inventory_schema
@@ -15,8 +14,8 @@ logger = Logs().get_logger("db")
 
 
 class Lab(metaclass=Singleton):
-    def __init__(self, di_db: InventoryDb):
-        self.di_db = di_db
+    def __init__(self):
+        self.di_db = InventoryDb()
         self.di_db_util = self.di_db.db_util
         self.max_transaction_count = MAX_TRANSACTION_COUNT
         self.show_inactive_items = False
@@ -59,7 +58,7 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
-    def _set_max_transaction_count(self, count: int):
+    def set_max_transaction_count(self, count: int):
         if count > 0:
             self.max_transaction_count = count
         else:

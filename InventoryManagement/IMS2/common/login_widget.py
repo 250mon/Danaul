@@ -10,8 +10,7 @@ from PySide6.QtCore import Qt, QByteArray, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
 from db.db_utils import ConfigReader
-from common.d_logger import Logs, logging
-from constants import CONFIG_FILE
+from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")
@@ -20,10 +19,9 @@ logger = Logs().get_logger("main")
 class LoginWidget(QWidget):
     start_main = Signal(str)
 
-    def __init__(self, config_file=CONFIG_FILE, parent=None):
+    def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
-        self.db_config_file = config_file
         self.initializeUI()
 
     def initializeUI(self):
@@ -36,7 +34,7 @@ class LoginWidget(QWidget):
     def createConnection(self):
         """Set up the connection to the database.
         Check for the tables needed."""
-        config = ConfigReader(self.db_config_file)
+        config = ConfigReader()
         database = QSqlDatabase.addDatabase("QPSQL")
         database.setHostName(config.get_options("Host"))
         database.setPort(int(config.get_options("Port")))

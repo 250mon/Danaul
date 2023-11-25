@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QWidget, QStyledItemDelegate, QStyleOptionViewItem, QSpinBox
+    QWidget, QStyleOptionViewItem, QSpinBox
 )
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
 from common.di_default_delegate import DefaultDelegate

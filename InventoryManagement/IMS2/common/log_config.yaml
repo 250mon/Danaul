@@ -6,7 +6,7 @@ root:
     level: WARNING
     handlers: [console]
 
-# Configuration for logger set with logging.getLogger(NAME)
+# Configurations for logger set with logging.getLogger(NAME)
 loggers:
     db:
         level: DEBUG
@@ -31,7 +31,7 @@ handlers:
         stream: ext://sys.stdout
         level: DEBUG
     file:
-        class: logging.hadlers.RotatingFileHandler
+        class: logging.handlers.RotatingFileHandler
         formatter: timed
         filename: ./log/debug.log
         maxBytes: 1024

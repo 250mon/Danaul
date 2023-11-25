@@ -144,7 +144,7 @@ class InvSystem:
 
             user_input = pyip.inputInt("번호 입력: ")
             if user_input == 0:
-                self._import_xl(self._read_bit_xl, 'consumption_stat.xlsx')
+                self._import_xl(self._read_bit_xl, '../consumption_stat.xlsx')
             elif user_input == 1:
                 self.items_handler.unit_outbound()
             elif user_input == 2:

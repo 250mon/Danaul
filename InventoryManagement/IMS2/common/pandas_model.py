@@ -1,11 +1,10 @@
-import os
 import sys
 import pandas as pd
 from typing import Dict
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
 from constants import EditLevel
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")

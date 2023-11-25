@@ -1,12 +1,11 @@
-import os
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
     QMessageBox, QDateEdit, QGroupBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
-from common.d_logger import Logs, logging
-from db.ds_lab import Lab
+from common.d_logger import Logs
+from db.di_lab import Lab
 from model.tr_model import TrModel
 from ui.di_table_widget import InventoryTableWidget
 from ui.single_tr_window import SingleTrWindow
@@ -292,5 +291,5 @@ class TrWidget(InventoryTableWidget):
         self.update_tr_view()
 
     def set_max_search_count(self, max_count: int):
-        Lab()._set_max_transaction_count(max_count)
+        Lab().set_max_transaction_count(max_count)
         self.filter_selection(self.source_model.selected_upper_id)

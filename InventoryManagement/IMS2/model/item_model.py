@@ -1,10 +1,9 @@
-import os
 import pandas as pd
 from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex, Signal
 from model.di_data_model import DataModel
-from db.ds_lab import Lab
-from common.d_logger import Logs, logging
+from db.di_lab import Lab
+from common.d_logger import Logs
 from constants import RowFlags, EditLevel
 
 
