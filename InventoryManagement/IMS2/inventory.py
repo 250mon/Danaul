@@ -321,4 +321,4 @@ def main():
 try:
     main()
 except Exception as e:
-    logger.Exception("Unexpected exception! %s", e)
+    logger.error("Unexpected exception! %s", e)

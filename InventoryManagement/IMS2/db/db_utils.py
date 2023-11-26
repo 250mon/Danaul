@@ -20,7 +20,8 @@ async def connect_pg():
                                      password=config.get_options("Password"))
         return conn
     except Exception as e:
-        logger.exception('Error while connecting to DB', e)
+        logger.debug('Error while connecting to DB')
+        logger.debug(e)
         raise e
 
 
@@ -42,7 +43,8 @@ class ConnectPg:
             logger.debug("Successfully connected!!!")
             return self._conn
         except Exception as e:
-            logger.exception('Error while connecting to DB', e)
+            logger.debug('Error while connecting to DB')
+            logger.debug(e)
             return None
 
     async def __aexit__(self,
@@ -76,9 +78,10 @@ class DbUtil:
                     logger.info(f"{statement}")
                     status = await conn.execute(statement)
                     results.append(status)
-                    logger.debug(status)
+                    logger.info(status)
                 except Exception as e:
-                    logger.exception(f'create_tables: Error while creating table: {statement}', e)
+                    logger.info(f'create_tables: Error while creating table: {statement}')
+                    logger.info(e)
             logger.info("Finished creating the tables")
         return results
 
@@ -102,10 +105,11 @@ class DbUtil:
                     result = await conn.execute(sql_stmt)
                     results.append(result)
                 except UndefinedTableError as ute:
-                    logger.exception('drop_table: Trying to drop an undefined table', ute)
+                    logger.info('drop_table: Trying to drop an undefined table', ute)
                 except Exception as e:
-                    logger.exception('drop_table: Error while dropping tables', e)
-        logger.info("Finished removing the tables")
+                    logger.info('drop_table: Error while dropping tables')
+                    logger.info(e)
+            logger.info("Finished removing the tables")
         return results
 
     async def select_query(self, query: str, args: List = None):
@@ -127,7 +131,8 @@ class DbUtil:
                     results: List[Record] = await query.fetch()
                 return results
             except Exception as e:
-                logger.exception(f'select_query: Error while executing {query}', e)
+                logger.debug(f'select_query: Error while executing {query}')
+                logger.debug(e)
                 return None
 
 
@@ -145,13 +150,14 @@ class DbUtil:
                 logger.debug("Error while connecting to DB during sync_executing")
                 return "Connection failed"
 
-            logger.info("Synchronous executing")
+            logger.debug("Synchronous executing")
             try:
                 results = await conn.executemany(statement, args)
-                logger.info(f"results::\n{results}")
+                logger.debug(f"results::\n{results}")
                 return results
             except Exception as e:
-                logger.exception('executemany: Error during synchronous executing', e)
+                logger.debug('executemany: Error during synchronous executing')
+                logger.debug(e)
                 return e
 
 
@@ -170,7 +176,7 @@ class DbUtil:
                 logger.debug(arg)
                 return await conn.execute(stmt, *arg)
 
-        logger.info("Asynchronous executing")
+        logger.debug("Asynchronous executing")
         config = ConfigReader()
         async with asyncpg.create_pool(host=config.get_options("Host"),
                                        port=config.get_options("Port"),
