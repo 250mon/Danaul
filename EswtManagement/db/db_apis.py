@@ -1,39 +1,33 @@
 import pandas as pd
+import re
 from typing import List
 from db.db_utils import DbUtil
-from db.db_schema import *
 from common.d_logger import Logs
 
 
 logger = Logs().get_logger("db")
 
 
-class TreatmentsDb:
+class DbApi:
     def __init__(self):
-
         self.db_util = DbUtil()
 
-    async def create_tables(self):
-        logger.info("Creating tables ...")
-        statements = [CREATE_CATEGORY_TABLE,
-                      CREATE_TREATMENT_TABLE,
-                      CREATE_PATIENT_TABLE,
-                      CREATE_PROVIDER_TABLE,
-                      CREATE_USER_TABLE,
-                      CREATE_BODY_PART_TABLE,
-                      CREATE_SESSION_TABLE]
+    async def create_tables(self, statements: List[str]):
         return await self.db_util.create_tables(statements)
 
-    async def drop_tables(self):
-        table_names = ['category', 'patients', 'treatments',
-                       'providers', 'users', 'body_parts',
-                       'sessions']
+    async def drop_tables(self, table_names: List[str]):
         # dropping is always in a reverse order from creating
         return await self.db_util.drop_tables(table_names[::-1])
 
-    async def initialize_db(self):
-        await self.drop_tables()
-        await self.create_tables()
+    async def initialize_db(self, statements: List[str]):
+        table_name_re = re.compile(r'''EXISTS\s+([a-z_]+)\s*\(''', re.MULTILINE)
+        table_names = []
+        for stmt in statements:
+            name = table_name_re.findall(stmt)
+            table_names += name
+
+        await self.drop_tables(table_names)
+        await self.create_tables(statements)
 
     async def insert_df(self, table: str, df: pd.DataFrame):
         def make_stmt(table_name: str, row_values: List):
@@ -62,7 +56,7 @@ class TreatmentsDb:
         return await self.db_util.executemany(stmt, args)
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
-        col_name, id_series = next(del_df.treatments())
+        col_name, id_series = next(del_df.items())
         args = [(_id,) for _id in id_series]
         logger.debug(f"Delete {col_name} = {args} from {table} ...")
         return await self.db_util.delete(table, col_name, args)
