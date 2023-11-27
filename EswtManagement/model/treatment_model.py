@@ -7,18 +7,15 @@ from db.ds_lab import Lab
 from common.d_logger import Logs, logging
 from constants import RowFlags, EditLevel
 
-
-self.logger = Logs().get_logger(os.path.basename(__file__))
-self.logger.setLevel(logging.DEBUG)
-
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
+logger = Logs().get_logger("main")
 
 
 class TreatmentModel(DataModel):
-    treatments.model_changed_signal = Signal(object)
+    treatment_model_changed_signal = Signal(object)
 
     def __init__(self, user_name):
         self.init_params()
@@ -120,7 +117,7 @@ class TreatmentModel(DataModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
-        self.logger.debug(f"index({index}) value({value})")
+        logger.debug(f"index({index}) value({value})")
 
         col_name = self.get_col_name(index.column())
         if col_name == 'active':
@@ -138,7 +135,7 @@ class TreatmentModel(DataModel):
         elif col_name == 'treatment_name':
             # when a new row is added, treatment_name needs to be checked if any duplicate
             if not self.model_df[self.model_df.treatment_name == value].empty:
-                self.logger.debug(f"treatments.name({value}) is already in use")
+                logger.debug(f"treatments.name({value}) is already in use")
                 return False
 
         return super().setData(index, value, role)
@@ -174,8 +171,8 @@ class TreatmentModel(DataModel):
         if (new_treatment_name is not None and
                 new_treatment_name != "" and
                 new_treatment_name not in self.model_df['treatment_name']):
-            self.logger.debug(f"treatment_name({new_treatment_name}) is valid")
+            logger.debug(f"treatment_name({new_treatment_name}) is valid")
             return True
         else:
-            self.logger.debug(f"treatment_name({new_treatment_name}) is not valid")
+            logger.debug(f"treatment_name({new_treatment_name}) is not valid")
             return False

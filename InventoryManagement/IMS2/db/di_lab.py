@@ -1,7 +1,6 @@
 import re
 import asyncio
 from typing import List
-from datetime import date
 from db.di_db import InventoryDb
 import pandas as pd
 from common.d_logger import Logs
@@ -157,81 +156,3 @@ class Lab(metaclass=Singleton):
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
         return await self.di_db.delete_df(table, del_df)
-
-    async def upsert_items_df(self, items_df: pd.DataFrame):
-        return await self.di_db.upsert_items_df(items_df)
-
-    async def insert_skus_df(self, skus_df: pd.DataFrame):
-        return await self.di_db.insert_df('skus', skus_df)
-
-    async def delete_skus_df(self, skus_df: pd.DataFrame):
-        return await self.di_db.delete_skus_df(skus_df)
-
-    async def insert_trs_df(self, trs_df: pd.DataFrame):
-        return await self.di_db.insert_df('transactions', trs_df)
-
-    async def delete_trs_df(self, trs_df: pd.DataFrame):
-        return await self.di_db.delete_trs_df(trs_df)
-
-    async def get_trs_df_by_date(self, start_date: date, end_date: date):
-        query = """ SELECT * FROM transactions as t
-                        WHERE tr_timestamp::date >= $1
-                        AND tr_timestamp::date <= $2 """
-        args = (start_date, end_date)
-        db_results = await self.di_db_util.select_query(query, [args, ])
-        df = self._db_to_df(db_results)
-        return df
-
-async def main(lab):
-    cat_s = lab.categories_df.set_index('category_id')['category_name']
-    tr_type_s = lab.tr_types_df.set_index('tr_type_id')['tr_type']
-
-    # Convert a dataframe into classes and insert them into DB
-    new_items_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
-                                 [None, True, 'n6', 3, 'change']],
-                                columns=['item_id', 'active', 'item_name',
-                                         'category_id', 'description'])
-    # await lab.di_db.insert_items_df(new_items_df)
-    await lab.di_db.upsert_items_df(new_items_df)
-    await lab.update_lab_df_from_db('items')
-
-    # Get data from db
-    lab.items_df['category'] = lab.items_df['category_id'].map(cat_s)
-    print(lab.items_df)
-
-    # i_s = lab.items_df.set_index('item_id')['item_name']
-    #
-    # lab.skus_df['item_name'] = lab.skus_df['item_id'].map(i_s)
-    # print(lab.skus_df)
-    #
-    # sku_idx_df = lab.skus_df.set_index('sku_id')
-    #
-    # lab.trs_df['item_name'] = lab.trs_df['sku_id'].map(sku_idx_df['item_name'])
-    # lab.trs_df['tr_type'] = lab.trs_df['tr_type_id'].map(tr_type_s)
-    # print(lab.trs_df)
-
-    # item = await lab.get_item_from_db_by_id(1)
-    # print(item.item_name)
-
-    # transaction = await lab.get_transaction_from_db_by_id(1)
-    # print(transaction.tr_timestamp)
-
-    # skus = await lab.get_skus_from_db()
-    # skus = await lab.get_sku_from_db_by_item_id(1)
-    # for sku in skus.values():
-    #     print(sku.sku_id)
-    #
-    # trs = await lab.get_transactions_from_db_by_sku_id(1)
-    # for tr in trs.values():
-    #     print(tr.tr_id)
-
-    # s_date = date.today()
-    # e_date = date.today()
-    # trs = await lab.get_transactions_from_db_by_date(s_date, e_date)
-    # for tr in trs.values():
-    #     print(tr.tr_id)
-
-if __name__ == '__main__':
-    danaul_db = InventoryDb('../di_config')
-    lab = Lab(danaul_db)
-    asyncio.run(main(lab))

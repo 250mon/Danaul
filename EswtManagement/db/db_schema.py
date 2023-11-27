@@ -12,17 +12,28 @@ CREATE_TREATMENT_TABLE = \
         treatment_id SERIAL PRIMARY KEY,
         active BOOL NOT NULL DEFAULT TRUE,
         treatment_name TEXT NOT NULL,
+        treatment_price INT NOT NULL,
         category_id INT NOT NULL,
         description TEXT,
         FOREIGN KEY (category_id) REFERENCES category(category_id),
         UNIQUE(treatment_name)
     );"""
 
+CREATE_PATIENT_TABLE = \
+    """
+    CREATE TABLE IF NOT EXISTS patients(
+        patient_id SERIAL PRIMARY KEY,
+        patient_name TEXT NOT NULL,
+        patient_emr_id INT,
+        patient_gender INT,
+        patient_birthdate INT,
+    );"""
+
 CREATE_PROVIDER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS providers(
         provider_id SERIAL PRIMARY KEY,
-        provider_name TEXT NOT NULL
+        provider_name TEXT NOT DATE
     );"""
 
 CREATE_USER_TABLE = \
@@ -34,17 +45,30 @@ CREATE_USER_TABLE = \
         UNIQUE(user_name)
     );"""
 
+CREATE_BODY_PART_TABLE = \
+    """
+    CREATE TABLE IF NOT EXISTS body_parts(
+        part_id SERIAL PRIMARY KEY,
+        part_name TEXT NOT NULL,
+        sub_parts TEXT,
+        UNIQUE(part_name)
+    );"""
+
 CREATE_SESSION_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS sessions(
         session_id SERIAL PRIMARY KEY,
         user_id INT NOT NULL,
         treatment_id INT NOT NULL,
-        treatment_detail TEXT,
+        patient_id INT NOT NULL,
         provider_id INT NOT NULL,
+        part_id INT NOT NULL,
+        treatment_detail TEXT,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         description TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (treatment_id) REFERENCES treatments(treatment_id),
-        FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+        FOREIGN KEY (user_id) REFERENCES users(user_id),
+        FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+        FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
+        FOREIGN KEY (part_id) REFERENCES body_parts(part_id)
     );"""

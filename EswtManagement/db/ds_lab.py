@@ -2,7 +2,6 @@ import os
 import re
 import asyncio
 from typing import List
-from datetime import date
 from db.ds_db import TreatmentsDb
 import pandas as pd
 from common.d_logger import Logs, logging
@@ -11,11 +10,9 @@ from common.singleton import Singleton
 import db.db_schema
 
 
+logger = Logs().get_logger("db")
 
 class Lab(metaclass=Singleton):
-    logger = Logs().get_logger(os.path.basename(__file__))
-    logger.setLevel(logging.DEBUG)
-
     def __init__(self, di_db: TreatmentsDb):
         self.di_db = di_db
         self.di_db_util = self.di_db.db_util
@@ -24,10 +21,11 @@ class Lab(metaclass=Singleton):
 
         self.table_df = {
             'category': None,
-            'users': None,
-            'providers': None,
+            'patients': None,
             'treatments': None,
-            'skus': None,
+            'providers': None,
+            'users': None,
+            'body_parts': None,
             'sessions': None
         }
         self._set_db_column_names()
@@ -47,7 +45,7 @@ class Lab(metaclass=Singleton):
                         in self.table_df.keys()]
             data_dfs: List = await asyncio.gather(*get_data)
             for df in data_dfs:
-                self.logger.debug(f"Retrieved DB data \n{df}")
+                logger.debug(f"Retrieved DB data \n{df}")
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data_dfs.pop()
 
@@ -64,7 +62,7 @@ class Lab(metaclass=Singleton):
         if count > 0:
             self.max_transaction_count = count
         else:
-            self.logger.warn(f""
+            logger.warn(f""
                         f"count({count}) is not a positive integer")
 
     def _set_db_column_names(self):
@@ -75,7 +73,7 @@ class Lab(metaclass=Singleton):
         self.table_column_names['sessions'] = col_name.findall(db.inventory_schema.CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
-        self.logger.debug(f"{table}")
+        logger.debug(f"{table}")
         where_clause = ""
         if not self.show_inactive_treatments:
             if table == "treatments":
@@ -111,7 +109,7 @@ class Lab(metaclass=Singleton):
             query = f"SELECT * FROM {table}"
 
         query = query + where_clause
-        self.logger.debug(f"{query}")
+        logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)
         # logger.debug(f"{db_results[:2]}")
@@ -148,7 +146,7 @@ class Lab(metaclass=Singleton):
         self.user_id_s = make_series('users', False)
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
-        self.logger.debug(f"table {table}")
+        logger.debug(f"table {table}")
         self.table_df[table] = await self._get_df_from_db(table, **kwargs)
 
     async def insert_df(self, table: str, new_df: pd.DataFrame):
@@ -159,81 +157,3 @@ class Lab(metaclass=Singleton):
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
         return await self.di_db.delete_df(table, del_df)
-
-    async def upsert_treatments_df(self, treatments_df: pd.DataFrame):
-        return await self.di_db.upsert_treatments_df(treatments_df)
-
-    async def insert_skus_df(self, skus_df: pd.DataFrame):
-        return await self.di_db.insert_df('skus', skus_df)
-
-    async def delete_skus_df(self, skus_df: pd.DataFrame):
-        return await self.di_db.delete_skus_df(skus_df)
-
-    async def insert_trs_df(self, trs_df: pd.DataFrame):
-        return await self.di_db.insert_df('sessions', trs_df)
-
-    async def delete_trs_df(self, trs_df: pd.DataFrame):
-        return await self.di_db.delete_trs_df(trs_df)
-
-    async def get_trs_df_by_date(self, start_date: date, end_date: date):
-        query = """ SELECT * FROM sessions as t
-                        WHERE timestamp::date >= $1
-                        AND timestamp::date <= $2 """
-        args = (start_date, end_date)
-        db_results = await self.di_db_util.select_query(query, [args, ])
-        df = self._db_to_df(db_results)
-        return df
-
-async def main(lab):
-    cat_s = lab.categories_df.set_index('category_id')['category_name']
-    tr_type_s = lab.tr_types_df.set_index('provider_id')['tr_type']
-
-    # Convert a dataframe into classes and insert them into DB
-    new_treatments_df = pd.DataFrame([[None, True, 'n5', 2, 'lala'],
-                                 [None, True, 'n6', 3, 'change']],
-                                columns=['treatment_id', 'active', 'treatment_name',
-                                         'category_id', 'description'])
-    # await lab.di_db.insert_treatments_df(new_treatments_df)
-    await lab.di_db.upsert_treatments_df(new_treatments_df)
-    await lab.update_lab_df_from_db('treatments')
-
-    # Get data from db
-    lab.treatments_df['category'] = lab.treatments_df['category_id'].map(cat_s)
-    print(lab.treatments_df)
-
-    # i_s = lab.treatments_df.set_index('treatment_id')['treatment_name']
-    #
-    # lab.skus_df['treatment_name'] = lab.skus_df['treatment_id'].map(i_s)
-    # print(lab.skus_df)
-    #
-    # treatment_idx_df = lab.skus_df.set_index('treatment_id')
-    #
-    # lab.trs_df['treatment_name'] = lab.trs_df['treatment_id'].map(treatment_idx_df['treatment_name'])
-    # lab.trs_df['tr_type'] = lab.trs_df['provider_id'].map(tr_type_s)
-    # print(lab.trs_df)
-
-    # treatments.= await lab.get_treatment_from_db_by_id(1)
-    # print(treatments.treatment_name)
-
-    # transaction = await lab.get_transaction_from_db_by_id(1)
-    # print(transaction.timestamp)
-
-    # skus = await lab.get_skus_from_db()
-    # skus = await lab.get_sku_from_db_by_treatment_id(1)
-    # for sku in skus.values():
-    #     print(sku.treatment_id)
-    #
-    # trs = await lab.get_sessions_from_db_by_treatment_id(1)
-    # for tr in trs.values():
-    #     print(tr.session_id)
-
-    # s_date = date.today()
-    # e_date = date.today()
-    # trs = await lab.get_sessions_from_db_by_date(s_date, e_date)
-    # for tr in trs.values():
-    #     print(tr.session_id)
-
-if __name__ == '__main__':
-    danaul_db = TreatmentsDb()
-    lab = Lab(danaul_db)
-    asyncio.run(main(lab))

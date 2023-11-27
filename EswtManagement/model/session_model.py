@@ -14,6 +14,7 @@ from ds_exceptions import *
 Handling a raw dataframe from db to convert into model data(dataframe)
 Also, converting model data(dataframe) back into a data class to update db
 """
+logger = Logs().get_logger("main")
 
 
 class SessionModel(DataModel):
@@ -26,9 +27,6 @@ class SessionModel(DataModel):
         self.end_timestamp = QDate.currentDate()
         # setting a model is carried out in the DataModel
         super().__init__(user_name)
-
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-        self.logger.setLevel(logging.DEBUG)
 
     def init_params(self):
         self.set_table_name('sessions')
@@ -61,21 +59,21 @@ class SessionModel(DataModel):
 
     def set_upper_model_id(self, treatment_id: int or None):
         self.selected_upper_id = treatment_id
-        self.logger.debug(f"treatment_id({self.selected_upper_id}) is set")
+        logger.debug(f"treatment_id({self.selected_upper_id}) is set")
 
         if treatment_id is not None:
             self.selected_upper_name = self.sku_model.get_data_from_id(treatment_id, 'sku_name')
-            self.logger.debug(f"sku_name({self.selected_upper_name}) is set")
+            logger.debug(f"sku_name({self.selected_upper_name}) is set")
         else:
             self.selected_upper_name = ""
 
     def set_beg_timestamp(self, beg: QDate):
         self.beg_timestamp = beg
-        self.logger.debug(f"beg_timestamp({self.beg_timestamp})")
+        logger.debug(f"beg_timestamp({self.beg_timestamp})")
 
     def set_end_timestamp(self, end: QDate):
         self.end_timestamp = end
-        self.logger.debug(f"end_timestamp({self.end_timestamp})")
+        logger.debug(f"end_timestamp({self.end_timestamp})")
 
     async def update(self):
         """
@@ -84,11 +82,11 @@ class SessionModel(DataModel):
         """
         # end day needs to be added 1 day otherwise query results only includes those thata
         # were created until the day 00h 00mm 00sec
-        self.logger.debug(f"downloading data from DB")
+        logger.debug(f"downloading data from DB")
         kwargs = {'treatment_id': self.selected_upper_id,
                   'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
                   'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")}
-        self.logger.debug(f"\n{kwargs}")
+        logger.debug(f"\n{kwargs}")
         await super().update(**kwargs)
 
         # await Lab().update_lab_df_from_db(self.table_name, **kwargs)
@@ -149,8 +147,8 @@ class SessionModel(DataModel):
                 try:
                     ret = int(data_to_display)
                 except Exception as e:
-                    self.logger.error(e)
-                    self.logger.error(f"{col_name} {data_to_display}")
+                    logger.error(e)
+                    logger.error(f"{col_name} {data_to_display}")
                 return int(data_to_display)
             elif col_name == 'timestamp':
                 # data type is datetime.date
@@ -183,7 +181,7 @@ class SessionModel(DataModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
 
-        self.logger.debug(f"index({index}), value({value})")
+        logger.debug(f"index({index}), value({value})")
 
         col_name = self.get_col_name(index.column())
         if col_name == 'tr_type':
@@ -203,7 +201,7 @@ class SessionModel(DataModel):
         :param next_new_id:
         :return: new dataframe if succeeds, otherwise raise an exception
         """
-        self.logger.debug(f"new_id({next_new_id})\n")
+        logger.debug(f"new_id({next_new_id})\n")
         if self.selected_upper_id is None:
             error = "treatment_id is empty"
             raise NonExistentSkuIdError(error)
@@ -222,7 +220,7 @@ class SessionModel(DataModel):
             idx = id_s.idxmax()
             last_qty = self.model_df.iloc[idx, self.get_col_number("after_qty")].item()
         except Exception as e:
-            self.logger.debug(e)
+            logger.debug(e)
             # key error where session_id is not present
             sku_df = self.sku_model.model_df
             last_qty = sku_df.loc[sku_df["treatment_id"] == self.selected_upper_id, "sku_qty"].item()
@@ -254,7 +252,7 @@ class SessionModel(DataModel):
         self.selected_upper_id = None
 
         next_new_id = self.model_df.iloc[:, 0].max() + 1
-        self.logger.debug(f"New model_df_row id is {next_new_id}")
+        logger.debug(f"New model_df_row id is {next_new_id}")
 
         result_s = pd.Series([False] * joined_df.shape[0], index=joined_df.index)
         for row in joined_df.itertuples():
@@ -305,7 +303,7 @@ class SessionModel(DataModel):
         before_qty = index.siblingAtColumn(self.get_col_number('before_qty')).data()
 
         if tr_qty <= 0:
-            self.logger.debug(f"tr_qty is not positive integer {tr_qty}")
+            logger.debug(f"tr_qty is not positive integer {tr_qty}")
             return False
 
         result = True
@@ -325,8 +323,8 @@ class SessionModel(DataModel):
                 self.plus_qty_to_models('-', before_qty, tr_qty, index)
 
         debug_msg = "valid" if result is True else "not valid"
-        self.logger.debug(f"before_qty({before_qty}) tr_qty({tr_qty})")
-        self.logger.debug(f"Sku({treatment_id}) Tr({tr_type}) is {debug_msg}")
+        logger.debug(f"before_qty({before_qty}) tr_qty({tr_qty})")
+        logger.debug(f"Sku({treatment_id}) Tr({tr_type}) is {debug_msg}")
         # not allow a user to change tr_qty after this point
         self.clear_new_rows()
 
@@ -341,7 +339,7 @@ class SessionModel(DataModel):
 
         after_qty_idx = index.siblingAtColumn(self.get_col_number('after_qty'))
         self.setData(after_qty_idx, after_qty)
-        self.logger.debug(f"before_qty({before_qty}){op}tr_qty({tr_qty}) => after_qty({after_qty})")
+        logger.debug(f"before_qty({before_qty}){op}tr_qty({tr_qty}) => after_qty({after_qty})")
 
     def update_sku_qty(self):
         """
@@ -352,7 +350,7 @@ class SessionModel(DataModel):
             qty_update_df.reset_index(inplace=True)
             idx_s = qty_update_df.groupby('treatment_id')['session_id'].idxmax()
             qty_df = qty_update_df.loc[idx_s, ["treatment_id", "after_qty"]]
-            self.logger.debug(f"qty_df to update\n{qty_df}")
+            logger.debug(f"qty_df to update\n{qty_df}")
             return qty_df
 
         new_tr_df = self.get_new_df()

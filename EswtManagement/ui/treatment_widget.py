@@ -1,4 +1,3 @@
-import os
 from typing import List
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
@@ -12,14 +11,14 @@ from model.treatment_model import TreatmentModel
 from ui.single_item_window import SingleItemWindow
 
 
+logger = Logs().get_logger("main")
+
+
 class TreatmentWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.delegate_mode = True
-
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-        self.logger.setLevel(logging.DEBUG)
 
     def set_source_model(self, model: TreatmentModel):
         self.source_model = model
@@ -117,10 +116,10 @@ class TreatmentWidget(InventoryTableWidget):
     @ Slot(bool)
     def edit_mode_clicked(self, checked):
         if checked:
-            self.logger.debug("Now enter into edit mode")
+            logger.debug("Now enter into edit mode")
             self.edit_mode_starts()
         elif self.source_model.is_model_editing():
-            self.logger.debug("The model is in the middle of editing."
+            logger.debug("The model is in the middle of editing."
                          ' Should save before exit the mode')
             QMessageBox.information(self,
                                     '편집모드 중 종료',
@@ -128,7 +127,7 @@ class TreatmentWidget(InventoryTableWidget):
                                     QMessageBox.Close)
             self.edit_mode.setChecked(True)
         else:
-            self.logger.debug("Now edit mode ends")
+            logger.debug("Now edit mode ends")
             self.edit_mode_ends()
 
     def edit_mode_starts(self):
@@ -146,9 +145,9 @@ class TreatmentWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        self.logger.debug(f"{action}")
+        logger.debug(f"{action}")
         if action == "add_treatment":
-            self.logger.debug("Adding treatment ...")
+            logger.debug("Adding treatment ...")
             self.add_new_row()
             if not self.delegate_mode:
                 # Input window mode using DataMapperWidget
@@ -157,9 +156,9 @@ class TreatmentWidget(InventoryTableWidget):
                                                     new_treatment_index, self)
 
         elif action == "chg_treatment":
-            self.logger.debug("Changing treatment ...")
+            logger.debug("Changing treatment ...")
             if selected_indexes := self._get_selected_indexes():
-                self.logger.debug(f"chg_treatment_{selected_indexes}")
+                logger.debug(f"chg_treatment_{selected_indexes}")
                 # if self.delegate_mode:
                 #     self.change_rows_by_delegate(selected_indexes)
                 if not self.delegate_mode:
@@ -167,9 +166,9 @@ class TreatmentWidget(InventoryTableWidget):
                                                         selected_indexes, self)
 
         elif action == "del_treatment":
-            self.logger.debug("Deleting treatment ...")
+            logger.debug("Deleting treatment ...")
             if selected_indexes := self._get_selected_indexes():
-                self.logger.debug(f"del_treatment_{selected_indexes}")
+                logger.debug(f"del_treatment_{selected_indexes}")
                 self.delete_rows(selected_indexes)
 
     def save_model_to_db(self):
@@ -193,7 +192,7 @@ class TreatmentWidget(InventoryTableWidget):
         :return:
         """
         if self.source_model.is_flag_column(index):
-            self.logger.debug(f"treatments.{index.row()} added")
+            logger.debug(f"treatments.{index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
         if hasattr(self.source_model, "validate_new_row"):
@@ -210,7 +209,7 @@ class TreatmentWidget(InventoryTableWidget):
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 self.source_model.set_chg_flag(idx)
-                self.logger.debug(f"treatments {idx.row()} changed")
+                logger.debug(f"treatments {idx.row()} changed")
 
 
     @Slot(QModelIndex)

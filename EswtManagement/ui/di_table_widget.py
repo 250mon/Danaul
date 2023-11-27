@@ -1,4 +1,3 @@
-import os
 from typing import List
 from abc import abstractmethod
 from PySide6.QtWidgets import QMainWindow, QWidget, QMessageBox, QTableView
@@ -10,8 +9,7 @@ from common.spinbox_delegate import SpinBoxDelegate
 from common.d_logger import Logs, logging
 
 
-self.logger = Logs().get_logger(os.path.basename(__file__))
-self.logger.setLevel(logging.DEBUG)
+logger = Logs().get_logger("main")
 
 
 class InventoryTableWidget(QWidget):
@@ -126,10 +124,10 @@ class InventoryTableWidget(QWidget):
             rows.append(idx.row())
 
         if len(selected_indexes) > 0 and False not in is_valid_indexes:
-            self.logger.debug(f"Indexes selected: {rows}")
+            logger.debug(f"Indexes selected: {rows}")
             return selected_indexes
         else:
-            self.logger.debug(f"Indexes not selected or invalid: {selected_indexes}")
+            logger.debug(f"Indexes not selected or invalid: {selected_indexes}")
             return None
 
     @Slot(str)
@@ -168,7 +166,7 @@ class InventoryTableWidget(QWidget):
             if self.source_model.is_flag_column(idx):
                 src_idx = self.proxy_model.mapToSource(idx)
                 self.source_model.set_chg_flag(src_idx)
-                self.logger.debug(f"rows {src_idx.row()} being changed")
+                logger.debug(f"rows {src_idx.row()} being changed")
 
     def delete_rows(self, indexes: List[QModelIndex]):
         """
@@ -189,7 +187,7 @@ class InventoryTableWidget(QWidget):
         if len(del_indexes) > 0:
             self.source_model.set_del_flag(del_indexes)
             rows = [idx.row() for idx in del_indexes]
-            self.logger.debug(f"rows {rows} deleted")
+            logger.debug(f"rows {rows} deleted")
 
     async def save_to_db(self):
         """

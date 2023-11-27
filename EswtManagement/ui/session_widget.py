@@ -1,4 +1,3 @@
-import os
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
     QMessageBox, QDateEdit, QGroupBox
@@ -13,13 +12,13 @@ from ui.single_tr_window import SingleTrWindow
 from constants import UserPrivilege
 
 
+logger = Logs().get_logger("main")
+
+
 class SessionWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-
-        self.logger = Logs().get_logger(os.path.basename(__file__))
-        self.logger.setLevel(logging.DEBUG)
 
     def set_source_model(self, model: SessionModel):
         self.source_model = model
@@ -180,22 +179,22 @@ class SessionWidget(InventoryTableWidget):
         :param action:
         :return:
         """
-        self.logger.debug(f"{action}")
+        logger.debug(f"{action}")
 
         if action == "buy":
-            self.logger.debug("buying ...")
+            logger.debug("buying ...")
             self.add_new_row(tr_type='Buy')
         elif action == "sell":
-            self.logger.debug("selling ...")
+            logger.debug("selling ...")
             self.add_new_row(tr_type='Sell')
         elif action == "adj+":
-            self.logger.debug("adjusting plus ...")
+            logger.debug("adjusting plus ...")
             self.add_new_row(tr_type='AdjustmentPlus')
         elif action == "adj-":
-            self.logger.debug("adjusting minus ...")
+            logger.debug("adjusting minus ...")
             self.add_new_row(tr_type='AdjustmentMinus')
         elif action == "del_tr":
-            self.logger.debug("Deleting tr ...")
+            logger.debug("Deleting tr ...")
             if selected_indexes := self._get_selected_indexes():
                 self.delete_rows(selected_indexes)
 
@@ -239,7 +238,7 @@ class SessionWidget(InventoryTableWidget):
         If it fails to pass the validation, remove it.
         :return:
         """
-        self.logger.debug(f"tr {index.row()} added")
+        logger.debug(f"tr {index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
         if not self.source_model.validate_new_row(src_idx):
@@ -273,7 +272,7 @@ class SessionWidget(InventoryTableWidget):
         :param treatment_id:
         :return:
         """
-        self.logger.debug(f"treatment_id({treatment_id})")
+        logger.debug(f"treatment_id({treatment_id})")
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
         # set selected_treatment_id
