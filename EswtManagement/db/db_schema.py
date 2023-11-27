@@ -6,17 +6,17 @@ CREATE_CATEGORY_TABLE = \
         UNIQUE(category_name)
     );"""
 
-CREATE_TREATMENT_TABLE = \
+CREATE_MODALITY_TABLE = \
     """
-    CREATE TABLE IF NOT EXISTS treatments(
-        treatment_id SERIAL PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS modalities(
+        modality_id SERIAL PRIMARY KEY,
         active BOOL NOT NULL DEFAULT TRUE,
-        treatment_name TEXT NOT NULL,
-        treatment_price INT NOT NULL,
+        modality_name TEXT NOT NULL,
+        modality_price INT NOT NULL,
         category_id INT NOT NULL,
         description TEXT,
         FOREIGN KEY (category_id) REFERENCES category(category_id),
-        UNIQUE(treatment_name)
+        UNIQUE(modality_name)
     );"""
 
 CREATE_PATIENT_TABLE = \
@@ -59,14 +59,13 @@ CREATE_SESSION_TABLE = \
     CREATE TABLE IF NOT EXISTS sessions(
         session_id SERIAL PRIMARY KEY,
         user_id INT NOT NULL,
-        treatment_id INT NOT NULL,
+        modality_id INT NOT NULL,
         patient_id INT NOT NULL,
         provider_id INT NOT NULL,
         part_id INT NOT NULL,
-        treatment_detail TEXT,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         description TEXT,
-        FOREIGN KEY (treatment_id) REFERENCES treatments(treatment_id),
+        FOREIGN KEY (modality_id) REFERENCES modalities(modality_id),
         FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
         FOREIGN KEY (provider_id) REFERENCES providers(provider_id),

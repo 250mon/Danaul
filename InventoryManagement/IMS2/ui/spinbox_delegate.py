@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QWidget, QStyleOptionViewItem, QSpinBox
 )
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
-from common.di_default_delegate import DefaultDelegate
+from ui.di_default_delegate import DefaultDelegate
 
 
 class SpinBoxDelegate(DefaultDelegate):

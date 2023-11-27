@@ -1,14 +1,12 @@
-import os
 from typing import List
 from abc import abstractmethod
 from PySide6.QtWidgets import QMainWindow, QWidget, QMessageBox, QTableView
 from PySide6.QtCore import Slot, QSortFilterProxyModel, QModelIndex
 from model.di_data_model import DataModel
-from common.di_default_delegate import DefaultDelegate
-from common.combobox_delegate import ComboBoxDelegate
-from common.spinbox_delegate import SpinBoxDelegate
-from common.d_logger import Logs, logging
-
+from ui.di_default_delegate import DefaultDelegate
+from ui.combobox_delegate import ComboBoxDelegate
+from ui.spinbox_delegate import SpinBoxDelegate
+from common.d_logger import Logs
 
 logger = Logs().get_logger("main")
 

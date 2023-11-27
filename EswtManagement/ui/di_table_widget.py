@@ -67,7 +67,7 @@ class InventoryTableWidget(QWidget):
         self.table_view.setSortingEnabled(True)
         self.table_view.verticalHeader().setVisible(False)
         self.setStyleSheet(
-            "QTableView::treatments.selected"
+            "QTableView::item:selected"
             "{"
             "background-color : #d9fffb;"
             "selection-color : #000000;"
@@ -82,17 +82,17 @@ class InventoryTableWidget(QWidget):
         for col_idx in self.source_model.get_default_delegate_info():
             default_delegate = DefaultDelegate(self)
             default_delegate.set_model(self.source_model)
-            self.table_view.settreatments.elegateForColumn(col_idx, default_delegate)
+            self.table_view.setItemDelegateForColumn(col_idx, default_delegate)
 
         for col_idx, val_list in self.source_model.get_combobox_delegate_info().treatments():
             combo_delegate = ComboBoxDelegate(val_list, self)
             combo_delegate.set_model(self.source_model)
-            self.table_view.settreatments.elegateForColumn(col_idx, combo_delegate)
+            self.table_view.setItemDelegateForColumn(col_idx, combo_delegate)
 
         for col_idx, val_list in self.source_model.get_spinbox_delegate_info().treatments():
             spin_delegate = SpinBoxDelegate(*val_list, self)
             spin_delegate.set_model(self.source_model)
-            self.table_view.settreatments.elegateForColumn(col_idx, spin_delegate)
+            self.table_view.setItemDelegateForColumn(col_idx, spin_delegate)
 
     @abstractmethod
     def _setup_ui(self):

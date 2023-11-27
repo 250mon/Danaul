@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
-    QWidget, QStyledtreatments.elegate, QStyleOptionViewtreatments. QSpinBox
+    QWidget, QStyledelegate, QStyleOptionViewItem, QSpinBox
 )
-from PySide6.QtCore import QModelIndex, Qt, QAbstracttreatments.odel
+from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
 from common.default_delegate import DefaultDelegate
 
 
@@ -13,7 +13,7 @@ class SpinBoxDelegate(DefaultDelegate):
 
     def createEditor(self,
                      parent: QWidget,
-                     option: QStyleOptionViewtreatments.
+                     option: QStyleOptionViewItem,
                      index: QModelIndex) -> QWidget:
         editor = QSpinBox(parent)
         editor.setMinimum(self.min)
@@ -28,14 +28,13 @@ class SpinBoxDelegate(DefaultDelegate):
 
     def setModelData(self,
                      editor: QSpinBox,
-                     model: QAbstracttreatments.odel,
+                     model: QAbstractItemModel,
                      index: QModelIndex) -> None:
         editor_val = editor.value()
         model.setData(index, editor_val, Qt.EditRole)
 
     def updateEditorGeometry(self,
                              editor: QSpinBox,
-                             option: QStyleOptionViewtreatments.
+                             option: QStyleOptionViewItem,
                              index: QModelIndex) -> None:
         editor.setGeometry(option.rect)
-

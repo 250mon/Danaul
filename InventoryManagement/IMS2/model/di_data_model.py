@@ -4,7 +4,7 @@ from typing import Dict, List
 from abc import abstractmethod
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtGui import QColor, QBrush
-from common.pandas_model import PandasModel
+from model.pandas_model import PandasModel
 from db.di_lab import Lab
 from common.d_logger import Logs
 from constants import EditLevel, RowFlags, UserPrivilege, ADMIN_GROUP

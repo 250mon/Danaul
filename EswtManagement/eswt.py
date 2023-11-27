@@ -9,7 +9,7 @@ from PySide6.QtGui import QAction, QIcon
 from common.login_widget import LoginWidget
 from common.async_helper import AsyncHelper
 from db.ds_lab import Lab
-from db.ds_db import TreatmentsDb
+from db.db_apis import TreatmentsDb
 from model.treatment_model import TreatmentModel
 from model.session_model import SessionModel
 from ui.treatment_widget import TreatmentWidget

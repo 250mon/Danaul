@@ -61,7 +61,7 @@ class PandasModel(QAbstractTableModel):
     def headerData(self,
                    section: int,
                    orientation: Qt.Orientation,
-                   role=Qt.treatments.ataRole) -> str or None:
+                   role=Qt.ItemDataRole) -> str or None:
         """Override method from QAbstractTableModel
 
         Return dataframe index as vertical header data and columns as horizontal header data.
@@ -92,19 +92,19 @@ class PandasModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if not index.isValid():
             logger.debug(f"CHECK!!! index({index}) is not valid")
-            return Qt.Notreatments.lags
+            return Qt.NoItemFlags
 
         if not self.is_editable:
-            return Qt.treatments.sEnabled | Qt.treatments.sSelectable
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         if index.row() in self.uneditable_rows_set:
-            return Qt.treatments.sEnabled | Qt.treatments.sSelectable
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         elif (index.row() in self.new_rows_set and
                 self.col_idx_edit_lvl[index.column()] <= EditLevel.Creatable):
-            return Qt.treatments.sEnabled | Qt.treatments.sEditable | Qt.treatments.sSelectable
+            return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         elif self.col_idx_edit_lvl[index.column()] <= self.edit_level:
-            return Qt.treatments.sEnabled | Qt.treatments.sEditable | Qt.treatments.sSelectable
+            return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         else:
-            return Qt.treatments.sEnabled | Qt.treatments.sSelectable
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def set_edit_level(self, level: EditLevel):
         self.edit_level = level

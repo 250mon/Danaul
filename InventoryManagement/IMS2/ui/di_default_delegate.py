@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PySide6.QtCore import QModelIndex
-from common.pandas_model import PandasModel
+from model.pandas_model import PandasModel
 
 
 class DefaultDelegate(QStyledItemDelegate):

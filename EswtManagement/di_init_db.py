@@ -2,34 +2,36 @@ import asyncio
 import pandas as pd
 import bcrypt
 from db.db_apis import DbApi
-from db.inventory_schema import *
+from db.db_schema import *
 
 
 async def main():
-    danaul_db = DbApi()
+    db_api = DbApi()
 
     # Initialize db by dropping all the tables and then
     # creating them all over again.
     # After creating the tables, inserting initial data
     async def initialize():
         statements = [CREATE_CATEGORY_TABLE,
-                      CREATE_ITEM_TABLE,
-                      CREATE_SKU_TABLE,
+                      CREATE_MODALITY_TABLE,
+                      CREATE_PATIENT_TABLE,
+                      CREATE_PROVIDER_TABLE,
                       CREATE_USER_TABLE,
-                      CREATE_TRANSACTION_TYPE_TABLE,
-                      CREATE_TRANSACTION_TABLE]
-        await danaul_db.initialize_db(statements)
+                      CREATE_BODY_PART_TABLE,
+                      CREATE_SESSION_TABLE]
+        await db_api.initialize_db(statements)
 
         extra_data = {}
         # initial insert
         extra_data['category'] = pd.DataFrame({
-            'id': [1, 2, 3, 4],
-            'name': ['외용제', '수액제', '보조기', '기타']
+            'id': [1, 2],
+            'name': ['ESWT', 'DOSU']
         })
 
-        extra_data['transaction_type'] = pd.DataFrame({
-            'id': [1, 2, 3, 4],
-            'name': ['Buy', 'Sell', 'AdjustmentPlus', 'AdjustmentMinus']
+        extra_data['body_parts'] = pd.DataFrame({
+            'id': [1, 2, 3, 4, 5, 6, 7, 8],
+            'name': ['Shoulder', 'Elbow', 'Plantar', 'Ankle', 'Wrist',
+                     'Cervical', 'Lumbar', 'Thoracic']
         })
         def encrypt_password(password):
             # Generate a salt and hash the password
@@ -46,7 +48,7 @@ async def main():
 
         for table, data_df in extra_data.items():
             # make dataframe for each table
-            await danaul_db.insert_df(table, data_df)
+            await db_api.insert_df(table, data_df)
 
     async def insert_items():
         items_df = pd.DataFrame({
@@ -56,7 +58,7 @@ async def main():
             'category_id':   [1, 1],
             'description':   ['', '']
         })
-        print(await danaul_db.insert_df('items', items_df))
+        print(await db_api.insert_df('items', items_df))
 
     async def insert_skus():
         skus_df = pd.DataFrame({
@@ -71,7 +73,7 @@ async def main():
             'expiration_date':  ['DEFAULT', 'DEFAULT', 'DEFAULT'],
             'description':      ['', '', '']
         })
-        print(await danaul_db.insert_df('skus', skus_df))
+        print(await db_api.insert_df('skus', skus_df))
 
     async def insert_trs():
         # Inserting transactions
@@ -86,7 +88,7 @@ async def main():
             'tr_timestamp': ['DEFAULT'],
             'description': ['']
         })
-        print(await danaul_db.insert_df('transactions', trs_df))
+        print(await db_api.insert_df('transactions', trs_df))
 
     await initialize()
     await insert_items()
@@ -112,7 +114,7 @@ async def main():
             JOIN skus as s using(item_id)
             JOIN category as c using(category_id)
                """
-        print(await danaul_db.db_util.select_query(stmt))
+        print(await db_api.db_util.select_query(stmt))
 
 
 if __name__ == '__main__':

@@ -1,35 +1,33 @@
 import pandas as pd
+import re
 from typing import List
 from db.db_utils import DbUtil
-from db.inventory_schema import *
 from common.d_logger import Logs
 
 
 logger = Logs().get_logger("db")
 
 
-class InventoryDb:
+class DbApi:
     def __init__(self):
         self.db_util = DbUtil()
 
-    async def create_tables(self):
-        statements = [CREATE_CATEGORY_TABLE,
-                      CREATE_ITEM_TABLE,
-                      CREATE_SKU_TABLE,
-                      CREATE_USER_TABLE,
-                      CREATE_TRANSACTION_TYPE_TABLE,
-                      CREATE_TRANSACTION_TABLE]
+    async def create_tables(self, statements: List[str]):
         return await self.db_util.create_tables(statements)
 
-    async def drop_tables(self):
-        table_names = ['category', 'items', 'skus', 'users',
-                       'transactions', 'transaction_type']
+    async def drop_tables(self, table_names: List[str]):
         # dropping is always in a reverse order from creating
         return await self.db_util.drop_tables(table_names[::-1])
 
-    async def initialize_db(self):
-        await self.drop_tables()
-        await self.create_tables()
+    async def initialize_db(self, statements: List[str]):
+        table_name_re = re.compile(r'''EXISTS\s+([a-z_]+)\s*\(''', re.MULTILINE)
+        table_names = []
+        for stmt in statements:
+            name = table_name_re.findall(stmt)
+            table_names += name
+
+        await self.drop_tables(table_names)
+        await self.create_tables(statements)
 
     async def insert_df(self, table: str, df: pd.DataFrame):
         def make_stmt(table_name: str, row_values: List):
@@ -58,7 +56,6 @@ class InventoryDb:
         return await self.db_util.executemany(stmt, args)
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
-        # args = [(item.item_id,) for item in items_df.itertuples()]
         col_name, id_series = next(del_df.items())
         args = [(_id,) for _id in id_series]
         logger.debug(f"Delete {col_name} = {args} from {table} ...")

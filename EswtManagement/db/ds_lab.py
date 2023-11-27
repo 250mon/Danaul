@@ -1,13 +1,12 @@
-import os
 import re
 import asyncio
 from typing import List
-from db.ds_db import TreatmentsDb
+from db.db_apis import TreatmentsDb
 import pandas as pd
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from constants import MAX_TRANSACTION_COUNT
 from common.singleton import Singleton
-import db.db_schema
+from db.db_schema import *
 
 
 logger = Logs().get_logger("db")
@@ -68,9 +67,9 @@ class Lab(metaclass=Singleton):
     def _set_db_column_names(self):
         col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
         self.table_column_names = {}
-        self.table_column_names['treatments'] = col_name.findall(db.inventory_schema.CREATE_TREATMENT_TABLE)
-        self.table_column_names['skus'] = col_name.findall(db.inventory_schema.CREATE_SKU_TABLE)
-        self.table_column_names['sessions'] = col_name.findall(db.inventory_schema.CREATE_TRANSACTION_TABLE)
+        self.table_column_names['treatments'] = col_name.findall(CREATE_MODALITY_TABLE)
+        self.table_column_names['skus'] = col_name.findall(CREATE_SKU_TABLE)
+        self.table_column_names['sessions'] = col_name.findall(CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")

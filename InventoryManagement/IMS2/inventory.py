@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, Slot, QFile
 from PySide6.QtGui import QAction, QIcon
-from common.login_widget import LoginWidget
+from ui.login_widget import LoginWidget
 from common.async_helper import AsyncHelper
 from db.di_lab import Lab
 from model.item_model import ItemModel

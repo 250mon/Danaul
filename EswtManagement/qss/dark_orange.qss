@@ -13,12 +13,12 @@ QWidget
     background-color: #323232;
 }
 
-QWidget:treatments.hover
+QWidget:item:hover
 {
     background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffa02f, stop: 1 #ca0619);
 }
 
-QWidget:treatments.selected
+QWidget:item:selected
 {
     background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffa02f, stop: 1 #d7801a);
 }
@@ -28,13 +28,13 @@ QMenuBar::item
     background: transparent;
 }
 
-QMenuBar::treatments.selected
+QMenuBar::item:selected
 {
     background: transparent;
     border: 1px solid #ffaa00;
 }
 
-QMenuBar::treatments.pressed
+QMenuBar::item:pressed
 {
     background: #444;
     border: 1px solid #000;
@@ -60,7 +60,7 @@ QMenu::item
     padding: 2px 20px 2px 20px;
 }
 
-QMenu::treatments.selected
+QMenu::item:selected
 {
     color: #000000;
 }
@@ -71,7 +71,7 @@ QWidget:disabled
     background-color: #323232;
 }
 
-QAbstracttreatments.iew
+QAbstractItemView
 {
     background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4d4d4d, stop: 0.1 #646464, stop: 1 #5d5d5d);
 }
@@ -132,7 +132,7 @@ QComboBox:on
     selection-background-color: #ffaa00;
 }
 
-QComboBox QAbstracttreatments.iew
+QComboBox QAbstractItemView
 {
     border: 2px solid darkgray;
     selection-background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffa02f, stop: 1 #d7801a);
@@ -286,14 +286,14 @@ color: #414141;
 QDockWidget::title
 {
     text-align: center;
-    spacing: 3px; /* spacing between treatments in the tool bar */
+    spacing: 3px; /* spacing between items in the tool bar */
     background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #323232, stop: 0.5 #242424, stop:1 #323232);
 }
 
 QDockWidget::close-button, QDockWidget::float-button
 {
     text-align: center;
-    spacing: 1px; /* spacing between treatments in the tool bar */
+    spacing: 1px; /* spacing between items in the tool bar */
     background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #323232, stop: 0.5 #242424, stop:1 #323232);
 }
 
@@ -313,7 +313,7 @@ QMainWindow::separator
     color: white;
     padding-left: 4px;
     border: 1px solid #4c4c4c;
-    spacing: 3px; /* spacing between treatments in the tool bar */
+    spacing: 3px; /* spacing between items in the tool bar */
 }
 
 QMainWindow::separator:hover
@@ -323,12 +323,12 @@ QMainWindow::separator:hover
     color: white;
     padding-left: 4px;
     border: 1px solid #6c6c6c;
-    spacing: 3px; /* spacing between treatments in the tool bar */
+    spacing: 3px; /* spacing between items in the tool bar */
 }
 
 QToolBar::handle
 {
-     spacing: 3px; /* spacing between treatments in the tool bar */
+     spacing: 3px; /* spacing between items in the tool bar */
      background: url(:/images/handle.png);
 }
 

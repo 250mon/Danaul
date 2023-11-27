@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
 from typing import List
-from common.di_default_delegate import DefaultDelegate
+from ui.di_default_delegate import DefaultDelegate
 
 
 class ComboBoxDelegate(DefaultDelegate):
