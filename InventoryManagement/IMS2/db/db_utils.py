@@ -7,6 +7,7 @@ from typing import Optional, Type, List, Tuple
 from common.d_logger import Logs
 from constants import ConfigReader
 
+
 logger = Logs().get_logger("db")
 
 
