@@ -14,8 +14,8 @@ logger = Logs().get_logger("db")
 
 class Lab(metaclass=Singleton):
     def __init__(self):
-        self.di_db = DbApi()
-        self.di_db_util = self.di_db.db_util
+        self.db_api = DbApi()
+        self.di_db_util = self.db_api.db_util
         self.max_transaction_count = MAX_TRANSACTION_COUNT
         self.show_inactive_items = False
 
@@ -149,10 +149,10 @@ class Lab(metaclass=Singleton):
         self.table_df[table] = await self._get_df_from_db(table, **kwargs)
 
     async def insert_df(self, table: str, new_df: pd.DataFrame):
-        return await self.di_db.insert_df(table, new_df)
+        return await self.db_api.insert_df(table, new_df)
 
     async def update_df(self, table: str, up_df: pd.DataFrame):
-        return await self.di_db.update_df(table, up_df)
+        return await self.db_api.update_df(table, up_df)
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
-        return await self.di_db.delete_df(table, del_df)
+        return await self.db_api.delete_df(table, del_df)

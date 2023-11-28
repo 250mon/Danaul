@@ -1,7 +1,7 @@
 import re
 import asyncio
 from typing import List
-from db.db_apis import TreatmentsDb
+from db.db_apis import DbApi
 import pandas as pd
 from common.d_logger import Logs
 from constants import MAX_TRANSACTION_COUNT
@@ -12,11 +12,11 @@ from db.db_schema import *
 logger = Logs().get_logger("db")
 
 class Lab(metaclass=Singleton):
-    def __init__(self, di_db: TreatmentsDb):
-        self.di_db = di_db
-        self.di_db_util = self.di_db.db_util
+    def __init__(self):
+        self.db_api = DbApi()
+        self.di_db_util = self.db_api.db_util
         self.max_transaction_count = MAX_TRANSACTION_COUNT
-        self.show_inactive_treatments = False
+        self.show_inactive_items = False
 
         self.table_df = {
             'category': None,
@@ -67,14 +67,14 @@ class Lab(metaclass=Singleton):
     def _set_db_column_names(self):
         col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
         self.table_column_names = {}
-        self.table_column_names['treatments'] = col_name.findall(CREATE_MODALITY_TABLE)
-        self.table_column_names['skus'] = col_name.findall(CREATE_SKU_TABLE)
-        self.table_column_names['sessions'] = col_name.findall(CREATE_TRANSACTION_TABLE)
+        self.table_column_names['patients'] = col_name.findall(CREATE_PATIENT_TABLE)
+        # self.table_column_names['skus'] = col_name.findall(CREATE_SKU_TABLE)
+        # self.table_column_names['sessions'] = col_name.findall(CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
         where_clause = ""
-        if not self.show_inactive_treatments:
+        if not self.show_inactive_items:
             if table == "treatments":
                 where_clause = " WHERE active = True"
             elif table == "skus":
@@ -149,10 +149,10 @@ class Lab(metaclass=Singleton):
         self.table_df[table] = await self._get_df_from_db(table, **kwargs)
 
     async def insert_df(self, table: str, new_df: pd.DataFrame):
-        return await self.di_db.insert_df(table, new_df)
+        return await self.db_api.insert_df(table, new_df)
 
     async def update_df(self, table: str, up_df: pd.DataFrame):
-        return await self.di_db.update_df(table, up_df)
+        return await self.db_api.update_df(table, up_df)
 
     async def delete_df(self, table: str, del_df: pd.DataFrame):
-        return await self.di_db.delete_df(table, del_df)
+        return await self.db_api.delete_df(table, del_df)

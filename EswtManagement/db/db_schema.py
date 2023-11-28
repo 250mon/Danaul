@@ -23,17 +23,18 @@ CREATE_PATIENT_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS patients(
         patient_id SERIAL PRIMARY KEY,
+        patient_emr_id INT NOT NULL,
         patient_name TEXT NOT NULL,
-        patient_emr_id INT,
-        patient_gender INT,
-        patient_birthdate INT,
+        patient_gender TEXT NOT NULL,
+        patient_birthdate DATE,
+        UNIQUE(patient_emr_id)
     );"""
 
 CREATE_PROVIDER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS providers(
         provider_id SERIAL PRIMARY KEY,
-        provider_name TEXT NOT DATE
+        provider_name TEXT NOT NULL 
     );"""
 
 CREATE_USER_TABLE = \
@@ -63,10 +64,11 @@ CREATE_SESSION_TABLE = \
         patient_id INT NOT NULL,
         provider_id INT NOT NULL,
         part_id INT NOT NULL,
-        timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         description TEXT,
-        FOREIGN KEY (modality_id) REFERENCES modalities(modality_id),
+        timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        session_price INT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(user_id),
+        FOREIGN KEY (modality_id) REFERENCES modalities(modality_id),
         FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
         FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
         FOREIGN KEY (part_id) REFERENCES body_parts(part_id)

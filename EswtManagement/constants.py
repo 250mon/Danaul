@@ -54,4 +54,8 @@ class ConfigReader(metaclass=Singleton):
             print(e)
 
     def get_options(self, option_name: str):
-        return self.options.get(option_name, None)
+        options = self.options.get(option_name, None)
+        if options is None:
+            self.read_config_file(CONFIG_FILE)
+            options = self.options.get(option_name, None)
+        return options

@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (
-    QWidget, QStyledelegate, QStyleOptionViewItem, QSpinBox
+    QWidget, QStyleOptionViewItem, QSpinBox
 )
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
-from common.default_delegate import DefaultDelegate
+from ui.default_delegate import DefaultDelegate
 
 
 class SpinBoxDelegate(DefaultDelegate):

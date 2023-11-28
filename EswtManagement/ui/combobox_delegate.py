@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import (
-    QWidget, QStyledItemDelegate, QStyleOptionViewItem, QComboBox
+    QWidget, QStyleOptionViewItem, QComboBox
 )
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
 from typing import List
-from common.default_delegate import DefaultDelegate
+from ui.default_delegate import DefaultDelegate
 
 
 class ComboBoxDelegate(DefaultDelegate):

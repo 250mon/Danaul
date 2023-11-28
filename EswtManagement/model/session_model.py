@@ -1,10 +1,9 @@
-import os
 import pandas as pd
 from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex
 from model.di_data_model import DataModel
 from db.ds_lab import Lab
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 from constants import EditLevel
 from common.datetime_utils import *
 from constants import RowFlags
@@ -144,11 +143,6 @@ class SessionModel(DataModel):
                                 'tr_qty', 'before_qty', 'after_qty']
             if col_name in int_type_columns:
                 # if column data is int, return int type
-                try:
-                    ret = int(data_to_display)
-                except Exception as e:
-                    logger.error(e)
-                    logger.error(f"{col_name} {data_to_display}")
                 return int(data_to_display)
             elif col_name == 'timestamp':
                 # data type is datetime.date

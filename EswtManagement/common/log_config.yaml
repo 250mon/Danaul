@@ -9,7 +9,7 @@ root:
 # Configurations for logger set with logging.getLogger(NAME)
 loggers:
     db:
-        level: INFO
+        level: DEBUG
         handlers: [console]
         propagate: no
     main:

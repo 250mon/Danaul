@@ -3,11 +3,10 @@ from abc import abstractmethod
 from PySide6.QtWidgets import QMainWindow, QWidget, QMessageBox, QTableView
 from PySide6.QtCore import Slot, QSortFilterProxyModel, QModelIndex
 from model.di_data_model import DataModel
-from common.default_delegate import DefaultDelegate
-from common.combobox_delegate import ComboBoxDelegate
-from common.spinbox_delegate import SpinBoxDelegate
-from common.d_logger import Logs, logging
-
+from ui.default_delegate import DefaultDelegate
+from ui.combobox_delegate import ComboBoxDelegate
+from ui.spinbox_delegate import SpinBoxDelegate
+from common.d_logger import Logs
 
 logger = Logs().get_logger("main")
 
@@ -84,12 +83,12 @@ class InventoryTableWidget(QWidget):
             default_delegate.set_model(self.source_model)
             self.table_view.setItemDelegateForColumn(col_idx, default_delegate)
 
-        for col_idx, val_list in self.source_model.get_combobox_delegate_info().treatments():
+        for col_idx, val_list in self.source_model.get_combobox_delegate_info().items():
             combo_delegate = ComboBoxDelegate(val_list, self)
             combo_delegate.set_model(self.source_model)
             self.table_view.setItemDelegateForColumn(col_idx, combo_delegate)
 
-        for col_idx, val_list in self.source_model.get_spinbox_delegate_info().treatments():
+        for col_idx, val_list in self.source_model.get_spinbox_delegate_info().items():
             spin_delegate = SpinBoxDelegate(*val_list, self)
             spin_delegate.set_model(self.source_model)
             self.table_view.setItemDelegateForColumn(col_idx, spin_delegate)

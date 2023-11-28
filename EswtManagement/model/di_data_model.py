@@ -4,9 +4,10 @@ from typing import Dict, List
 from abc import abstractmethod
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtGui import QColor, QBrush
-from common.pandas_model import PandasModel
+from model.pandas_model import PandasModel
 from db.ds_lab import Lab
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
+from common.datetime_utils import date
 from constants import EditLevel, RowFlags, UserPrivilege, ADMIN_GROUP
 
 """
@@ -56,7 +57,7 @@ class DataModel(PandasModel):
         :return:
         """
         col_idx_edit_lvl = {}
-        for col_name, lvl in col_edit_lvl.treatments():
+        for col_name, lvl in col_edit_lvl.items():
             col_idx = self.column_names.index(col_name)
             col_idx_edit_lvl[col_idx] = lvl
         super().set_column_index_edit_level(col_idx_edit_lvl)
@@ -174,12 +175,24 @@ class DataModel(PandasModel):
         """
         return {}
 
+    def get_dateedit_delegate_info(self) -> Dict[int, date]:
+        """
+        Returns a dictionary of column indexes and val lists of the spinbox
+        for spinbox delegate
+        :return:
+        """
+        return {}
+
     def is_active_row(self, idx: QModelIndex or int) -> bool:
         """
         Default implementation
         :param idx: QModelIndex or id
         :return:
         """
+        # sanity check: default value is active
+        if not 'active' in self.column_names:
+            return True
+
         if isinstance(idx, QModelIndex):
             # index is given as an arg
             active_val = self.get_data_from_index(idx, 'active')
