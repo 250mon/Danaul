@@ -8,7 +8,7 @@ from PySide6.QtGui import QFont
 from common.d_logger import Logs
 from ui.di_table_widget import InventoryTableWidget
 from model.patient_model import PatientModel
-from ui.single_item_window import SingleItemWindow
+from ui.single_patient_window import SinglePatientWindow
 
 
 logger = Logs().get_logger("main")
@@ -142,9 +142,9 @@ class PatientWidget(InventoryTableWidget):
         if not self.delegate_mode:
             # Input window mode using DataMapperWidget
             new_pt_index = self.source_model.index(self.source_model.rowCount() - 1, 0)
-            self.patient_window = SingleItemWindow(self.proxy_model,
-                                                   new_pt_index,
-                                                   self)
+            self.patient_window = SinglePatientWindow(self.proxy_model,
+                                                      new_pt_index,
+                                                      self)
 
     @Slot()
     def del_patient(self):
@@ -161,9 +161,9 @@ class PatientWidget(InventoryTableWidget):
                 # if self.delegate_mode:
                 #     self.change_rows_by_delegate(selected_indexes)
                 if not self.delegate_mode:
-                    self.patient_window = SingleItemWindow(self.proxy_model,
-                                                           selected_indexes,
-                                                           self)
+                    self.patient_window = SinglePatientWindow(self.proxy_model,
+                                                              selected_indexes,
+                                                              self)
 
     def save_model_to_db(self):
         """

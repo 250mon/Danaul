@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel
 from model.session_model import SessionModel
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")
