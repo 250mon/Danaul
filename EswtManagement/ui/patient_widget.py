@@ -7,20 +7,20 @@ from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtGui import QFont
 from common.d_logger import Logs
 from ui.di_table_widget import InventoryTableWidget
-from model.patient_model import PatientModel
-from ui.single_patient_window import SinglePatientWindow
+from model.provider_model import ProviderModel
+from ui.single_provider_window import SingleProviderWindow
 
 
 logger = Logs().get_logger("main")
 
 
-class PatientWidget(InventoryTableWidget):
+class ProviderWidget(InventoryTableWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.delegate_mode = True
 
-    def set_source_model(self, model: PatientModel):
+    def set_source_model(self, model: ProviderModel):
         self.source_model = model
         self._apply_model()
 
@@ -36,7 +36,7 @@ class PatientWidget(InventoryTableWidget):
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
-        initial_sort_col_num = self.source_model.get_col_number('patient_name')
+        initial_sort_col_num = self.source_model.get_col_number('provider_name')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     def _setup_initial_table_view(self):
@@ -52,11 +52,8 @@ class PatientWidget(InventoryTableWidget):
         Needs to be implemented
         :return:
         """
-        self.set_col_hidden('patient_id')
-        self.set_col_width("patient_emr_id", 50)
-        self.set_col_width("patient_name", 50)
-        self.set_col_width("patient_gender", 20)
-        self.set_col_width("patient_birthdate", 50)
+        self.set_col_hidden('provider_id')
+        self.set_col_width("provider_name", 50)
 
         title_label = QLabel('환자')
         font = QFont("Arial", 12, QFont.Bold)
@@ -72,9 +69,9 @@ class PatientWidget(InventoryTableWidget):
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_btn = QPushButton('신환')
-        add_btn.clicked.connect(self.add_patient)
+        add_btn.clicked.connect(self.add_provider)
         del_btn = QPushButton('삭제')
-        del_btn.clicked.connect(self.del_patient)
+        del_btn.clicked.connect(self.del_provider)
         save_btn = QPushButton('저장')
         save_btn.clicked.connect(self.save_model_to_db)
 
@@ -136,32 +133,32 @@ class PatientWidget(InventoryTableWidget):
         self.parent.edit_unlock_signal.emit("treatment_widget")
 
     @Slot()
-    def add_patient(self):
-        logger.debug("Adding a patient ...")
+    def add_provider(self):
+        logger.debug("Adding a provider ...")
         self.add_new_row()
         if not self.delegate_mode:
             # Input window mode using DataMapperWidget
             new_pt_index = self.source_model.index(self.source_model.rowCount() - 1, 0)
-            self.patient_window = SinglePatientWindow(self.proxy_model,
+            self.provider_window = SingleProviderWindow(self.proxy_model,
                                                       new_pt_index,
                                                       self)
 
     @Slot()
-    def del_patient(self):
-        logger.debug("Deleting patient ...")
+    def del_provider(self):
+        logger.debug("Deleting provider ...")
         if selected_indexes := self._get_selected_indexes():
-            logger.debug(f"del_patient {selected_indexes}")
+            logger.debug(f"del_provider {selected_indexes}")
             self.delete_rows(selected_indexes)
 
     @Slot()
-    def chg_patient(self):
-            logger.debug("Changing patient ...")
+    def chg_provider(self):
+            logger.debug("Changing provider ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"chg_patient {selected_indexes}")
+                logger.debug(f"chg_provider {selected_indexes}")
                 # if self.delegate_mode:
                 #     self.change_rows_by_delegate(selected_indexes)
                 if not self.delegate_mode:
-                    self.patient_window = SinglePatientWindow(self.proxy_model,
+                    self.provider_window = SingleProviderWindow(self.proxy_model,
                                                               selected_indexes,
                                                               self)
 
@@ -173,12 +170,12 @@ class PatientWidget(InventoryTableWidget):
         :return:
         """
         if hasattr(self.parent, "async_start"):
-            self.parent.async_start("patient_save")
+            self.parent.async_start("provider_save")
         self.edit_mode.setChecked(False)
         self.edit_mode_ends()
 
     @Slot(object)
-    def added_new_patient_by_single_item_window(self, index: QModelIndex):
+    def added_new_provider_by_single_item_window(self, index: QModelIndex):
         """
         This is called when SingleItemWindow emits a signal
         It validates the newly added treatments. If it fails, remove it.
@@ -186,7 +183,7 @@ class PatientWidget(InventoryTableWidget):
         :return:
         """
         if self.source_model.is_flag_column(index):
-            logger.debug(f"patient {index.row()} added")
+            logger.debug(f"provider {index.row()} added")
 
         src_idx = self.proxy_model.mapToSource(index)
         if hasattr(self.source_model, "validate_new_row"):
@@ -194,7 +191,7 @@ class PatientWidget(InventoryTableWidget):
                 self.source_model.drop_rows([src_idx])
 
     @Slot(object)
-    def changed_patients_by_single_item_window(self, indexes: List[QModelIndex]):
+    def changed_providers_by_single_item_window(self, indexes: List[QModelIndex]):
         """
         This is called when SingleItemWindow emits a signal
         :param indexes:
@@ -203,7 +200,7 @@ class PatientWidget(InventoryTableWidget):
         for idx in indexes:
             if self.source_model.is_flag_column(idx):
                 self.source_model.set_chg_flag(idx)
-                logger.debug(f"patients {idx.row()} changed")
+                logger.debug(f"providers {idx.row()} changed")
 
 
     @Slot(QModelIndex)
@@ -215,9 +212,9 @@ class PatientWidget(InventoryTableWidget):
         :return:
         """
         if not self.edit_mode.isChecked() and index.isValid() and hasattr(
-                self.parent, 'patient_selected'):
-            patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
-            self.parent.patient_selected(patient_id)
+                self.parent, 'provider_selected'):
+            provider_id = index.siblingAtColumn(self.source_model.get_col_number('provider_id')).data()
+            self.parent.provider_selected(provider_id)
 
     def update_all_views(self):
         """
