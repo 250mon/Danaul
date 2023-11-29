@@ -30,20 +30,24 @@ CREATE_PATIENT_TABLE = \
         UNIQUE(patient_emr_id)
     );"""
 
-CREATE_PROVIDER_TABLE = \
-    """
-    CREATE TABLE IF NOT EXISTS providers(
-        provider_id SERIAL PRIMARY KEY,
-        provider_name TEXT NOT NULL 
-    );"""
-
 CREATE_USER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS users(
         user_id SERIAL PRIMARY KEY,
         user_name TEXT NOT NULL,
         user_password BYTEA NOT NULL,
+        user_realname TEXT NOT NULL,
+        user_role TEXT NOT NULL,
         UNIQUE(user_name)
+    );"""
+
+CREATE_PROVIDER_TABLE = \
+    """
+    CREATE TABLE IF NOT EXISTS providers(
+        provider_id SERIAL PRIMARY KEY,
+        user_name TEXT NOT NULL,
+        provider_name TEXT NOT NULL,
+        FOREIGN KEY (user_name) REFERENCES users(user_name)
     );"""
 
 CREATE_BODY_PART_TABLE = \
@@ -59,17 +63,17 @@ CREATE_SESSION_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS sessions(
         session_id SERIAL PRIMARY KEY,
-        user_id INT NOT NULL,
-        modality_id INT NOT NULL,
-        patient_id INT NOT NULL,
-        provider_id INT NOT NULL,
-        part_id INT NOT NULL,
+        user_name TEXT NOT NULL,
+        modality_name TEXT NOT NULL,
+        patient_name TEXT NOT NULL,
+        provider_name TEXT NOT NULL,
+        part_name TEXT NOT NULL,
         description TEXT,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         session_price INT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(user_id),
-        FOREIGN KEY (modality_id) REFERENCES modalities(modality_id),
-        FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
-        FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
-        FOREIGN KEY (part_id) REFERENCES body_parts(part_id)
+        FOREIGN KEY (user_name) REFERENCES users(user_name),
+        FOREIGN KEY (modality_name) REFERENCES modalities(modality_name),
+        FOREIGN KEY (patient_name) REFERENCES patients(patient_name),
+        FOREIGN KEY (provider_name) REFERENCES providers(provider_name),
+        FOREIGN KEY (part_name) REFERENCES body_parts(part_name)
     );"""
