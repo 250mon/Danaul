@@ -37,7 +37,7 @@ CREATE_USER_TABLE = \
         user_name TEXT NOT NULL,
         user_password BYTEA NOT NULL,
         user_realname TEXT NOT NULL,
-        user_role TEXT NOT NULL,
+        user_job TEXT NOT NULL,
         UNIQUE(user_name)
     );"""
 

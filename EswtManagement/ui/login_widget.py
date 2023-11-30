@@ -1,9 +1,11 @@
 import sys
 from time import sleep
+from typing import Dict
 import bcrypt
 from PySide6.QtWidgets import (
     QWidget, QDialog, QLabel, QPushButton, QLineEdit,
-    QMessageBox, QFormLayout, QVBoxLayout, QApplication
+    QMessageBox, QFormLayout, QVBoxLayout, QApplication,
+    QHBoxLayout, QGroupBox, QComboBox
 )
 from PySide6.QtCore import Qt, QByteArray, Signal
 from PySide6.QtGui import QFont
@@ -105,24 +107,33 @@ class LoginWidget(QWidget):
 
         self.setLayout(main_v_box)
 
-    def query_user_password(self, user_name):
+    def query_user_info(self, user_name) -> Dict:
+        """
+        query user info with user_name
+        """
         query = QSqlQuery()
-        query.prepare("SELECT user_password FROM users WHERE user_name = ?")
+        query.prepare("SELECT * FROM users WHERE user_name = ?")
         query.addBindValue(user_name)
         query.exec()
 
-        result = None
+        db_record = {}
         if query.next():
-            result = query.value(0)
-            logger.debug("Got a password!")
+            db_record['user_name'] = query.value('user_name')
+            db_record['user_password'] = query.value('user_password')
+            db_record['user_realname'] = query.value('user_realname')
+            db_record['user_job'] = query.value('user_job')
+            logger.debug("Got a record!")
         else:
-            logger.debug("No password found")
+            logger.debug("No record found")
+        return db_record
 
-        return result
-
-    def insert_user_info(self, user_name, hashed_user_pw):
+    def insert_user_info(self, db_record):
+        """
+        Insert db_record into DB
+        """
         query = QSqlQuery()
-        pw = QByteArray(hashed_user_pw)
+        user_name = db_record['user_name']
+        pw = QByteArray(db_record['hashed_pw'])
         logger.debug(f"{user_name}, password:{pw}")
         query.prepare("""INSERT INTO users (user_name, user_password) VALUES ($1, $2)
                             ON CONFLICT (user_name)
@@ -157,7 +168,8 @@ class LoginWidget(QWidget):
     def verify_user(self, password, user_name):
         # The following code converts QByteArray to PyBtye(bytes) format
         # stored_pwd: type is QByteArray hex format
-        stored_pw: QByteArray = self.query_user_password(user_name)
+        db_record = self.query_user_info(user_name)
+        stored_pw: QByteArray = db_record.get('user_password', '')
         if stored_pw is None:
             return False
 
@@ -200,17 +212,17 @@ class LoginWidget(QWidget):
         self.user_input_dialog = QDialog(self)
         self.user_input_dialog.setWindowTitle("Change Password")
         header_label = QLabel("Change Password")
-        self.user_name = QLabel(user_name)
+        self.user_name_le = QLabel(user_name)
 
-        self.new_password = QLineEdit()
-        self.new_password.setEchoMode(QLineEdit.Password)
-        self.confirm_password = QLineEdit()
-        self.confirm_password.setEchoMode(QLineEdit.Password)
+        self.new_password_le = QLineEdit()
+        self.new_password_le.setEchoMode(QLineEdit.Password)
+        self.confirm_password_le = QLineEdit()
+        self.confirm_password_le.setEchoMode(QLineEdit.Password)
 
         # Arrange QLineEdit widgets in a QFormLayout
         dialog_form = QFormLayout()
-        dialog_form.addRow("New Password", self.new_password)
-        dialog_form.addRow("Confirm Password", self.confirm_password)
+        dialog_form.addRow("New Password", self.new_password_le)
+        dialog_form.addRow("Confirm Password", self.confirm_password_le)
 
         # Create sign up button
         ok_button = QPushButton("OK")
@@ -233,20 +245,46 @@ class LoginWidget(QWidget):
         # create a new user account
         self.user_input_dialog.setWindowTitle("Create New User")
         header_label = QLabel("Create New User Account")
-        self.user_name = QLineEdit()
 
-        self.new_password = QLineEdit()
-        self.new_password.setEchoMode(QLineEdit.Password)
-        self.confirm_password = QLineEdit()
-        self.confirm_password.setEchoMode(QLineEdit.Password)
+        # user name part
+        self.user_name_le = QLineEdit()
+        user_name_check_btn = QPushButton("중복확인")
+        user_name_check_btn.clicked.connect(self.check_duplicate_user_name)
+        user_name_hbox = QHBoxLayout()
+        user_name_hbox.addWidget(self.user_name_le)
+        user_name_hbox.addWidget(user_name_check_btn)
+
+        # password part
+        self.new_password_le = QLineEdit()
+        self.new_password_le.setEchoMode(QLineEdit.Password)
+        self.confirm_password_le = QLineEdit()
+        self.confirm_password_le.setEchoMode(QLineEdit.Password)
+        self.password_check_btn = QPushButton("비밀번호 확인")
+        self.password_check_btn.clicked.connect(self.check_password_integrity)
+
+        # additional info
+        self.real_name_le = QLineEdit()
+        self.job_cb = QComboBox()
+        self.job_cb.addItems(['물리치료사', '도수치료사', '간호조무사', '방사선사'])
+
+        # initially disabled
+        self.new_password_le.setEnabled(False)
+        self.confirm_password_le.setEnabled(False)
+        self.password_check_btn.setEnabled(False)
+        self.real_name_le.setEnabled(False)
+        self.job_cb.setEnabled(False)
 
         # Arrange QLineEdit widgets in a QFormLayout
         dialog_form = QFormLayout()
-        dialog_form.addRow("User Name:", self.user_name)
-        dialog_form.addRow("New Password", self.new_password)
-        dialog_form.addRow("Confirm Password", self.confirm_password)
+        dialog_form.addRow("아이디", user_name_hbox)
+        dialog_form.horizontalSpacing()
+        dialog_form.addRow("비밀번호 입력", self.new_password_le)
+        dialog_form.addRow("비밀번호 확인", self.confirm_password_le)
+        dialog_form.addRow("", self.password_check_btn)
+        dialog_form.horizontalSpacing()
+        dialog_form.addRow("이 름", self.real_name_le)
+        dialog_form.addRow("직 책", self.job_cb)
 
-        # Create sign up button
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(self.accept_user_info)
 
@@ -260,12 +298,39 @@ class LoginWidget(QWidget):
         self.user_input_dialog.setLayout(dialog_v_box)
         self.user_input_dialog.show()
 
+    def check_duplicate_user_name(self):
+        self.user_name_le.setEnabled(False)
+        self.new_password_le.setEnabled(True)
+        self.confirm_password_le.setEnabled(True)
+        self.password_check_btn.setEnabled(True)
+
+    def check_password_integrity(self):
+        pw_text = self.new_password_le.text()
+        confirm_text = self.confirm_password_le.text()
+
+        if len(pw_text) < 1 or len(confirm_text) < 1:
+            QMessageBox.warning(self,
+                                "Error Message",
+                                "비밀번호가 형식에 맞지 않습니다.",
+                                QMessageBox.Close)
+        elif pw_text != confirm_text:
+            QMessageBox.warning(self,
+                                "Error Message",
+                                "비밀번호가 일치하지 않습니다.",
+                                QMessageBox.Close)
+        else:
+            self.new_password_le.setEnabled(False)
+            self.confirm_password_le.setEnabled(False)
+            self.password_check_btn.setEnabled(False)
+            self.real_name_le.setEnabled(True)
+            self.job_cb.setEnabled(True)
+
     def accept_user_info(self):
         """Verify that the user's passwords match. If so, save the user's
         info to DB and display the login window."""
-        user_name_text = self.user_name.text()
-        pw_text = self.new_password.text()
-        confirm_text = self.confirm_password.text()
+        user_name_text = self.user_name_le.text()
+        pw_text = self.new_password_le.text()
+        confirm_text = self.confirm_password_le.text()
         if pw_text != confirm_text:
             QMessageBox.warning(self,
                                 "Error Message",
