@@ -191,11 +191,11 @@ class LoginWidget(QWidget):
 
         password_verified = self.verify_user(password, user_name)
         if password_verified:
-            self.close()
             if change_pw:
                 self.change_passwd(user_name)
             else:
-                # Open the SQL management application
+                # Close login and open the SQL management application
+                self.close()
                 sleep(0.5)  # Pause slightly before showing the parent window
                 self.start_main.emit(user_name)
                 logger.debug("Passed!!!")
@@ -259,8 +259,11 @@ class LoginWidget(QWidget):
         self.new_password_le.setEchoMode(QLineEdit.Password)
         self.confirm_password_le = QLineEdit()
         self.confirm_password_le.setEchoMode(QLineEdit.Password)
-        self.password_check_btn = QPushButton("비밀번호 확인")
+        self.password_check_btn = QPushButton("확인")
         self.password_check_btn.clicked.connect(self.check_password_integrity)
+        pasword_hbox = QHBoxLayout()
+        pasword_hbox.addWidget(self.confirm_password_le)
+        pasword_hbox.addWidget(self.password_check_btn)
 
         # additional info
         self.real_name_le = QLineEdit()
@@ -279,8 +282,7 @@ class LoginWidget(QWidget):
         dialog_form.addRow("아이디", user_name_hbox)
         dialog_form.horizontalSpacing()
         dialog_form.addRow("비밀번호 입력", self.new_password_le)
-        dialog_form.addRow("비밀번호 확인", self.confirm_password_le)
-        dialog_form.addRow("", self.password_check_btn)
+        dialog_form.addRow("비밀번호 확인", pasword_hbox)
         dialog_form.horizontalSpacing()
         dialog_form.addRow("이 름", self.real_name_le)
         dialog_form.addRow("직 책", self.job_cb)
