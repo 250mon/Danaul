@@ -148,7 +148,6 @@ class InventoryTableWidget(QWidget):
         except Exception as e:
             QMessageBox.information(self,
                                     "Failed New Sku",
-                                    # "세부품목을 먼저 선택하세요.",
                                     str(e),
                                     QMessageBox.Close)
 

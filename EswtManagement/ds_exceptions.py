@@ -26,3 +26,7 @@ class BaseValueError(ValueError):
 
 class InvalidTrTypeError(BaseValueError):
     pass
+
+
+class InvalidPasswordError(BaseValueError):
+    pass

@@ -1,29 +1,16 @@
+import sys
 import asyncio
 import asyncpg
 from asyncpg import UndefinedTableError
 from asyncpg import Record
 from types import TracebackType
-from typing import Optional, Type, List, Tuple
+from typing import Optional, Type, List, Tuple, Dict
+from PySide6.QtWidgets import QMessageBox
+from PySide6.QtSql import QSqlDatabase, QSqlQuery
 from common.d_logger import Logs
 from constants import ConfigReader
 
 logger = Logs().get_logger("db")
-
-
-async def connect_pg():
-    config = ConfigReader()
-    try:
-        conn = await asyncpg.connect(host=config.get_options("Host"),
-                                     port=config.get_options("Port"),
-                                     user=config.get_options("User"),
-                                     database=config.get_options("Database"),
-                                     password=config.get_options("Password"))
-        return conn
-    except Exception as e:
-        logger.debug('Error while connecting to DB')
-        logger.debug(e)
-        raise e
-
 
 
 class ConnectPg:
@@ -135,7 +122,6 @@ class DbUtil:
                 logger.debug(e)
                 return None
 
-
     async def executemany(self, statement: str, args: List[Tuple]):
         """
         Execute a statement through connection.executemany()
@@ -160,7 +146,6 @@ class DbUtil:
                 logger.debug(e)
                 return e
 
-
     async def pool_execute(self, statement: str, args: List[Tuple]):
         """
         Execute a statement through ascynpg.pool
@@ -170,6 +155,7 @@ class DbUtil:
             if successful, list of results of queries
             otherwise, exception
         """
+
         async def execute(stmt, arg, pool):
             async with pool.acquire() as conn:
                 logger.debug(stmt)
@@ -218,3 +204,157 @@ class DbUtil:
         results = await self.executemany(stmt, args)
         logger.debug(f":\n{results}")
         return results
+
+
+class QtDbUtil:
+    def __init__(self):
+        self.createConnection()
+
+    def createConnection(self):
+        """Set up the connection to the database.
+        Check for the tables needed."""
+        config = ConfigReader()
+        database = QSqlDatabase.addDatabase("QPSQL")
+        database.setHostName(config.get_options("Host"))
+        database.setPort(int(config.get_options("Port")))
+        database.setUserName(config.get_options("User"))
+        database.setPassword(config.get_options("Password"))
+        database.setDatabaseName(config.get_options("Database"))
+        if not database.open():
+            logger.error("Unable to Connect.")
+            logger.error(database.lastError())
+            sys.exit(1)  # Error code 1 - signifies error
+        else:
+            logger.debug("Connected")
+
+        # Check if the tables we need exist in the database
+        # tables_needed = {"users"}
+        # tables_not_found = tables_needed - set(database.tables())
+        # if tables_not_found:
+        tables = database.tables()
+        if "users" not in tables:
+            QMessageBox.critical(None,
+                                 "Error",
+                                 f"""<p>The following tables are missing
+                                  from the database: {tables}</p>""")
+            sys.exit(1)  # Error code 1 - signifies error
+
+    def query_info(self, query_stmt: str) -> Dict:
+        """
+        query user info with user_name
+        """
+        logger.debug(query_stmt)
+
+        query = QSqlQuery()
+        query.prepare(query_stmt)
+        query.exec()
+
+        output_db_record = {}
+        if query.next():
+            rec = query.record()
+            rec_col_count = rec.count()
+            for i in range(rec_col_count):
+                output_db_record[rec.fieldName(i)] = rec.value(i)
+            logger.debug("Got a record!")
+            logger.debug(output_db_record)
+        else:
+            logger.debug("No record found")
+
+        return output_db_record
+
+    def insert_into_db(self, table_name: str, input_db_record: Dict):
+        """
+        Insert input_db_record into DB
+        """
+        logger.debug(f"Inserting data into {table_name}: {input_db_record}")
+
+        def make_stmt(field_names: List, arg_values: List):
+            # make a statement like
+            # "INSERT INTO tb (f1, f2, f3) VALUES($1, $2, $3)"
+            field_part = ','.join(field_names)
+            place_holders = []
+            i = 1
+            for val in arg_values:
+                if val == 'DEFAULT':
+                    place_holders.append('DEFAULT')
+                else:
+                    place_holders.append(f'${i}')
+                    i += 1
+            value_part = ','.join(place_holders)
+            stmt = (f"INSERT INTO {table_name} ({field_part}) VALUES({value_part})")
+            return stmt
+
+        field_names = list(input_db_record.keys())
+        args = list(input_db_record.values())
+        stmt = make_stmt(field_names, args)
+        logger.debug(f"{stmt} :: {args}")
+
+        query = QSqlQuery()
+        query.prepare(stmt)
+        for arg in args:
+            query.addBindValue(arg)
+
+        if query.exec():
+            logger.debug("Data insertion into DB successful!")
+        else:
+            QMessageBox.warning(None,
+                                "Warning",
+                                "Improper data to insert !!",
+                                QMessageBox.Close)
+            logger.debug("Data insertion into DB failed!")
+            logger.debug(f"{query.lastError()}")
+
+    def update_db(self, table_name: str, input_db_record: Dict, where_clause: str):
+        """
+        Update DB with input_db_record
+        """
+        logger.debug(f"Updating data in {table_name}: {input_db_record}")
+
+        def make_stmt(record: Dict):
+            # make a statement like "UPDATE tb name1 = $1, name2 = $2 WHERE ..."
+            place_holders = []
+            i = 1
+            for name, val in record.items():
+                place_holders.append(f'{name} = ${i}')
+                i += 1
+            stmt_value_part = ','.join(place_holders)
+            stmt = f"UPDATE {table_name} SET {stmt_value_part} WHERE {where_clause}"
+            return stmt
+
+        args = list(input_db_record.values())
+        stmt = make_stmt(input_db_record)
+        logger.debug(f"{stmt} :: {args}")
+
+        query = QSqlQuery()
+        query.prepare(stmt)
+        for arg in args:
+            query.addBindValue(arg)
+
+        if query.exec():
+            logger.debug("Data updating successful!")
+        else:
+            QMessageBox.warning(None,
+                                "Warning",
+                                "Improper data to update!!",
+                                QMessageBox.Close)
+            logger.debug("Data updating failed!")
+            logger.debug(f"{query.lastError()}")
+
+    def delete_db(self, table_name: str, where_clause: str):
+        """
+        Delete a record in DB
+        """
+        logger.debug(f"Deleting data in {table_name} where {where_clause}")
+        query = QSqlQuery()
+        stmt = f"DELETE FROM {table_name} WHERE {where_clause}"
+        query.prepare(stmt)
+
+        if query.exec():
+            logger.debug("Data deleting successful!")
+        else:
+            QMessageBox.warning(None,
+                                "Warning",
+                                "Improper expression to delete!!",
+                                QMessageBox.Close)
+            logger.debug("Data deleting failed!")
+            logger.debug(f"{query.lastError()}")

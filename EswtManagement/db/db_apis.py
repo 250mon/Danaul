@@ -29,9 +29,9 @@ class DbApi:
         await self.drop_tables(table_names)
         await self.create_tables(statements)
 
-    async def insert_df(self, table: str, df: pd.DataFrame):
+    async def insert_df(self, table_name: str, df: pd.DataFrame):
         # make a query statement part
-        def make_stmt(table_name: str, row_values: List):
+        def make_stmt(row_values: List):
             # make a statement like "INSERT INTO tb VALUES($1, $2, $3)"
             place_holders = []
             i = 1
@@ -45,10 +45,10 @@ class DbApi:
             stmt = f"INSERT INTO {table_name} VALUES({stmt_value_part})"
             return stmt
 
-        logger.debug(f"Insert into {table}...")
+        logger.debug(f"Insert into {table_name}...")
         logger.debug(f"\n{df}")
         args = df.values.tolist()
-        stmt = make_stmt(table, args[0])
+        stmt = make_stmt(args[0])
 
         # make a query argument part
         # we need to remove 'DEFAULT' from args

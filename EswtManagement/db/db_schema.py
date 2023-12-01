@@ -45,9 +45,9 @@ CREATE_PROVIDER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS providers(
         provider_id SERIAL PRIMARY KEY,
-        user_name TEXT NOT NULL,
+        user_id INT NOT NULL,
         provider_name TEXT NOT NULL,
-        FOREIGN KEY (user_name) REFERENCES users(user_name)
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
     );"""
 
 CREATE_BODY_PART_TABLE = \
@@ -63,17 +63,17 @@ CREATE_SESSION_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS sessions(
         session_id SERIAL PRIMARY KEY,
-        user_name TEXT NOT NULL,
-        modality_name TEXT NOT NULL,
-        patient_name TEXT NOT NULL,
-        provider_name TEXT NOT NULL,
-        part_name TEXT NOT NULL,
+        user_id INT NOT NULL,
+        modality_id INT NOT NULL,
+        patient_id INT NOT NULL,
+        provider_id INT NOT NULL,
+        part_id INT NOT NULL,
         description TEXT,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         session_price INT NOT NULL,
-        FOREIGN KEY (user_name) REFERENCES users(user_name),
-        FOREIGN KEY (modality_name) REFERENCES modalities(modality_name),
-        FOREIGN KEY (patient_name) REFERENCES patients(patient_name),
-        FOREIGN KEY (provider_name) REFERENCES providers(provider_name),
-        FOREIGN KEY (part_name) REFERENCES body_parts(part_name)
+        FOREIGN KEY (user_id) REFERENCES users(user_id),
+        FOREIGN KEY (modality_id) REFERENCES modalities(modality_id),
+        FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+        FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
+        FOREIGN KEY (part_id) REFERENCES body_parts(part_id)
     );"""

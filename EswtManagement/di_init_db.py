@@ -3,6 +3,7 @@ import pandas as pd
 import bcrypt
 from db.db_apis import DbApi
 from db.db_schema import *
+from common.auth_util import encrypt_password
 
 
 async def insert_initial_data(db_api):
@@ -34,28 +35,25 @@ async def insert_initial_data(db_api):
         'patient_birthdate': [d1, d2],
     })
 
+    encrypted_pw = encrypt_password('a')
+    initial_data['users'] = pd.DataFrame({
+        'user_id': [1, 2],
+        'user_name': ['admin', 'test'],
+        'user_password': [encrypted_pw, encrypted_pw],
+        'user_realname': ['jj', 'tt'],
+        'user_job': ['진료', '물리치료']
+    })
+
     initial_data['providers'] = pd.DataFrame({
         'provider_id': [1, 2],
-        'provider_name': ['Jessie', 'Mike'],
+        'user_id': [1, 2],
+        'provider_name': ['Jessie', 'Mike']
     })
 
     initial_data['body_parts'] = pd.DataFrame({
         'part_id': [1, 2, 3, 4, 5, 6, 7, 8],
         'part_name': ['Shoulder', 'Elbow', 'Plantar', 'Ankle', 'Wrist',
                       'Cervical', 'Lumbar', 'Thoracic']
-    })
-
-    def encrypt_password(password):
-        # Generate a salt and hash the password
-        salt = bcrypt.gensalt()
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
-        return hashed_password
-
-    encrypted_pw = encrypt_password('a')
-    initial_data['users'] = pd.DataFrame({
-        'id': [1, 2],
-        'name': ['admin', 'test'],
-        'pw': [encrypted_pw, encrypted_pw]
     })
 
     initial_data['sessions'] = pd.DataFrame({
@@ -82,8 +80,8 @@ async def main():
     statements = [CREATE_CATEGORY_TABLE,
                   CREATE_MODALITY_TABLE,
                   CREATE_PATIENT_TABLE,
-                  CREATE_PROVIDER_TABLE,
                   CREATE_USER_TABLE,
+                  CREATE_PROVIDER_TABLE,
                   CREATE_BODY_PART_TABLE,
                   CREATE_SESSION_TABLE]
     await db_api.initialize_db(statements)
