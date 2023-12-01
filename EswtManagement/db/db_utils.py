@@ -262,16 +262,18 @@ class QtDbUtil:
 
         return output_db_record
 
-    def insert_into_db(self, table_name: str, input_db_record: Dict):
+    def insert_into_db(self,
+                       table_name: str,
+                       record: Dict):
         """
         Insert input_db_record into DB
         """
-        logger.debug(f"Inserting data into {table_name}: {input_db_record}")
+        logger.debug(f"Inserting data into {table_name}: {record}")
 
-        def make_stmt(field_names: List, arg_values: List):
+        def make_stmt(col_names: List, arg_values: List):
             # make a statement like
             # "INSERT INTO tb (f1, f2, f3) VALUES($1, $2, $3)"
-            field_part = ','.join(field_names)
+            col_part = ','.join(col_names)
             place_holders = []
             i = 1
             for val in arg_values:
@@ -281,11 +283,12 @@ class QtDbUtil:
                     place_holders.append(f'${i}')
                     i += 1
             value_part = ','.join(place_holders)
-            stmt = (f"INSERT INTO {table_name} ({field_part}) VALUES({value_part})")
+            stmt = (f"INSERT INTO {table_name} ({col_part})"
+                    f" VALUES({value_part})")
             return stmt
 
-        field_names = list(input_db_record.keys())
-        args = list(input_db_record.values())
+        field_names = list(record.keys())
+        args = list(record.values())
         stmt = make_stmt(field_names, args)
         logger.debug(f"{stmt} :: {args}")
 
@@ -304,11 +307,14 @@ class QtDbUtil:
             logger.debug("Data insertion into DB failed!")
             logger.debug(f"{query.lastError()}")
 
-    def update_db(self, table_name: str, input_db_record: Dict, where_clause: str):
+    def update_db(self,
+                  table_name: str,
+                  record: Dict,
+                  where_clause: str):
         """
         Update DB with input_db_record
         """
-        logger.debug(f"Updating data in {table_name}: {input_db_record}")
+        logger.debug(f"Updating data in {table_name}: {record}")
 
         def make_stmt(record: Dict):
             # make a statement like "UPDATE tb name1 = $1, name2 = $2 WHERE ..."
@@ -321,8 +327,8 @@ class QtDbUtil:
             stmt = f"UPDATE {table_name} SET {stmt_value_part} WHERE {where_clause}"
             return stmt
 
-        args = list(input_db_record.values())
-        stmt = make_stmt(input_db_record)
+        args = list(record.values())
+        stmt = make_stmt(record)
         logger.debug(f"{stmt} :: {args}")
 
         query = QSqlQuery()

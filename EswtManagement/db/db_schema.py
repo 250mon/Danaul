@@ -41,15 +41,6 @@ CREATE_USER_TABLE = \
         UNIQUE(user_name)
     );"""
 
-CREATE_PROVIDER_TABLE = \
-    """
-    CREATE TABLE IF NOT EXISTS providers(
-        provider_id SERIAL PRIMARY KEY,
-        user_id INT NOT NULL,
-        provider_name TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(user_id)
-    );"""
-
 CREATE_BODY_PART_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS body_parts(
@@ -74,6 +65,6 @@ CREATE_SESSION_TABLE = \
         FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (modality_id) REFERENCES modalities(modality_id),
         FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
-        FOREIGN KEY (provider_id) REFERENCES providers(provider_id),
+        FOREIGN KEY (provider_id) REFERENCES users(user_id),
         FOREIGN KEY (part_id) REFERENCES body_parts(part_id)
     );"""

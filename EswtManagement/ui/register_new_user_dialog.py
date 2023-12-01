@@ -100,6 +100,9 @@ class RegNewUserDialog(QDialog):
         hashed_pw_qbyte = QByteArray(hashed_pw)
 
         real_name = self.real_name_le.text()
+        if len(real_name) < 1:
+            return
+
         job = self.job_cb.currentText()
 
         input_db_record = {
@@ -110,18 +113,6 @@ class RegNewUserDialog(QDialog):
         }
         # self.insert_user_info(input_db_record)
         self.db_util.insert_into_db('users', input_db_record)
-
-        # if it is a physical therapist, insert it into providers table
-        if input_db_record['user_job'] == '물리치료':
-            rec = self.db_util.query_info(f"SELECT user_id FROM users"
-                                          f" WHERE user_name = '{user_name}'")
-            user_id = rec['user_id']
-            input_db_record = {
-                'user_id': user_id,
-                'provider_name': real_name,
-            }
-            self.db_util.insert_into_db('providers', input_db_record)
-
         self.user_input_dialog.close()
 
     def check_duplicate_user_name(self):

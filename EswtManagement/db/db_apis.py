@@ -1,11 +1,38 @@
 import pandas as pd
 import re
-from typing import List
+from typing import List, Dict
 from db.db_utils import DbUtil
 from common.d_logger import Logs
 
 
 logger = Logs().get_logger("db")
+
+
+def make_insert_query(table_name: str,
+                      record: Dict):
+    # make a statement like
+    # "INSERT INTO tb (col1, col2) VALUES($1, $2)"
+    filtered_rec = filter(lambda x: x.key() if x.value() != 'DEFAULT',
+                          record)
+    trans_rec = enumerate(filtered_rec)
+    for r in trans_rec:
+        print(r)
+
+    # col_part = []
+    # val_place_holder = []
+    # i = 1
+    # for col, val in zip(col_names, row_values):
+    #     if val == 'DEFAULT':
+    #         pass
+    #     else:
+    #         col_part.append(col)
+    #         val_place_holder.append(f'${i}')
+    #         i += 1
+    # val_part = ','.join(val_place_holder)
+    # col_part = ','.join(col_part)
+    # stmt = (f"INSERT INTO {table_name} ({col_part})"
+    #         f" VALUES({val_part})")
+    # return stmt
 
 
 class DbApi:
@@ -31,24 +58,11 @@ class DbApi:
 
     async def insert_df(self, table_name: str, df: pd.DataFrame):
         # make a query statement part
-        def make_stmt(row_values: List):
-            # make a statement like "INSERT INTO tb VALUES($1, $2, $3)"
-            place_holders = []
-            i = 1
-            for val in row_values:
-                if val == 'DEFAULT':
-                    place_holders.append('DEFAULT')
-                else:
-                    place_holders.append(f'${i}')
-                    i += 1
-            stmt_value_part = ','.join(place_holders)
-            stmt = f"INSERT INTO {table_name} VALUES({stmt_value_part})"
-            return stmt
 
         logger.debug(f"Insert into {table_name}...")
         logger.debug(f"\n{df}")
         args = df.values.tolist()
-        stmt = make_stmt(args[0])
+        stmt = make_insert_query(table_name, df.columns, args[0])
 
         # make a query argument part
         # we need to remove 'DEFAULT' from args
@@ -75,3 +89,7 @@ class DbApi:
         logger.debug(f"{stmt}")
         logger.debug(args)
         return await self.db_util.executemany(stmt, args)
+
+
+if __name__ == '__main__':
+    make_insert_query('d', {"a": 1, "b": 2})
