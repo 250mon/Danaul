@@ -12,10 +12,11 @@ def make_insert_query(table_name: str,
                       record: Dict):
     # make a statement like
     # "INSERT INTO tb (col1, col2) VALUES($1, $2)"
-    filtered_rec = filter(lambda x: x.key() if x.value() != 'DEFAULT',
+    filtered_rec = filter(lambda x:  x.value() != 'DEFAULT',
                           record)
-    trans_rec = enumerate(filtered_rec)
-    for r in trans_rec:
+    mapped_rec = map(lambda x: x.key(), filtered_rec)
+    enum_rec = enumerate(mapped_rec)
+    for r in enum_rec:
         print(r)
 
     # col_part = []
