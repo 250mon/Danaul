@@ -9,8 +9,8 @@ from PySide6.QtGui import QFont
 from common.auth_util import *
 from db.db_utils import QtDbUtil
 from common.d_logger import Logs
-from change_pw_diaglog import ChgPwDialog
-from register_new_user_dialog import RegNewUserDialog
+from ui.change_pw_diaglog import ChgPwDialog
+from ui.register_new_user_dialog import RegNewUserDialog
 
 
 logger = Logs().get_logger("main")

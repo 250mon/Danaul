@@ -38,6 +38,7 @@ class SinglePatientWindow(QWidget):
         self.emrIdLabel = QLabel("EMR ID:")
         if self.new_patient_mode:
             self.emrIdLineEdit = QLineEdit()
+            self.emrIdLineEdit.setInputMask("9")
         else:
             self.emrIdBox = QLabel()
 
@@ -47,9 +48,6 @@ class SinglePatientWindow(QWidget):
         self.genderLabel = QLabel("성   별:")
         self.genderComboBox = QComboBox()
         self.genderComboBox.addItems(["M", "F"])
-
-        self.birthDateLabel = QLabel("생년월일:")
-        self.birthDateEdit = QDateEdit()
 
         self.nextButton = QPushButton("&Next")
         self.previousButton = QPushButton("&Previous")
@@ -63,7 +61,6 @@ class SinglePatientWindow(QWidget):
             self.nameLabel.setBuddy(self.emrIdBox)
         self.emrIdLabel.setBuddy(self.emrIdLineEdit)
         self.genderLabel.setBuddy(self.genderComboBox)
-        self.birthDateLabel.setBuddy(self.birthDateEdit)
         self.addMapper()
 
         # wire the signals into the parent widget
@@ -82,7 +79,6 @@ class SinglePatientWindow(QWidget):
         if self.new_patient_mode:
             self.mapper.addMapping(self.nameLineEdit, 2)
         self.mapper.addMapping(self.genderComboBox, 3)
-        self.mapper.addMapping(self.birthDateEdit, 4)
 
         self.previousButton.clicked.connect(self.mapper.toPrevious)
         self.nextButton.clicked.connect(self.mapper.toNext)
@@ -142,13 +138,11 @@ class SinglePatientWindow(QWidget):
             gridbox.addWidget(self.emrIdBox, 0, 1, 1, 1)
         gridbox.addWidget(self.nameLabel, 1, 0, 1, 1)
         gridbox.addWidget(self.nameLineEdit, 1, 1, 1, 1)
-        gridbox.addWidget(self.genderLabel, 4, 0, 1, 1)
-        gridbox.addWidget(self.genderComboBox, 4, 1, 1, 1)
-        gridbox.addWidget(self.birthDateLabel, 3, 0, 1, 1)
-        gridbox.addWidget(self.birthDateEdit, 3, 1, 1, 1)
+        gridbox.addWidget(self.genderLabel, 2, 0, 1, 1)
+        gridbox.addWidget(self.genderComboBox, 2, 1, 1, 1)
 
-        gridbox.addLayout(vbox1, 3, 2, 1, 1)
-        gridbox.addLayout(hbox1, 5, 1, 1, 1)
+        gridbox.addLayout(vbox1, 1, 2, 1, 1)
+        gridbox.addLayout(hbox1, 3, 1, 1, 1)
 
         self.setLayout(gridbox)
         self.setWindowTitle("환자 입력")

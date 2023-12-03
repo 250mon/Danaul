@@ -68,9 +68,6 @@ class Lab(metaclass=Singleton):
         col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
         self.table_column_names = {}
         self.table_column_names['patients'] = col_name.findall(CREATE_PATIENT_TABLE)
-        self.table_column_names['providers'] = col_name.findall(CREATE_PROVIDER_TABLE)
-        # self.table_column_names['skus'] = col_name.findall(CREATE_SKU_TABLE)
-        # self.table_column_names['sessions'] = col_name.findall(CREATE_TRANSACTION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")

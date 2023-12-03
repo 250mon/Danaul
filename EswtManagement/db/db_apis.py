@@ -1,39 +1,11 @@
 import pandas as pd
 import re
-from typing import List, Dict
-from db.db_utils import DbUtil
+from typing import List
+from db.db_utils import DbUtil, make_insert_query
 from common.d_logger import Logs
 
 
 logger = Logs().get_logger("db")
-
-
-def make_insert_query(table_name: str,
-                      record: Dict):
-    # make a statement like
-    # "INSERT INTO tb (col1, col2) VALUES($1, $2)"
-    filtered_rec = filter(lambda x:  x.value() != 'DEFAULT',
-                          record)
-    mapped_rec = map(lambda x: x.key(), filtered_rec)
-    enum_rec = enumerate(mapped_rec)
-    for r in enum_rec:
-        print(r)
-
-    # col_part = []
-    # val_place_holder = []
-    # i = 1
-    # for col, val in zip(col_names, row_values):
-    #     if val == 'DEFAULT':
-    #         pass
-    #     else:
-    #         col_part.append(col)
-    #         val_place_holder.append(f'${i}')
-    #         i += 1
-    # val_part = ','.join(val_place_holder)
-    # col_part = ','.join(col_part)
-    # stmt = (f"INSERT INTO {table_name} ({col_part})"
-    #         f" VALUES({val_part})")
-    # return stmt
 
 
 class DbApi:
@@ -62,15 +34,15 @@ class DbApi:
 
         logger.debug(f"Insert into {table_name}...")
         logger.debug(f"\n{df}")
-        args = df.values.tolist()
-        stmt = make_insert_query(table_name, df.columns, args[0])
 
         # make a query argument part
         # we need to remove 'DEFAULT' from args
         non_default_df = df.loc[:, df.iloc[0, :] != 'DEFAULT']
         args = non_default_df.values.tolist()
+        stmt = make_insert_query(table_name, non_default_df.to_dict('records')[0])
 
-        logger.debug(f"{stmt} {args}")
+        logger.debug(stmt)
+        logger.debug(args)
         # return await self.db_util.pool_execute(stmt, args)
         return await self.db_util.executemany(stmt, args)
 
@@ -90,7 +62,3 @@ class DbApi:
         logger.debug(f"{stmt}")
         logger.debug(args)
         return await self.db_util.executemany(stmt, args)
-
-
-if __name__ == '__main__':
-    make_insert_query('d', {"a": 1, "b": 2})

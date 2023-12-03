@@ -20,7 +20,6 @@ class RegNewUserDialog(QDialog):
         # create a new user account
         self.user_input_dialog.setWindowTitle("Create New User")
 
-        # user name part
         self.user_name_le = QLineEdit()
         user_name_check_btn = QPushButton("중복확인")
         user_name_check_btn.clicked.connect(self.check_duplicate_user_name)
@@ -28,7 +27,6 @@ class RegNewUserDialog(QDialog):
         user_name_hbox.addWidget(self.user_name_le)
         user_name_hbox.addWidget(user_name_check_btn)
 
-        # password part
         self.new_password_le = QLineEdit()
         self.new_password_le.setEchoMode(QLineEdit.Password)
         self.confirm_password_le = QLineEdit()

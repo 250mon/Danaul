@@ -26,7 +26,6 @@ CREATE_PATIENT_TABLE = \
         patient_emr_id INT NOT NULL,
         patient_name TEXT NOT NULL,
         patient_gender TEXT NOT NULL,
-        patient_birthdate DATE,
         UNIQUE(patient_emr_id)
     );"""
 

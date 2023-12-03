@@ -13,6 +13,22 @@ from constants import ConfigReader
 logger = Logs().get_logger("db")
 
 
+def make_insert_query(table_name: str,
+                      record: Dict):
+    # make a statement like
+    # "INSERT INTO tb (col1, col2) VALUES($1, $2)"
+    def prefix_dollar(i):
+        return '$' + str(i)
+
+    # filtering [k1, k2, ... ]
+    col_part = [k for k, v in record.items() if v != 'DEFAULT']
+    # making value part ['$1', '$2' ...]
+    val_part = map(prefix_dollar, range(1, len(col_part) + 1))
+    stmt = f"INSERT INTO {table_name} ({','.join(col_part)})" \
+           f" VALUES({','.join(val_part)})"
+    return stmt
+
+
 class ConnectPg:
     def __init__(self):
         self.config = ConfigReader()
@@ -269,23 +285,6 @@ class QtDbUtil:
         Insert input_db_record into DB
         """
         logger.debug(f"Inserting data into {table_name}: {record}")
-
-        def make_stmt(col_names: List, arg_values: List):
-            # make a statement like
-            # "INSERT INTO tb (f1, f2, f3) VALUES($1, $2, $3)"
-            col_part = ','.join(col_names)
-            place_holders = []
-            i = 1
-            for val in arg_values:
-                if val == 'DEFAULT':
-                    place_holders.append('DEFAULT')
-                else:
-                    place_holders.append(f'${i}')
-                    i += 1
-            value_part = ','.join(place_holders)
-            stmt = (f"INSERT INTO {table_name} ({col_part})"
-                    f" VALUES({value_part})")
-            return stmt
 
         field_names = list(record.keys())
         args = list(record.values())
