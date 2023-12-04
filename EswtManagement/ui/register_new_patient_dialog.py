@@ -1,10 +1,9 @@
 from PySide6.QtWidgets import (
-    QDialog, QFormLayout, QPushButton, QLineEdit, QDateEdit,
-    QVBoxLayout, QHBoxLayout, QMessageBox, QComboBox
+    QDialog, QFormLayout, QPushButton, QLineEdit,
+    QVBoxLayout, QHBoxLayout, QComboBox
 )
-from PySide6.QtCore import Qt, QByteArray
+from PySide6.QtCore import Qt
 from db.db_utils import QtDbUtil
-from common.auth_util import *
 
 
 class RegNewPatientDialog(QDialog):
@@ -42,7 +41,6 @@ class RegNewPatientDialog(QDialog):
         dialog_form.addRow("환자번호", patient_emr_id_hbox)
         dialog_form.addRow("이   름", self.name_le)
         dialog_form.addRow("성   별", self.gender_cb)
-        dialog_form.addRow("직 무", self.job_cb)
 
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(self.accept_patient_info)
@@ -56,51 +54,26 @@ class RegNewPatientDialog(QDialog):
         self.patient_input_dialog.setLayout(dialog_v_box)
         self.patient_input_dialog.show()
 
-    def check_password_btn_clicked(self):
-        pw_text = self.new_password_le.text()
-        confirm_text = self.confirm_password_le.text()
-        try:
-            check_password_integrity(pw_text, confirm_text)
-        except Exception as e:
-            QMessageBox.warning(self,
-                                "Error Message",
-                                str(e),
-                                QMessageBox.Close)
-        else:
-            self.new_password_le.setEnabled(False)
-            self.confirm_password_le.setEnabled(False)
-            self.password_check_btn.setEnabled(False)
-            self.real_name_le.setEnabled(True)
-            self.job_cb.setEnabled(True)
+    def check_duplicate_emr_id(self):
+        # TODO: check if emr_id is already in use
+        self.emr_id_le.setEnabled(False)
+        self.name_le.setEnabled(True)
+        self.gender_cb.setEnabled(True)
 
     def accept_patient_info(self):
         """Verify that the patient's passwords match. If so, save the patient's
         info to DB and display the login window."""
-        patient_name = self.name_le.text()
-
-        pw_text = self.new_password_le.text()
-        hashed_pw = encrypt_password(pw_text)
-        # postgresql only accepts hexadecimal format
-        hashed_pw_qbyte = QByteArray(hashed_pw)
-
-        real_name = self.real_name_le.text()
-        if len(real_name) < 1:
-            return
-
-        job = self.job_cb.currentText()
+        emr_id = self.emr_id_le.text()
+        name = self.name_le.text()
+        gender = self.gender_cb.currentText()
 
         input_db_record = {
-            'patient_name': patient_name,
-            'patient_password': hashed_pw_qbyte,
-            'patient_realname': real_name,
-            'patient_job': job
+            'patient_emr_id': emr_id,
+            'patient_name': name,
+            'patient_gender': gender,
         }
         # self.insert_patient_info(input_db_record)
         self.db_util.insert_into_db('patients', input_db_record)
         self.patient_input_dialog.close()
 
-    def check_duplicate_emr_id(self):
-        self.name_le.setEnabled(False)
-        self.new_password_le.setEnabled(True)
-        self.confirm_password_le.setEnabled(True)
-        self.password_check_btn.setEnabled(True)
+        # TODO: update the patient list of main widget
