@@ -1,59 +1,36 @@
-from typing import List
+from typing import List, Dict
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
-    QLabel, QGroupBox, QMessageBox
+    QLabel, QGroupBox, QMessageBox, QWidget, QTreeView
 )
-from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
 from common.d_logger import Logs
-from ui.di_table_widget import InventoryTableWidget
-from model.provider_model import ProviderModel
-from ui.single_provider_window import SingleProviderWindow
+from model.patient_model import PatientModel
+from ui.di_table_widget import CommonView
+from ui.register_new_patient_dialog import NewPatientDialog
 
 
 logger = Logs().get_logger("main")
 
 
-class ProviderWidget(InventoryTableWidget):
-    def __init__(self, parent: QMainWindow = None):
+class PatientWidget(CommonView):
+    def __init__(self, model: PatientModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-        self.delegate_mode = True
-
-    def set_source_model(self, model: ProviderModel):
         self.source_model = model
-        self._apply_model()
+        self.initUi()
+        self.new_patient_dlg = NewPatientDialog(self)
 
-    def _setup_proxy_model(self):
-        """
-        Needs to be implemented
-        :return:
-        """
-        # -1 means searching every column
-        self.proxy_model.setFilterKeyColumn(-1)
+    def initUi(self):
+        self.proxy_model = QSortFilterProxyModel()
+        self._setup_proxy_model()
 
-        # Sorting
-        # For sorting, model data needs to be read in certain deterministic order
-        # we use SortRole to read in model.data() for sorting purpose
-        self.proxy_model.setSortRole(self.source_model.SortRole)
-        initial_sort_col_num = self.source_model.get_col_number('provider_name')
-        self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
-
-    def _setup_initial_table_view(self):
-        """
-        Carried out before the model is set to the table view
-        :return:
-        """
-        super()._setup_initial_table_view()
-        self.table_view.doubleClicked.connect(self.row_double_clicked)
-
-    def _setup_ui(self):
-        """
-        Needs to be implemented
-        :return:
-        """
-        self.set_col_hidden('provider_id')
-        self.set_col_width("provider_name", 50)
+        self.patient_view = QTreeView()
+        self.patient_view.setRootIsDecorated(False)
+        self.patient_view.setAlternatingRowColors(True)
+        self.patient_view.setModel(self.proxy_model)
+        self.patient_view.setSortingEnabled(True)
 
         title_label = QLabel('환자')
         font = QFont("Arial", 12, QFont.Bold)
@@ -69,152 +46,102 @@ class ProviderWidget(InventoryTableWidget):
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_btn = QPushButton('신환')
-        add_btn.clicked.connect(self.add_provider)
+        add_btn.clicked.connect(self.add_patient)
         del_btn = QPushButton('삭제')
-        del_btn.clicked.connect(self.del_provider)
-        save_btn = QPushButton('저장')
-        save_btn.clicked.connect(self.save_model_to_db)
-
-        self.edit_mode = QGroupBox("편집 모드")
-        self.edit_mode.setCheckable(True)
-        self.edit_mode.setChecked(False)
+        del_btn.clicked.connect(self.del_patient)
 
         edit_hbox = QHBoxLayout()
         edit_hbox.addWidget(add_btn)
         edit_hbox.addWidget(del_btn)
         edit_hbox.addWidget(save_btn)
-        self.edit_mode.setLayout(edit_hbox)
-        self.edit_mode.clicked.connect(self.edit_mode_clicked)
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(search_bar)
         hbox2.addStretch(1)
-        hbox2.addWidget(self.edit_mode)
+        hbox2.addWidget(edit_hbox)
 
         vbox = QVBoxLayout(self)
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
-        vbox.addWidget(self.table_view)
+        vbox.addWidget(self.patient_view)
         self.setLayout(vbox)
 
-    @Slot(str)
-    def enable_edit_mode(self, sender: str):
-        if sender != "treatment_widget":
-            self.edit_mode.setEnabled(True)
+    def _setup_proxy_model(self):
+        """
+        Needs to be implemented
+        :return:
+        """
+        # -1 means searching every column
+        self.proxy_model.setFilterKeyColumn(-1)
 
-    @Slot(str)
-    def disable_edit_mode(self, sender: str):
-        if sender != "treatment_widget":
-            self.edit_mode.setEnabled(False)
-
-    @ Slot(bool)
-    def edit_mode_clicked(self, checked):
-        if checked:
-            logger.debug("Now enter into edit mode")
-            self.edit_mode_starts()
-        elif self.source_model.is_model_editing():
-            logger.debug("The model is in the middle of editing."
-                         ' Should save before exit the mode')
-            QMessageBox.information(self,
-                                    '편집모드 중 종료',
-                                    '편집모드를 종료하려면 수정부분에 대해 먼저 저장하시거나 삭제해주세요',
-                                    QMessageBox.Close)
-            self.edit_mode.setChecked(True)
-        else:
-            logger.debug("Now edit mode ends")
-            self.edit_mode_ends()
-
-    def edit_mode_starts(self):
-        self.source_model.set_editable(True)
-        self.parent.edit_lock_signal.emit("treatment_widget")
-
-    def edit_mode_ends(self):
-        self.source_model.set_editable(False)
-        self.parent.edit_unlock_signal.emit("treatment_widget")
+        # Sorting
+        # For sorting, model data needs to be read in certain deterministic order
+        # we use SortRole to read in model.data() for sorting purpose
+        self.proxy_model.setSortRole(self.source_model.SortRole)
+        initial_sort_col_num = self.source_model.get_col_number('patient_emr_id')
+        self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     @Slot()
-    def add_provider(self):
-        logger.debug("Adding a provider ...")
-        self.add_new_row()
-        if not self.delegate_mode:
-            # Input window mode using DataMapperWidget
-            new_pt_index = self.source_model.index(self.source_model.rowCount() - 1, 0)
-            self.provider_window = SingleProviderWindow(self.proxy_model,
-                                                      new_pt_index,
-                                                      self)
+    def add_patient(self):
+        logger.debug("Adding a patient ...")
+        self.new_patient_dlg.show()
 
     @Slot()
-    def del_provider(self):
-        logger.debug("Deleting provider ...")
+    def del_patient(self):
+        logger.debug("Deleting patient ...")
         if selected_indexes := self._get_selected_indexes():
-            logger.debug(f"del_provider {selected_indexes}")
+            logger.debug(f"del_patient {selected_indexes}")
             self.delete_rows(selected_indexes)
 
     @Slot()
-    def chg_provider(self):
-            logger.debug("Changing provider ...")
+    def chg_patient(self):
+            logger.debug("Changing patient ...")
             if selected_indexes := self._get_selected_indexes():
-                logger.debug(f"chg_provider {selected_indexes}")
-                # if self.delegate_mode:
-                #     self.change_rows_by_delegate(selected_indexes)
-                if not self.delegate_mode:
-                    self.provider_window = SingleProviderWindow(self.proxy_model,
-                                                              selected_indexes,
-                                                              self)
+                logger.debug(f"chg_patient {selected_indexes}")
 
-    def save_model_to_db(self):
+    @Slot(object)
+    def save_model_to_db(self, input_db_record: Dict):
         """
         Save the model to DB
         It calls the inventory view's async_start() which calls back the model's
         save_to_db()
         :return:
         """
+        self.source_model.make_a_new_row_df(**input_db_record)
         if hasattr(self.parent, "async_start"):
-            self.parent.async_start("provider_save")
-        self.edit_mode.setChecked(False)
-        self.edit_mode_ends()
+            self.parent.async_start("patient_save")
 
-    @Slot(object)
-    def added_new_provider_by_single_item_window(self, index: QModelIndex):
+    def _get_selected_indexes(self):
         """
-        This is called when SingleItemWindow emits a signal
-        It validates the newly added treatments. If it fails, remove it.
-        index is indicating the treatment_id column of a new item
+        Common
         :return:
         """
-        if self.source_model.is_flag_column(index):
-            logger.debug(f"provider {index.row()} added")
+        # the indexes of proxy model
+        selected_indexes = self.patient_view.selectedIndexes()
+        is_valid_indexes = []
+        rows = []
+        for idx in selected_indexes:
+            is_valid_indexes.append(idx.isValid())
+            rows.append(idx.row())
 
-        src_idx = self.proxy_model.mapToSource(index)
-        if hasattr(self.source_model, "validate_new_row"):
-            if not self.source_model.validate_new_row(src_idx):
-                self.source_model.drop_rows([src_idx])
-
-    @Slot(object)
-    def changed_providers_by_single_item_window(self, indexes: List[QModelIndex]):
-        """
-        This is called when SingleItemWindow emits a signal
-        :param indexes:
-        :return:
-        """
-        for idx in indexes:
-            if self.source_model.is_flag_column(idx):
-                self.source_model.set_chg_flag(idx)
-                logger.debug(f"providers {idx.row()} changed")
-
+        if len(selected_indexes) > 0 and False not in is_valid_indexes:
+            logger.debug(f"Indexes selected: {rows}")
+            return selected_indexes
+        else:
+            logger.debug(f"Indexes not selected or invalid: {selected_indexes}")
+            return None
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        An treatments.being double clicked in the treatments.view automatically makes
-        the sku view to do filtering to show the skus of the selected treatments.
+        A patient being double clicked in the patient view automatically makes
+        the session view to update with the data of the patient.
         :param index:
         :return:
         """
-        if not self.edit_mode.isChecked() and index.isValid() and hasattr(
-                self.parent, 'provider_selected'):
-            provider_id = index.siblingAtColumn(self.source_model.get_col_number('provider_id')).data()
-            self.parent.provider_selected(provider_id)
+        if index.isValid() and hasattr(self.parent, 'patient_selected'):
+            patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
+            self.parent.patient_selected(patient_id)
 
     def update_all_views(self):
         """

@@ -11,7 +11,7 @@ from common.d_logger import Logs
 logger = Logs().get_logger("main")
 
 
-class InventoryTableWidget(QWidget):
+class CommonView(QWidget):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent

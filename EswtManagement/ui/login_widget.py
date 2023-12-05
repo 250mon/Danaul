@@ -10,7 +10,7 @@ from common.auth_util import *
 from db.db_utils import QtDbUtil
 from common.d_logger import Logs
 from ui.change_pw_diaglog import ChgPwDialog
-from ui.register_new_user_dialog import RegNewUserDialog
+from ui.register_new_user_dialog import NewUserDialog
 
 
 logger = Logs().get_logger("main")
@@ -124,7 +124,7 @@ class LoginWidget(QWidget):
         self.chang_pw_dialog.change_passwd(user_name)
 
     def register_new_user(self):
-        self.reg_new_user_dialog = RegNewUserDialog(self.db_util)
+        self.reg_new_user_dialog = NewUserDialog(self.db_util)
         self.reg_new_user_dialog.register_new_user()
 
 

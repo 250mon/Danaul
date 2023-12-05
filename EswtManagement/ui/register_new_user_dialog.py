@@ -7,7 +7,7 @@ from db.db_utils import QtDbUtil
 from common.auth_util import *
 
 
-class RegNewUserDialog(QDialog):
+class NewUserDialog(QDialog):
 
     def __init__(self, db_util: QtDbUtil, parent=None):
         self.db_util = db_util

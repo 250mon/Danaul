@@ -2,22 +2,21 @@ from PySide6.QtWidgets import (
     QDialog, QFormLayout, QPushButton, QLineEdit,
     QVBoxLayout, QHBoxLayout, QComboBox
 )
-from PySide6.QtCore import Qt
-from db.db_utils import QtDbUtil
+from PySide6.QtCore import Qt, Signal
 
 
-class RegNewPatientDialog(QDialog):
+class NewPatientDialog(QDialog):
+    new_patient_signal = Signal()
 
-    def __init__(self, db_util: QtDbUtil, parent=None):
-        self.db_util = db_util
+    def __init__(self, parent=None):
         super().__init__(parent)
+        self.new_patient_signal.connect(parent.save_model_to_db)
+        self.initUi()
 
-    def register_new_patient(self):
+
+    def initUi(self):
         """ Set up the dialog box for the patient to create a new patient. """
-        self.hide()  # Hide the login window
-        self.patient_input_dialog = QDialog(self)
-        # create a new patient
-        self.patient_input_dialog.setWindowTitle("Create New Patient")
+        self.setWindowTitle("Create New Patient")
 
         self.emr_id_le = QLineEdit()
         self.emr_id_le.setInputMask("9")
@@ -51,8 +50,7 @@ class RegNewPatientDialog(QDialog):
         dialog_v_box.addLayout(dialog_form, 1)
         dialog_v_box.addWidget(ok_button)
 
-        self.patient_input_dialog.setLayout(dialog_v_box)
-        self.patient_input_dialog.show()
+        self.setLayout(dialog_v_box)
 
     def check_duplicate_emr_id(self):
         # TODO: check if emr_id is already in use
@@ -72,8 +70,8 @@ class RegNewPatientDialog(QDialog):
             'patient_name': name,
             'patient_gender': gender,
         }
-        # self.insert_patient_info(input_db_record)
-        self.db_util.insert_into_db('patients', input_db_record)
-        self.patient_input_dialog.close()
+        self.new_patient_signal.emit(input_db_record)
+        self.close()
+
 
         # TODO: update the patient list of main widget

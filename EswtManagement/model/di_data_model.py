@@ -295,7 +295,7 @@ class DataModel(PandasModel):
         self.set_new_row(self.rowCount() - 1)
 
     @abstractmethod
-    def make_a_new_row_df(self, next_new_id, **kwargs):
+    def make_a_new_row_df(self, **kwargs):
         """
         Needs to be implemented in subclasses
         :param next_new_id:

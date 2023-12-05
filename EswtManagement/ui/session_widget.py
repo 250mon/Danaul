@@ -7,7 +7,7 @@ from PySide6.QtGui import QFont
 from common.d_logger import Logs, logging
 from db.ds_lab import Lab
 from model.session_model import SessionModel
-from ui.di_table_widget import InventoryTableWidget
+from ui.di_table_widget import CommonView
 from ui.single_tr_window import SingleTrWindow
 from constants import UserPrivilege
 
@@ -15,7 +15,7 @@ from constants import UserPrivilege
 logger = Logs().get_logger("main")
 
 
-class SessionWidget(InventoryTableWidget):
+class SessionWidget(CommonView):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
