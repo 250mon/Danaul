@@ -6,23 +6,21 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, Slot, QFile
 from PySide6.QtGui import QAction, QIcon
-from ui.login_widget import LoginWidget
 from common.async_helper import AsyncHelper
-from db.ds_lab import Lab
 from common.d_logger import Logs
-from constants import UserPrivilege, ConfigReader
+from db.ds_lab import Lab
 from model.patient_model import PatientModel
+from ui.login_widget import LoginWidget
 from ui.patient_widget import PatientWidget
+from constants import ConfigReader, ADMIN_GROUP
 
 
 logger = Logs().get_logger("main")
 
 
-class InventoryWindow(QMainWindow):
+class TreatmentWindow(QMainWindow):
     start_signal = Signal(str)
     done_signal = Signal(str)
-    edit_lock_signal = Signal(str)
-    edit_unlock_signal = Signal(str)
     update_all_signal = Signal()
     import_trs_signal = Signal(pd.DataFrame)
 
@@ -31,14 +29,13 @@ class InventoryWindow(QMainWindow):
         is_test: str = ConfigReader().get_options("Testmode")
 
         self.login_widget = LoginWidget(self)
-        self.login_widget.start_main.connect(self.initUI)
+        self.login_widget.start_main.connect(self.start_app)
         self.update_all_signal.connect(self.update_all)
-        # self.import_trs_signal.connect(self.import_sessions)
 
         if is_test.lower() == "true":
-            self.initUI("test")
+            self.start_app("test")
         elif is_test.lower() == "admin":
-            self.initUI("admin")
+            self.start_app("admin")
         else:
             self.login()
 
@@ -48,16 +45,23 @@ class InventoryWindow(QMainWindow):
         self.login_widget.show()
 
     @Slot(str)
-    def initUI(self, user_name: str):
+    def start_app(self, user_name: str):
+        self.setup_models(user_name)
+        self.async_helper = AsyncHelper(self, self.do_db_work)
+        self.initUi(user_name)
+
+    def setup_models(self, user_name):
+        self.patient_model = PatientModel(user_name)
+
+    def initUi(self, user_name):
         self.setWindowTitle("다나을 물리치료")
         self.setup_menu()
-        self.async_helper = AsyncHelper(self, self.do_db_work)
-
-        self.setup_main_window(user_name)
-
-    def setup_main_window(self, user_name):
-        self.setup_models(user_name)
-        self.setup_widgets()
+        if user_name in ADMIN_GROUP:
+            self.admin_menu.menuAction().setVisible(True)
+        else:
+            self.admin_menu.menuAction().setVisible(False)
+        self.setup_child_widgets()
+        self.setup_central_widget()
         self.show()
 
     def setup_menu(self):
@@ -94,27 +98,13 @@ class InventoryWindow(QMainWindow):
         self.admin_menu.addAction(reset_pw_action)
         self.admin_menu.menuAction().setVisible(False)
 
-    def setup_models(self, user_name):
-        self.user_name = user_name
-        self.patient_model = PatientModel(self.user_name)
-
-        if self.patient_model.get_user_privilege() == UserPrivilege.Admin:
-            self.admin_menu.menuAction().setVisible(True)
-        else:
-            self.admin_menu.menuAction().setVisible(False)
-
-
-    def setup_widgets(self):
-        self.patient_widget = PatientWidget(self)
-        self.patient_widget.set_source_model(self.patient_model)
+    def setup_child_widgets(self):
+        self.patient_widget = PatientWidget(self.patient_model, self)
 
         self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
         self.patient_widget.setMinimumWidth(400)
         self.patient_widget.setMaximumWidth(500)
-
-        # self.setup_dock_widgets()
-        self.setup_central_widget()
 
     def setup_central_widget(self):
         central_widget = QWidget(self)
@@ -166,7 +156,7 @@ class InventoryWindow(QMainWindow):
         result_str = None
         if action == "patient_save":
             logger.debug("Saving patients...")
-            result_str = await self.patient_widget.save_to_db()
+            result_str = await self.patient_model.save_to_db()
             logger.debug("Updating patients ...")
             await self.patient_model.update()
             # await self.sku_model.update()
@@ -245,7 +235,7 @@ class InventoryWindow(QMainWindow):
     def change_user(self):
         self.close()
         self.login_widget.start_main.disconnect()
-        self.login_widget.start_main.connect(self.setup_main_window)
+        self.login_widget.start_main.connect(self.initUi)
         self.login_widget.show()
 
 
@@ -259,7 +249,7 @@ def main():
     style_file.open(QFile.ReadOnly)
     app.setStyleSheet(style_file.readAll().toStdString())
 
-    InventoryWindow()
+    TreatmentWindow()
     app.exec()
 
 main()

@@ -20,9 +20,8 @@ class Lab(metaclass=Singleton):
 
         self.table_df = {
             'category': None,
+            'modalities': None,
             'patients': None,
-            'treatments': None,
-            'providers': None,
             'users': None,
             'body_parts': None,
             'sessions': None
@@ -72,16 +71,16 @@ class Lab(metaclass=Singleton):
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
         where_clause = ""
-        if not self.show_inactive_items:
-            if table == "treatments":
-                where_clause = " WHERE active = True"
-            elif table == "skus":
-                where_clause = " WHERE (treatment_id IN (SELECT treatment_id FROM treatments WHERE active = True)) AND " \
-                               "(active = True)"
-            elif table == "sessions":
-                where_clause = " WHERE treatment_id IN (SELECT treatment_id FROM skus AS s WHERE " \
-                               "(s.treatment_id IN (SELECT treatment_id FROM treatments AS i WHERE i.active = True)) AND " \
-                               "(s.active = True))"
+        # if not self.show_inactive_items:
+        #     if table == "treatments":
+        #         where_clause = " WHERE active = True"
+        #     elif table == "skus":
+        #         where_clause = " WHERE (treatment_id IN (SELECT treatment_id FROM treatments WHERE active = True)) AND " \
+        #                        "(active = True)"
+        #     elif table == "sessions":
+        #         where_clause = " WHERE treatment_id IN (SELECT treatment_id FROM skus AS s WHERE " \
+        #                        "(s.treatment_id IN (SELECT treatment_id FROM treatments AS i WHERE i.active = True)) AND " \
+        #                        "(s.active = True))"
 
         if table == "sessions":
             treatment_id = kwargs.get('treatment_id', None)
@@ -135,12 +134,14 @@ class Lab(metaclass=Singleton):
             ref_s: pd.Series = ref_df.iloc[:, 0]
             return ref_s
 
-        self.category_name_s = make_series('category', True)
         self.category_id_s = make_series('category', False)
-        self.tr_type_s = make_series('providers', True)
-        self.provider_id_s = make_series('providers', False)
-        self.user_name_s = make_series('users', True)
+        self.category_name_s = make_series('category', True)
+        self.modality_id_s = make_series('modalities', False)
+        self.modality_name_s = make_series('modalities', True)
+        self.patient_id_s = make_series('patients', False)
+        self.patient_name_s = make_series('patients', True)
         self.user_id_s = make_series('users', False)
+        self.user_name_s = make_series('users', True)
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
         logger.debug(f"table {table}")

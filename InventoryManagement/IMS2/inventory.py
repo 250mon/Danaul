@@ -16,7 +16,7 @@ from ui.item_widget import ItemWidget
 from ui.sku_widget import SkuWidget
 from ui.tr_widget import TrWidget
 from common.d_logger import Logs
-from constants import UserPrivilege, ConfigReader
+from constants import ConfigReader, ADMIN_GROUP
 from model.emr_tr_reader import EmrTransactionReader
 from ui.emr_import_widget import ImportWidget
 
@@ -37,14 +37,14 @@ class InventoryWindow(QMainWindow):
         is_test: str = ConfigReader().get_options("Testmode")
 
         self.login_widget = LoginWidget(self)
-        self.login_widget.start_main.connect(self.initUI)
+        self.login_widget.start_main.connect(self.start_app)
         self.update_all_signal.connect(self.update_all)
         self.import_trs_signal.connect(self.import_transactions)
 
         if is_test.lower() == "true":
-            self.initUI("test")
+            self.start_app("test")
         elif is_test.lower() == "admin":
-            self.initUI("admin")
+            self.start_app("admin")
         else:
             self.login()
 
@@ -54,16 +54,29 @@ class InventoryWindow(QMainWindow):
         self.login_widget.show()
 
     @Slot(str)
-    def initUI(self, user_name: str):
-        self.setWindowTitle("다나을 재고관리")
-        self.setup_menu()
-        self.async_helper = AsyncHelper(self, self.do_db_work)
-
-        self.setup_main_window(user_name)
-
-    def setup_main_window(self, user_name):
+    def start_app(self, user_name: str):
         self.setup_models(user_name)
-        self.setup_widgets()
+        self.async_helper = AsyncHelper(self, self.do_db_work)
+        self.initUi(user_name)
+
+    def setup_models(self, user_name):
+        self.item_model = ItemModel(user_name)
+        self.sku_model = SkuModel(user_name, self.item_model)
+        self.tr_model = TrModel(user_name, self.sku_model)
+
+    def initUi(self, user_name):
+        self.setWindowTitle("다나을 재고관리")
+
+        self.setup_menu()
+        if user_name in ADMIN_GROUP:
+            self.admin_menu.menuAction().setVisible(True)
+        else:
+            self.admin_menu.menuAction().setVisible(False)
+
+        self.setup_child_widgets()
+
+        # self.setup_dock_widgets()
+        self.setup_central_widget()
         self.show()
 
     def setup_menu(self):
@@ -106,19 +119,8 @@ class InventoryWindow(QMainWindow):
         self.admin_menu.addAction(reset_pw_action)
         self.admin_menu.menuAction().setVisible(False)
 
-    def setup_models(self, user_name):
-        self.user_name = user_name
-        self.item_model = ItemModel(self.user_name)
-        self.sku_model = SkuModel(self.user_name, self.item_model)
-        self.tr_model = TrModel(self.user_name, self.sku_model)
 
-        if self.item_model.get_user_privilege() == UserPrivilege.Admin:
-            self.admin_menu.menuAction().setVisible(True)
-        else:
-            self.admin_menu.menuAction().setVisible(False)
-
-
-    def setup_widgets(self):
+    def setup_child_widgets(self):
         self.item_widget = ItemWidget(self)
         self.item_widget.set_source_model(self.item_model)
 
@@ -136,9 +138,6 @@ class InventoryWindow(QMainWindow):
         self.sku_widget.setMaximumWidth(1100)
         self.tr_widget.setMinimumWidth(1200)
         self.tr_widget.setMaximumWidth(1600)
-
-        # self.setup_dock_widgets()
-        self.setup_central_widget()
 
     def setup_central_widget(self):
         central_widget = QWidget(self)
@@ -300,7 +299,7 @@ class InventoryWindow(QMainWindow):
     def change_user(self):
         self.close()
         self.login_widget.start_main.disconnect()
-        self.login_widget.start_main.connect(self.setup_main_window)
+        self.login_widget.start_main.connect(self.initUi)
         self.login_widget.show()
 
 

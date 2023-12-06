@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, Signal
 
 
 class NewPatientDialog(QDialog):
-    new_patient_signal = Signal()
+    new_patient_signal = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -19,7 +19,7 @@ class NewPatientDialog(QDialog):
         self.setWindowTitle("Create New Patient")
 
         self.emr_id_le = QLineEdit()
-        self.emr_id_le.setInputMask("9")
+        self.emr_id_le.setInputMask("99999")
         emr_id_check_btn = QPushButton("중복확인")
         emr_id_check_btn.clicked.connect(self.check_duplicate_emr_id)
         patient_emr_id_hbox = QHBoxLayout()
@@ -61,7 +61,7 @@ class NewPatientDialog(QDialog):
     def accept_patient_info(self):
         """Verify that the patient's passwords match. If so, save the patient's
         info to DB and display the login window."""
-        emr_id = self.emr_id_le.text()
+        emr_id = int(self.emr_id_le.text())
         name = self.name_le.text()
         gender = self.gender_cb.currentText()
 

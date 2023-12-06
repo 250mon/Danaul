@@ -21,6 +21,7 @@ logger = Logs().get_logger("main")
 class DataModel(PandasModel):
     def __init__(self, user_name):
         super().__init__()
+
         # for access control
         self.user_name = user_name
         if self.user_name in ADMIN_GROUP:
@@ -28,13 +29,15 @@ class DataModel(PandasModel):
         else:
             self.usr_edit_lvl = EditLevel.UserModifiable
         self.set_edit_level(self.usr_edit_lvl)
+
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
-        # set model df
+        # set model_df
         self._set_model_df()
 
-        self.selected_upper_id = None
+        # by selecting an id of the upper layer,
+        # the lower layer view is updated
         self.selected_upper_id = None
 
     def get_user_privilege(self):
@@ -266,21 +269,14 @@ class DataModel(PandasModel):
         """
         return QColor(Qt.white)
 
-    def append_new_row(self, **kwargs):
+    def append_new_row(self, **input_db_record):
         """
         Appends a new row to the end of the model
         :return: raise an exception if failed
         """
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
-
-        if self.model_df.empty:
-            next_new_id = 1
-        else:
-            next_new_id = self.model_df.iloc[:, 0].max() + 1
-        logger.debug(f"New model_df_row id({next_new_id})")
-
         try:
-            new_row_df = self.make_a_new_row_df(next_new_id, **kwargs)
+            new_row_df = self.make_a_new_row_df(**input_db_record)
         except Exception as e:
             raise e
 
@@ -288,7 +284,6 @@ class DataModel(PandasModel):
             self.model_df = new_row_df
         else:
             self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
-
         self.endInsertRows()
 
         # handles model flags
@@ -411,7 +406,7 @@ class DataModel(PandasModel):
             messages = {}
             # total_results are composed of 3 results: new, chg, del
             # Each result are composed of result from multiple queries
-            for op_type, result in total_results.treatments():
+            for op_type, result in total_results.items():
                 if result is None:
                     msg = '성공!!'
                 elif isinstance(result, asyncpg.exceptions.ForeignKeyViolationError):
@@ -424,7 +419,7 @@ class DataModel(PandasModel):
                 messages[op_type] = msg
 
             return_msg = f'<{self.table_name} RESULTS>'
-            for op_type, msg in messages.treatments():
+            for op_type, msg in messages.items():
                 return_msg += ('\n' + op_type + ': ' + msg)
             return return_msg
 

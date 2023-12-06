@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt, QModelIndex
 from model.di_data_model import DataModel
 from common.d_logger import Logs
 from constants import EditLevel
-from common.datetime_utils import *
 from constants import RowFlags
 
 

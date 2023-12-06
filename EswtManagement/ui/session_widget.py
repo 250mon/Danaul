@@ -7,7 +7,7 @@ from PySide6.QtGui import QFont
 from common.d_logger import Logs, logging
 from db.ds_lab import Lab
 from model.session_model import SessionModel
-from ui.di_table_widget import CommonView
+from ui.di_table_widget import ItemViewMethods
 from ui.single_tr_window import SingleTrWindow
 from constants import UserPrivilege
 
@@ -15,7 +15,7 @@ from constants import UserPrivilege
 logger = Logs().get_logger("main")
 
 
-class SessionWidget(CommonView):
+class SessionWidget(ItemViewMethods):
     def __init__(self, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
@@ -39,21 +39,21 @@ class SessionWidget(CommonView):
         """
         # Filtering is performed on treatment_name column
         search_col_num = self.source_model.get_col_number('treatment_id')
-        self.proxy_model.setFilterKeyColumn(search_col_num)
+        self.prx_model.setFilterKeyColumn(search_col_num)
 
         # Sorting
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
-        self.proxy_model.setSortRole(self.source_model.SortRole)
+        self.prx_model.setSortRole(self.source_model.SortRole)
         initial_sort_col_num = self.source_model.get_col_number('session_id')
 
         # descending order makes problem with mapToSource index
         # self.proxy_model.sort(initial_sort_col_num, Qt.DescendingOrder)
-        self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
+        self.prx_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     def _setup_initial_table_view(self):
         super()._setup_initial_table_view()
-        self.table_view.activated.connect(self.row_activated)
+        self.item_view.activated.connect(self.row_activated)
 
     def _setup_ui(self):
         """
@@ -150,7 +150,7 @@ class SessionWidget(CommonView):
         vbox = QVBoxLayout()
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
-        vbox.addWidget(self.table_view)
+        vbox.addWidget(self.item_view)
 
         if self.source_model.get_user_privilege() == UserPrivilege.Admin:
             del_tr_btn = QPushButton('관리자 삭제/해제')
@@ -195,7 +195,7 @@ class SessionWidget(CommonView):
             self.add_new_row(tr_type='AdjustmentMinus')
         elif action == "del_tr":
             logger.debug("Deleting tr ...")
-            if selected_indexes := self._get_selected_indexes():
+            if selected_indexes := self.get_selected_indexes():
                 self.delete_rows(selected_indexes)
 
     def save_model_to_db(self):
@@ -228,7 +228,7 @@ class SessionWidget(CommonView):
                                     QMessageBox.Close)
 
         else:
-            self.tr_window = SingleTrWindow(self.proxy_model, self)
+            self.tr_window = SingleTrWindow(self.prx_model, self)
 
     @Slot(object)
     def added_new_tr_by_single_tr_window(self, index: QModelIndex):
@@ -240,7 +240,7 @@ class SessionWidget(CommonView):
         """
         logger.debug(f"tr {index.row()} added")
 
-        src_idx = self.proxy_model.mapToSource(index)
+        src_idx = self.prx_model.mapToSource(index)
         if not self.source_model.validate_new_row(src_idx):
             self.source_model.drop_rows([src_idx])
         elif self.source_model.is_model_editing():
@@ -255,7 +255,7 @@ class SessionWidget(CommonView):
         :param index:
         :return:
         """
-        src_idx = self.proxy_model.mapToSource(index)
+        src_idx = self.prx_model.mapToSource(index)
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
 

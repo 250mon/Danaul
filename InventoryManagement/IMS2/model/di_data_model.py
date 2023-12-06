@@ -18,6 +18,7 @@ Also, converting model data(dataframe) back into a data class to update db
 class DataModel(PandasModel):
     def __init__(self, user_name):
         super().__init__()
+
         # for access control
         self.user_name = user_name
         if self.user_name in ADMIN_GROUP:
@@ -25,13 +26,15 @@ class DataModel(PandasModel):
         else:
             self.usr_edit_lvl = EditLevel.UserModifiable
         self.set_edit_level(self.usr_edit_lvl)
+
         # a list of columns which are used to make a df updating db
         self.db_column_names = None
 
-        # set model df
+        # set model_df
         self._set_model_df()
 
-        self.selected_upper_id = None
+        # by selecting an id of the upper layer,
+        # the lower layer view is updated
         self.selected_upper_id = None
 
     def get_user_privilege(self):
