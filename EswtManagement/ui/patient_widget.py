@@ -48,6 +48,7 @@ class PatientWidget(QWidget):
         self.patient_view.setRootIsDecorated(False)
         self.patient_view.setAlternatingRowColors(True)
         self.patient_view.setSortingEnabled(True)
+        self.patient_view.doubleClicked.connect(self.row_double_clicked)
 
         title_label = QLabel('환  자')
         font = QFont("Arial", 12, QFont.Bold)

@@ -68,6 +68,7 @@ class Lab(metaclass=Singleton):
         col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
         self.table_column_names = {}
         self.table_column_names['patients'] = col_name.findall(CREATE_PATIENT_TABLE)
+        self.table_column_names['sessions'] = col_name.findall(CREATE_SESSION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
@@ -103,13 +104,13 @@ class Lab(metaclass=Singleton):
             where_clause = ""
 
         elif table == "active_providers":
-            query = ("SELECT user_id as provider_id, user_name as provider_name"
-                     " FROM users active = 'True' and user_job = '물리치료'")
+            query = "SELECT user_id as provider_id, user_name as provider_name FROM users"
+            where_clause = "WHERE active = 'True' and user_job = '물리치료'"
 
         else:
             query = f"SELECT * FROM {table}"
 
-        query = query + where_clause
+        query = query + " " + where_clause
         logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)
@@ -154,7 +155,7 @@ class Lab(metaclass=Singleton):
 
     def get_id_from_data(self, table: str, data: object, col: str) -> int:
         tdf = self.table_df[table]
-        return tdf.iloc[tdf.loc[:, col] == data, 0].item()
+        return tdf.iloc[tdf.loc[:, col] == data, 1].item()
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
         logger.debug(f"table {table}")

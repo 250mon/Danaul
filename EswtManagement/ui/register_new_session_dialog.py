@@ -17,6 +17,9 @@ class NewSessionDialog(QDialog):
         super().__init__(parent)
         self.source_model: SessionModel or None = None
         self.patient_emr_id: int or None = None
+        self.provider_list = []
+        self.modality_list = []
+        self.part_list = []
         self.init_ui()
         self.new_session_signal.connect(parent.save_model_to_db)
 

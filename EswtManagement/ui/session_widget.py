@@ -54,9 +54,16 @@ class SessionWidget(QWidget):
         self.session_view.resizeColumnsToContents()
         self.session_view.setSortingEnabled(True)
 
-        self.item_view_helpers.set_col_hidden('provider_id')
-        self.item_view_helpers.set_col_width("session_id", 50)
-        self.item_view_helpers.set_col_width("treatment_id", 50)
+        self.item_view_helpers.set_col_hidden("session_id")
+        self.item_view_helpers.set_col_hidden('patient_id')
+        self.item_view_helpers.set_col_hidden("provider_id")
+        self.item_view_helpers.set_col_hidden("modality_id")
+        self.item_view_helpers.set_col_hidden("part_id")
+        self.item_view_helpers.set_col_hidden("user_id")
+        self.item_view_helpers.set_col_width("patient_name", 50)
+        self.item_view_helpers.set_col_width("provider_name", 50)
+        self.item_view_helpers.set_col_width("modality_name", 50)
+        self.item_view_helpers.set_col_width("part_name", 50)
         self.item_view_helpers.set_col_width("timestamp", 200)
         self.item_view_helpers.set_col_width("description", 600)
         # Unlike treatment_widget and sku_widget, tr_widget always allows editing
@@ -77,7 +84,7 @@ class SessionWidget(QWidget):
         end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
         date_search_btn = QPushButton('조회')
         # date_search_btn.setMaximumWidth(100)
-        date_search_btn.clicked.connect(lambda: self.filter_selection(
+        date_search_btn.clicked.connect(lambda: self.filter_for_selected_id(
             self.source_model.selected_patient_id))
 
         hbox1 = QHBoxLayout()
@@ -88,7 +95,7 @@ class SessionWidget(QWidget):
         hbox1.addStretch(1)
 
         search_all_btn = QPushButton('전체조회')
-        search_all_btn.clicked.connect(self.filter_no_selection)
+        search_all_btn.clicked.connect(self.filter_for_search_all)
         two_search_btn = QPushButton('2')
         two_search_btn.clicked.connect(lambda: self.set_max_search_count(2))
         five_search_btn = QPushButton('5')
@@ -139,6 +146,7 @@ class SessionWidget(QWidget):
     @Slot(str)
     def add_session(self):
         logger.debug("Adding a new session ...")
+        self.new_session_dlg.set_source_model(self.source_model)
         self.new_session_dlg.show()
 
     @Slot(str)
@@ -189,7 +197,7 @@ class SessionWidget(QWidget):
         # displaying the sku name in the tr view
         self.patient_name_label.setText(self.source_model.selected_patient_name)
 
-    def filter_selection(self, patient_id: int):
+    def filter_for_selected_id(self, patient_id: int):
         """
         A double-click event in the patient view triggers the parent's
         patient_selected method which in turn calls this method
@@ -203,7 +211,7 @@ class SessionWidget(QWidget):
         self.source_model.set_upper_model_id(patient_id)
         self.update_session_view()
 
-    def filter_no_selection(self):
+    def filter_for_search_all(self):
         """
         Connected to search all button
         :return:
@@ -216,4 +224,4 @@ class SessionWidget(QWidget):
 
     def set_max_search_count(self, max_count: int):
         Lab()._set_max_session_count(max_count)
-        self.filter_selection(self.source_model.selected_patient_id)
+        self.filter_for_selected_id(self.source_model.selected_patient_id)

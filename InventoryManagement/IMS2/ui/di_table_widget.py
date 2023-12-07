@@ -195,7 +195,7 @@ class InventoryTableWidget(QWidget):
         """
         return await self.source_model.save_to_db()
 
-    def filter_selection(self, id: int):
+    def filter_for_selected_upper_id(self, id: int):
         """
         A double click event that triggers the upper level widget's
         row_selected method eventually calls this method
@@ -211,7 +211,7 @@ class InventoryTableWidget(QWidget):
         self.proxy_model.setFilterRegularExpression(
             f"^{self.source_model.selected_upper_id}$")
 
-    def filter_no_selection(self):
+    def filter_for_search_all(self):
         """
         Connected to search all button
         :return:

@@ -71,7 +71,12 @@ class PatientModel(DataModel):
         col_name = self.get_col_name(index.column())
         data_to_display = self.model_df.iloc[index.row(), index.column()]
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            return str(data_to_display)
+            int_type_columns = ['patient_id', 'patient_emr_id']
+            if col_name in int_type_columns:
+                # if column data is int, return int type
+                return int(data_to_display)
+            else:
+                return str(data_to_display)
         elif role == Qt.TextAlignmentRole:
             left_aligned = ['description']
             if col_name in left_aligned:

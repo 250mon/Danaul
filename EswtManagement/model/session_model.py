@@ -64,7 +64,7 @@ class SessionModel(DataModel):
         self.model_df = self.model_df.merge(pt_info, how='left', on='patient_id')
 
         user_df = Lab().table_df['users']
-        provider_df = user_df.query('user_job == 물리치료')
+        provider_df = user_df.query("user_job == '물리치료'")
         self.provider_info = provider_df.loc[:, ['user_id', 'active', 'user_realname']]
         self.provider_info.rename(columns={'user_id': 'provider_id',
                                            'user_realname': 'provider_name'},
@@ -90,7 +90,9 @@ class SessionModel(DataModel):
 
         if patient_id is not None:
             pt_df = Lab().table_df['patients']
-            self.selected_patient_name = pt_df.loc[pt_df.iloc[:, 0] == patient_id, 'patient_name'].item()
+            self.selected_patient_name = Lab().get_data_from_id('patients',
+                                                                patient_id,
+                                                                'patient_name')
             logger.debug(f"patient({self.selected_patient_name}) is set")
         else:
             self.selected_patient_name = ""

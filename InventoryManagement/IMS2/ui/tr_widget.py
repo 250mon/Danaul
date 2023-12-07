@@ -83,7 +83,7 @@ class TrWidget(InventoryTableWidget):
         end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
         date_search_btn = QPushButton('조회')
         # date_search_btn.setMaximumWidth(100)
-        date_search_btn.clicked.connect(lambda: self.filter_selection(
+        date_search_btn.clicked.connect(lambda: self.filter_for_selected_upper_id(
             self.source_model.selected_upper_id))
 
         hbox1 = QHBoxLayout()
@@ -94,7 +94,7 @@ class TrWidget(InventoryTableWidget):
         hbox1.addStretch(1)
 
         search_all_btn = QPushButton('전체조회')
-        search_all_btn.clicked.connect(self.filter_no_selection)
+        search_all_btn.clicked.connect(self.filter_for_search_all)
         two_search_btn = QPushButton('2')
         two_search_btn.clicked.connect(lambda: self.set_max_search_count(2))
         five_search_btn = QPushButton('5')
@@ -265,7 +265,7 @@ class TrWidget(InventoryTableWidget):
         # displaying the sku name in the tr view
         self.sku_name_label.setText(self.source_model.selected_upper_name)
 
-    def filter_selection(self, sku_id: int):
+    def filter_for_selected_upper_id(self, sku_id: int):
         """
         A double-click event in the sku view triggers the parent's
         sku_selected method which in turn calls this method
@@ -279,7 +279,7 @@ class TrWidget(InventoryTableWidget):
         self.source_model.set_upper_model_id(sku_id)
         self.update_tr_view()
 
-    def filter_no_selection(self):
+    def filter_for_search_all(self):
         """
         Connected to search all button
         :return:
@@ -292,4 +292,4 @@ class TrWidget(InventoryTableWidget):
 
     def set_max_search_count(self, max_count: int):
         Lab().set_max_transaction_count(max_count)
-        self.filter_selection(self.source_model.selected_upper_id)
+        self.filter_for_selected_upper_id(self.source_model.selected_upper_id)

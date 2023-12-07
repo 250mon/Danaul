@@ -232,7 +232,7 @@ class InventoryWindow(QMainWindow):
         and this method consequently calls the sku view to display
         the item selected
         """
-        self.sku_widget.filter_selection(item_id)
+        self.sku_widget.filter_for_selected_upper_id(item_id)
 
     def sku_selected(self, sku_id: int):
         """
@@ -240,7 +240,7 @@ class InventoryWindow(QMainWindow):
         and this method consequently calls transaction view to display
         the sku selected
         """
-        self.tr_widget.filter_selection(sku_id)
+        self.tr_widget.filter_for_selected_upper_id(sku_id)
 
     def show_file_dialog(self):
         fname = QFileDialog.getOpenFileName(self, 'Open file', '../')

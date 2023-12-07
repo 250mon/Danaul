@@ -62,7 +62,7 @@ class SkuWidget(InventoryTableWidget):
         hbox1.stretch(1)
 
         search_all_btn = QPushButton('전체조회')
-        search_all_btn.clicked.connect(self.filter_no_selection)
+        search_all_btn.clicked.connect(self.filter_for_search_all)
         add_btn = QPushButton('추가')
         add_btn.clicked.connect(lambda: self.do_actions("add_sku"))
         del_btn = QPushButton('삭제/해제')

@@ -10,8 +10,10 @@ from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from db.ds_lab import Lab
 from model.patient_model import PatientModel
+from model.session_model import SessionModel
 from ui.login_widget import LoginWidget
 from ui.patient_widget import PatientWidget
+from ui.session_widget import SessionWidget
 from constants import ConfigReader, ADMIN_GROUP
 
 
@@ -52,6 +54,7 @@ class TreatmentWindow(QMainWindow):
 
     def setup_models(self, user_name):
         self.patient_model = PatientModel(user_name)
+        self.session_model = SessionModel(user_name)
 
     def initUi(self, user_name):
         self.setWindowTitle("다나을 물리치료")
@@ -100,23 +103,26 @@ class TreatmentWindow(QMainWindow):
 
     def setup_child_widgets(self):
         self.patient_widget = PatientWidget(self.patient_model, self)
+        self.session_widget = SessionWidget(self.session_model, self)
 
         self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
         self.patient_widget.setMinimumWidth(400)
         self.patient_widget.setMaximumWidth(500)
+        self.session_widget.setMinimumWidth(400)
+        self.session_widget.setMaximumWidth(500)
 
     def setup_central_widget(self):
         central_widget = QWidget(self)
 
-        hbox1 = QHBoxLayout()
-        hbox1.addWidget(self.patient_widget)
-        hbox2 = QHBoxLayout()
-        # hbox2.addWidget(self.tr_widget)
-        vbox = QVBoxLayout()
-        vbox.addLayout(hbox1)
-        vbox.addLayout(hbox2)
-        central_widget.setLayout(vbox)
+        vbox1 = QVBoxLayout()
+        vbox1.addWidget(self.patient_widget)
+        vbox2 = QHBoxLayout()
+        vbox2.addWidget(self.session_widget)
+        hbox = QHBoxLayout()
+        hbox.addLayout(vbox1)
+        hbox.addLayout(vbox2)
+        central_widget.setLayout(hbox)
         self.setCentralWidget(central_widget)
 
     def setup_dock_widgets(self):
@@ -159,27 +165,16 @@ class TreatmentWindow(QMainWindow):
             result_str = await self.patient_model.save_to_db()
             logger.debug("Updating patients ...")
             await self.patient_model.update()
-            # await self.sku_model.update()
-            # self.tr_model.selected_upper_id = None
-            # await self.tr_model.update()
-        # elif action == "sku_save":
-        #     logger.debug("Saving skus ...")
-        #     result_str = await self.sku_widget.save_to_db()
-        #     await self.sku_model.update()
-        #     self.tr_model.selected_upper_id = None
-        #     await self.tr_model.update()
-        # elif action == "tr_save":
-        #     logger.debug("Saving sessions ...")
-        #     await self.sku_widget.save_to_db()
-        #     result_str = await self.tr_widget.save_to_db()
-        #     await self.sku_model.update()
-        #     await self.tr_model.update()
-        # elif action == "treatments.update":
-        #     await self.treatments.model.update()
-        # elif action == "sku_update":
-        #     await self.sku_model.update()
-        # elif action == "tr_update":
-        #     await self.tr_model.update()
+            self.session_model.set_upper_model_id(None)
+            await self.session_model.update()
+        elif action == "session_save":
+            logger.debug("Saving sessions ...")
+            result_ssession = await self.session_model.save_to_db()
+            await self.session_model.update()
+        elif action == "patient_update":
+            await self.patient_model.update()
+        elif action == "session_update":
+            await self.session_model.update()
         elif action == "all_update":
             await self.patient_model.update()
             # await self.sku_model.update()
@@ -200,8 +195,7 @@ class TreatmentWindow(QMainWindow):
         and this method consequently calls the sku view to display
         the treatments.selected
         """
-        pass
-        # self.sku_widget.filter_selection(patient_id)
+        self.session_widget.filter_for_selected_id(patient_id)
 
     def sku_selected(self, treatment_id: int):
         """
