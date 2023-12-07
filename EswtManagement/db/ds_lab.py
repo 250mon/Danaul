@@ -4,7 +4,7 @@ from typing import List
 from db.db_apis import DbApi
 import pandas as pd
 from common.d_logger import Logs
-from constants import MAX_TRANSACTION_COUNT
+from constants import MAX_SESSION_COUNT
 from common.singleton import Singleton
 from db.db_schema import *
 
@@ -15,7 +15,7 @@ class Lab(metaclass=Singleton):
     def __init__(self):
         self.db_api = DbApi()
         self.di_db_util = self.db_api.db_util
-        self.max_transaction_count = MAX_TRANSACTION_COUNT
+        self.max_session_count = MAX_SESSION_COUNT
         self.show_inactive_items = False
 
         self.table_df = {
@@ -24,7 +24,8 @@ class Lab(metaclass=Singleton):
             'patients': None,
             'users': None,
             'body_parts': None,
-            'sessions': None
+            'sessions': None,
+            'active_providers': None,
         }
         self._set_db_column_names()
 
@@ -56,9 +57,9 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
-    def _set_max_transaction_count(self, count: int):
+    def _set_max_session_count(self, count: int):
         if count > 0:
-            self.max_transaction_count = count
+            self.max_session_count = count
         else:
             logger.warn(f""
                         f"count({count}) is not a positive integer")
@@ -83,23 +84,27 @@ class Lab(metaclass=Singleton):
         #                        "(s.active = True))"
 
         if table == "sessions":
-            treatment_id = kwargs.get('treatment_id', None)
+            patient_id = kwargs.get('patient_id', None)
             beg_ts = kwargs.get('beg_timestamp', '')
             end_ts = kwargs.get('end_timestamp', '')
-            if treatment_id is None:
+            if patient_id is None:
                 query = f"SELECT * FROM sessions {where_clause} ORDER BY session_id DESC LIMIT " \
-                        f"{self.max_transaction_count}"
+                        f"{self.max_session_count}"
             else:
                 if beg_ts != '' and end_ts != '':
-                    query = f"SELECT * FROM sessions WHERE treatment_id = {treatment_id} " \
+                    query = f"SELECT * FROM sessions WHERE patient_id = {patient_id} " \
                             f"AND timestamp >= '{beg_ts}' AND timestamp <= '{end_ts}' " \
-                            f"ORDER BY session_id DESC LIMIT {self.max_transaction_count}"
+                            f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
                 else:
                     # beg_ts == '' or end_ts == '':
-                    query = f"SELECT * FROM sessions WHERE treatment_id = {treatment_id} " \
-                            f"ORDER BY session_id DESC LIMIT {self.max_transaction_count}"
+                    query = f"SELECT * FROM sessions WHERE patient_id = {patient_id} " \
+                            f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
 
             where_clause = ""
+
+        elif table == "active_providers":
+            query = ("SELECT user_id as provider_id, user_name as provider_name"
+                     " FROM users active = 'True' and user_job = '물리치료'")
 
         else:
             query = f"SELECT * FROM {table}"
@@ -142,6 +147,14 @@ class Lab(metaclass=Singleton):
         self.patient_name_s = make_series('patients', True)
         self.user_id_s = make_series('users', False)
         self.user_name_s = make_series('users', True)
+
+    def get_data_from_id(self, table: str, id: int, col: str) -> object:
+        tdf = self.table_df[table]
+        return tdf.loc[tdf.iloc[:, 0] == id, col].item()
+
+    def get_id_from_data(self, table: str, data: object, col: str) -> int:
+        tdf = self.table_df[table]
+        return tdf.iloc[tdf.loc[:, col] == data, 0].item()
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
         logger.debug(f"table {table}")

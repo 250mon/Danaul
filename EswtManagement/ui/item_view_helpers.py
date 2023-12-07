@@ -1,7 +1,6 @@
 from typing import List
-from abc import abstractmethod
 from PySide6.QtWidgets import QMainWindow, QWidget, QMessageBox, QAbstractItemView
-from PySide6.QtCore import Slot, QSortFilterProxyModel, QModelIndex
+from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
 from model.di_data_model import DataModel
 from ui.default_delegate import DefaultDelegate
 from ui.combobox_delegate import ComboBoxDelegate
@@ -11,7 +10,7 @@ from common.d_logger import Logs
 logger = Logs().get_logger("main")
 
 
-class ItemViewMethods():
+class ItemViewHelpers:
     def __init__(self,
                  src_model: DataModel,
                  proxy_model: QSortFilterProxyModel,
@@ -126,7 +125,7 @@ class ItemViewMethods():
 
         # filtering in the sku view
         self.prx_model.setFilterRegularExpression(
-            f"^{self.src_model.selected_upper_id}$")
+            f"^{self.src_model.selected_patient_id}$")
 
     def filter_no_selection(self):
         """

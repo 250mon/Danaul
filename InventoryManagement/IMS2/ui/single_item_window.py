@@ -1,4 +1,4 @@
-import sys, os
+import sys
 from typing import List
 from PySide6.QtWidgets import (
     QApplication, QWidget, QComboBox,
@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QModelIndex, Signal, QSortFilterProxyModel
 from db.di_lab import Lab
 from model.item_model import ItemModel
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")
@@ -36,33 +36,30 @@ class SingleItemWindow(QWidget):
             self.new_item_mode = True
             self.model_indexes = [indexes]
 
+        self.init_ui()
+
+    def init_ui(self):
         self.nameLabel = QLabel("제품명:")
         if self.new_item_mode:
             self.nameLineEdit = QLineEdit()
             # self.nameLineEdit.setReadOnly(True)
         else:
             self.nameBox = QLabel()
-
         self.activeLabel = QLabel("활성:")
         self.activeComboBox = QComboBox()
         self.activeComboBox.addItems(['True', 'False'])
         if 'active' not in self.proxy_model.sourceModel().editable_col_dicts.keys():
             self.activeComboBox.setEnabled(False)
-
         self.categoryLabel = QLabel("제품군:")
         self.categoryComboBox = QComboBox()
         category_name_list = Lab().table_df['category']['category_name'].values.tolist()
         self.categoryComboBox.addItems(category_name_list)
-
         self.descriptionLabel = QLabel("비고:")
         self.descriptionTextEdit = QPlainTextEdit()
-
         self.nextButton = QPushButton("&Next")
         self.previousButton = QPushButton("&Previous")
-
         self.okButton = QPushButton("&Ok")
         self.exitButton = QPushButton("&Exit")
-
         if self.new_item_mode:
             self.nameLabel.setBuddy(self.nameLineEdit)
         else:
@@ -71,14 +68,40 @@ class SingleItemWindow(QWidget):
         self.categoryLabel.setBuddy(self.categoryComboBox)
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
         self.addMapper()
-
         # wire the signals into the parent widget
         if hasattr(self.parent, "added_new_item_by_single_item_window"):
             self.add_item_signal.connect(self.parent.added_new_item_by_single_item_window)
         if hasattr(self.parent, "changed_items_by_single_item_window"):
             self.chg_item_signal.connect(self.parent.changed_items_by_single_item_window)
 
-        self.initializeUI()
+        vbox1 = QVBoxLayout()
+        vbox1.addWidget(self.okButton, Qt.AlignTop)
+        vbox1.addWidget(self.exitButton)
+        vbox1.addStretch()
+
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(self.previousButton)
+        hbox1.addWidget(self.nextButton)
+
+        gridbox = QGridLayout()
+        gridbox.addWidget(self.nameLabel, 0, 0, 1, 1)
+        if self.new_item_mode:
+            gridbox.addWidget(self.nameLineEdit, 0, 1, 1, 1)
+        else:
+            gridbox.addWidget(self.nameBox, 0, 1, 1, 1)
+        gridbox.addWidget(self.categoryLabel, 1, 0, 1, 1)
+        gridbox.addWidget(self.categoryComboBox, 1, 1, 1, 1)
+        gridbox.addWidget(self.descriptionLabel, 3, 0, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.descriptionTextEdit, 3, 1, 1, 1)
+        gridbox.addWidget(self.activeLabel, 4, 0, 1, 1)
+        gridbox.addWidget(self.activeComboBox, 4, 1, 1, 1)
+
+        gridbox.addLayout(vbox1, 3, 2, 1, 1)
+        gridbox.addLayout(hbox1, 5, 1, 1, 1)
+
+        self.setLayout(gridbox)
+        self.setWindowTitle("아이템 입력")
+        self.show()
 
     def addMapper(self):
         self.mapper = QDataWidgetMapper(self)
@@ -130,35 +153,6 @@ class SingleItemWindow(QWidget):
             self.add_item_signal.emit(self.model_indexes[0])
         self.close()
 
-    def initializeUI(self):
-        vbox1 = QVBoxLayout()
-        vbox1.addWidget(self.okButton, Qt.AlignTop)
-        vbox1.addWidget(self.exitButton)
-        vbox1.addStretch()
-
-        hbox1 = QHBoxLayout()
-        hbox1.addWidget(self.previousButton)
-        hbox1.addWidget(self.nextButton)
-
-        gridbox = QGridLayout()
-        gridbox.addWidget(self.nameLabel, 0, 0, 1, 1)
-        if self.new_item_mode:
-            gridbox.addWidget(self.nameLineEdit, 0, 1, 1, 1)
-        else:
-            gridbox.addWidget(self.nameBox, 0, 1, 1, 1)
-        gridbox.addWidget(self.categoryLabel, 1, 0, 1, 1)
-        gridbox.addWidget(self.categoryComboBox, 1, 1, 1, 1)
-        gridbox.addWidget(self.descriptionLabel, 3, 0, 1, 1, Qt.AlignTop)
-        gridbox.addWidget(self.descriptionTextEdit, 3, 1, 1, 1)
-        gridbox.addWidget(self.activeLabel, 4, 0, 1, 1)
-        gridbox.addWidget(self.activeComboBox, 4, 1, 1, 1)
-
-        gridbox.addLayout(vbox1, 3, 2, 1, 1)
-        gridbox.addLayout(hbox1, 5, 1, 1, 1)
-
-        self.setLayout(gridbox)
-        self.setWindowTitle("아이템 입력")
-        self.show()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

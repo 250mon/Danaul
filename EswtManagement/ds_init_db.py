@@ -21,18 +21,15 @@ async def insert_initial_data(db_api):
         'category_id': [1, 1],
     })
 
-    import datetime
-    d1 = datetime.date(2000, 6, 10)
-    d2 = datetime.date(2010, 7, 30)
     initial_data['patients'] = pd.DataFrame({
         'patient_emr_id': [3, 54],
         'patient_name': ['유비', '관우'],
         'patient_gender': ['M', 'M'],
-        'patient_birthdate': [d1, d2],
     })
 
     encrypted_pw = encrypt_password('a')
     initial_data['users'] = pd.DataFrame({
+        'active': [True, True],
         'user_name': ['admin', 'test'],
         'user_password': [encrypted_pw, encrypted_pw],
         'user_realname': ['jj', 'tt'],

@@ -23,15 +23,13 @@ class LoginWidget(QWidget):
         super().__init__()
         self.parent = parent
         self.db_util = QtDbUtil()
-        self.initializeUI()
+        self.init_ui()
 
-    def initializeUI(self):
+    def init_ui(self):
         """Initialize the Login GUI window."""
         self.setFixedSize(300, 300)
         self.setWindowTitle("로그인")
-        self.setupWindow()
 
-    def setupWindow(self):
         """Set up the widgets for the login GUI."""
         header_label = QLabel("다나을 재고 관리")
         header_label.setFont(QFont('Arial', 20))

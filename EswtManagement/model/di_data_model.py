@@ -38,7 +38,7 @@ class DataModel(PandasModel):
 
         # by selecting an id of the upper layer,
         # the lower layer view is updated
-        self.selected_upper_id = None
+        self.selected_patient_id = None
 
     def get_user_privilege(self):
         if self.user_name in ADMIN_GROUP:
@@ -76,17 +76,9 @@ class DataModel(PandasModel):
         return index.column() == flag_col
 
     def get_data_from_index(self, index: QModelIndex, col: str) -> object:
-        # if not index.isValid():
-        #     return None
-        # elif col not in self.column_names:
-        #     return None
         return self.model_df.iloc[index.row(), self.get_col_number(col)]
 
     def get_data_from_id(self, id: int, col: str) -> object:
-        # if id not in self.model_df.iloc[:, 0].values:
-        #     return None
-        # elif col not in self.column_names:
-        #     return None
         return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
 
     def set_flag(self, index: QModelIndex, flag: int):
@@ -123,14 +115,14 @@ class DataModel(PandasModel):
         logger.debug(f"setting the df of Lab to {self.table_name}_model_f")
         self.model_df = Lab().table_df[self.table_name]
 
-        # we store the columns list here for later use of db update
+        # store the columns list here for later use of db update
         self.db_column_names = Lab().table_column_names[self.table_name]
-
-        # reindexing in the order of table view
-        self.model_df = self.model_df.reindex(self.column_names, axis=1)
 
         # fill name columns against ids of each auxiliary data
         self.set_add_on_cols()
+
+        # reindexing in the order of table view
+        self.model_df = self.model_df.reindex(self.column_names, axis=1)
 
     def update_model_df_from_db(self):
         """

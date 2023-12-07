@@ -14,7 +14,7 @@ logger = Logs().get_logger("main")
 
 
 class SingleSessionWindow(QWidget):
-    create_tr_signal = Signal(object)
+    create_session_signal = Signal(object)
 
     def __init__(self, proxy_model: QSortFilterProxyModel, parent=None):
         super().__init__()

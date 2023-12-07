@@ -17,11 +17,10 @@ logger = Logs().get_logger("main")
 
 
 class SessionModel(DataModel):
-    def __init__(self, user_name: str, sku_model: SkuModel):
-        self.sku_model = sku_model
+    def __init__(self, user_name: str):
         self.init_params()
-        self.selected_upper_id = None
-        self.selected_upper_name = ""
+        self.selected_patient_id = None
+        self.selected_patient_name = ""
         self.beg_timestamp = QDate.currentDate().addMonths(-6)
         self.end_timestamp = QDate.currentDate()
         # setting a model is carried out in the DataModel
@@ -32,13 +31,19 @@ class SessionModel(DataModel):
 
         self.col_edit_lvl = {
             'session_id': EditLevel.NotEditable,
-            'treatment_id': EditLevel.NotEditable,
-            'treatment_detail': EditLevel.UserModifiable,
-            'provider_id': EditLevel.UserModifiable,
-            'timestamp': EditLevel.NotEditable,
+            'patient_id': EditLevel.NotEditable,
+            'patient_emr_id': EditLevel.NotEditable,
+            'patient_name': EditLevel.NotEditable,
+            'provider_id': EditLevel.NotEditable,
+            'provider_name': EditLevel.UserModifiable,
+            'modality_id': EditLevel.NotEditable,
+            'modality_name': EditLevel.UserModifiable,
+            'part_id': EditLevel.NotEditable,
+            'part_name': EditLevel.UserModifiable,
             'description': EditLevel.UserModifiable,
+            'timestamp': EditLevel.NotEditable,
+            'session_price': EditLevel.UserModifiable,
             'user_id': EditLevel.NotEditable,
-            'user_name': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
 
@@ -51,20 +56,44 @@ class SessionModel(DataModel):
         Adds extra columns of each name mapped to ids of supplementary data
         :return:
         """
+        self.model_df = Lab().table_df['sessions']
+
         # set more columns for the view
-        self.model_df['provider_name'] = self.model_df['provider_id'].map(Lab().provider_name_s)
-        self.model_df['user_name'] = self.model_df['user_id'].map(Lab().user_name_s)
+        patient_df = Lab().table_df['patients']
+        pt_info = patient_df.loc[:, ['patient_id', 'patient_emr_id', 'patient_name']]
+        self.model_df = self.model_df.merge(pt_info, how='left', on='patient_id')
+
+        user_df = Lab().table_df['users']
+        provider_df = user_df.query('user_job == 물리치료')
+        self.provider_info = provider_df.loc[:, ['user_id', 'active', 'user_realname']]
+        self.provider_info.rename(columns={'user_id': 'provider_id',
+                                           'user_realname': 'provider_name'},
+                                  inplace=True)
+        self.model_df = self.model_df.merge(self.provider_info, how='left', on='provider_id')
+
+        modality_df = Lab().table_df['modalities']
+        self.modality_info = modality_df.loc[:, ['modality_id', 'modality_name']]
+        self.model_df = self.model_df.merge(self.modality_info, how='left', on='modality_id')
+
+        part_df = Lab().table_df['body_parts']
+        self.part_info = part_df.loc[:, ['part_id', 'part_name']]
+        self.model_df = self.model_df.merge(self.part_info, how='left', on='part_id')
+
+        user_info = user_df.loc[:, ['user_id', 'user_name']]
+        self.model_df = self.model_df.merge(user_info, how='left', on='user_id')
+
         self.model_df['flag'] = RowFlags.OriginalRow
 
-    def set_upper_model_id(self, treatment_id: int or None):
-        self.selected_upper_id = treatment_id
-        logger.debug(f"treatment_id({self.selected_upper_id}) is set")
+    def set_upper_model_id(self, patient_id: int or None):
+        self.selected_patient_id = patient_id
+        logger.debug(f"patient_id({self.selected_patient_id}) is set")
 
-        if treatment_id is not None:
-            self.selected_upper_name = self.sku_model.get_data_from_id(treatment_id, 'sku_name')
-            logger.debug(f"sku_name({self.selected_upper_name}) is set")
+        if patient_id is not None:
+            pt_df = Lab().table_df['patients']
+            self.selected_patient_name = pt_df.loc[pt_df.iloc[:, 0] == patient_id, 'patient_name'].item()
+            logger.debug(f"patient({self.selected_patient_name}) is set")
         else:
-            self.selected_upper_name = ""
+            self.selected_patient_name = ""
 
     def set_beg_timestamp(self, beg: QDate):
         self.beg_timestamp = beg
@@ -76,23 +105,17 @@ class SessionModel(DataModel):
 
     async def update(self):
         """
-        Override method to use selected_treatment_id and begin_/end_ timestamp
+        Override method to use selected_patient_id and begin_/end_ timestamp
         :return:
         """
         # end day needs to be added 1 day otherwise query results only includes those thata
         # were created until the day 00h 00mm 00sec
         logger.debug(f"downloading data from DB")
-        kwargs = {'treatment_id': self.selected_upper_id,
+        kwargs = {'patient_id': self.selected_patient_id,
                   'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
                   'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")}
         logger.debug(f"\n{kwargs}")
         await super().update(**kwargs)
-
-        # await Lab().update_lab_df_from_db(self.table_name, **kwargs)
-        #
-        # self._set_model_df()
-        # self.layoutAboutToBeChanged.emit()
-        # self.layoutChanged.emit()
 
     def get_default_delegate_info(self) -> List[int]:
         """
@@ -108,8 +131,14 @@ class SessionModel(DataModel):
         for combobox delegate
         :return:
         """
+        provider_list = Lab().table_df['active_providers']['provider_name'].to_list()
+        modality_list = self.modality_info['modality_name'].to_list()
+        part_list = self.part_info['part_name'].to_list()
+
         combo_info_dict = {
-            self.get_col_number('tr_type'): Lab().tr_type_s.to_list()
+            self.get_col_number('provider_name'): provider_list,
+            self.get_col_number('modality_name'): modality_list,
+            self.get_col_number('part_name'): part_list,
         }
         return combo_info_dict
 
@@ -120,7 +149,7 @@ class SessionModel(DataModel):
         :return:
         """
         spin_info_dict = {
-            self.get_col_number('tr_qty'): [1, 1000],
+            self.get_col_number('session_price'): [0, 1000000],
         }
         return spin_info_dict
 
@@ -139,14 +168,22 @@ class SessionModel(DataModel):
         col_name = self.get_col_name(index.column())
         data_to_display = self.model_df.iloc[index.row(), index.column()]
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = ['session_id', 'user_id', 'treatment_id', 'provider_id',
-                                'tr_qty', 'before_qty', 'after_qty']
+            int_type_columns = ['session_id', 'patient_id', 'provider_id',
+                                'modality_id', 'part_id', 'session_price', 'user_id']
             if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
+
+            elif col_name == 'active':
+                if data_to_display:
+                    return 'Y'
+                else:
+                    return 'N'
+
             elif col_name == 'timestamp':
                 # data type is datetime.date
                 return pydt_to_qdt(data_to_display)
+
             else:
                 # otherwise, string type
                 return str(data_to_display)
@@ -178,9 +215,27 @@ class SessionModel(DataModel):
         logger.debug(f"index({index}), value({value})")
 
         col_name = self.get_col_name(index.column())
-        if col_name == 'tr_type':
+        if col_name == 'active':
+            # taking care of converting str type input to bool type
+            if value == 'Y':
+                value = True
+            else:
+                value = False
+
+        elif col_name == 'provider_name':
             id_col = self.get_col_number('provider_id')
-            self.model_df.iloc[index.row(), id_col] = Lab().provider_id_s.loc[value]
+            provider_id = Lab().get_id_from_data('active_provider', value, col_name)
+            self.model_df.iloc[index.row(), id_col] = provider_id
+
+        elif col_name == 'modality_name':
+            id_col = self.get_col_number('modality_id')
+            modality_id = Lab().get_id_from_data('modalities', value, col_name)
+            self.model_df.iloc[index.row(), id_col] = modality_id
+
+        elif col_name == 'part_name':
+            id_col = self.get_col_number('part_id')
+            part_id = Lab().get_id_from_data('body_parts', value, col_name)
+            self.model_df.iloc[index.row(), id_col] = part_id
 
         elif col_name == 'timestamp':
             # data type is datetime.date
@@ -189,166 +244,68 @@ class SessionModel(DataModel):
 
         return super().setData(index, value, role)
 
-    def make_a_new_row_df(self, next_new_id, **kwargs) -> pd.DataFrame:
+    def make_a_new_row_df(self, **kwargs) -> pd.DataFrame:
         """
-        Needs to be implemented in subclasses
-        :param next_new_id:
         :return: new dataframe if succeeds, otherwise raise an exception
         """
-        logger.debug(f"new_id({next_new_id})\n")
-        if self.selected_upper_id is None:
-            error = "treatment_id is empty"
-            raise NonExistentSkuIdError(error)
-        elif self.selected_upper_id not in self.sku_model.model_df.treatment_id.values:
-            error = f"treatment_id({self.selected_upper_id}) does not exist"
-            raise NonExistentSkuIdError(error)
-        elif not self.sku_model.is_active_row(self.selected_upper_id):
-            error = f"treatment_id({self.selected_upper_id}) is not active"
-            raise InactiveSkuIdError(error)
-        elif 'tr_type' not in kwargs.keys():
-            error = "tr_type is not specified"
-            raise InvalidTrTypeError(error)
+        if self.selected_patient_id is None:
+            error = "patient_id is empty"
+            raise NonExistentPatientIdError(error)
 
-        try:
-            id_s = self.model_df.groupby("treatment_id")["session_id"].get_group(self.selected_upper_id)
-            idx = id_s.idxmax()
-            last_qty = self.model_df.iloc[idx, self.get_col_number("after_qty")].item()
-        except Exception as e:
-            logger.debug(e)
-            # key error where session_id is not present
-            sku_df = self.sku_model.model_df
-            last_qty = sku_df.loc[sku_df["treatment_id"] == self.selected_upper_id, "sku_qty"].item()
+        # patients part
+        patient_emr_id = Lab().get_data_from_id('patients',
+                                                self.selected_patient_id,
+                                                'patient_emr_id')
+        patient_name = Lab().get_data_from_id('patients',
+                                              self.selected_patient_id,
+                                              'patient_name')
+        # provider part
+        provider_name = kwargs.get('provider_name')
+        provider_id = Lab().get_id_from_data('active_providers',
+                                             provider_name,
+                                             'provider_name')
+        # modality part
+        modality_name = kwargs.get('modality_name')
+        modality_id = Lab().get_id_from_data('modalities',
+                                             modality_name,
+                                             'modality_name')
 
-        tr_type = kwargs['tr_type']
-        provider_id = Lab().provider_id_s.loc[tr_type]
-        tr_qty = kwargs.get('tr_qty', 1)
+        # body part
+        part_name = kwargs.get('part_name')
+        part_id = Lab().get_id_from_data('body_parts',
+                                         part_name,
+                                         'part_name')
+
         description = kwargs.get('description', "")
+        session_price = kwargs.get('session_price', 0)
         user_id = Lab().user_id_s.loc[self.user_name]
 
         new_model_df = pd.DataFrame([{
-            'session_id': next_new_id,
-            'treatment_id': self.selected_upper_id,
-            'tr_type': tr_type,
-            'tr_qty': tr_qty,
-            'before_qty': last_qty,
-            'after_qty': last_qty,
-            'timestamp': datetime.now(),
-            'description': description,
-            'user_name': self.user_name,
-            'user_id': user_id,
+            'patient_id': self.selected_patient_id,
+            'patient_emr_id': patient_emr_id,
+            'patient_name': patient_name,
             'provider_id': provider_id,
+            'provider_name': provider_name,
+            'modality_id': modality_id,
+            'modality_name': modality_name,
+            'part_id': part_id,
+            'part_name': part_name,
+            'description': description,
+            'timestamp': datetime.now(),
+            'session_price': session_price,
+            'user_id': user_id,
             'flag': RowFlags.NewRow
         }])
         return new_model_df
 
-    def append_new_rows_from_emr(self, joined_df: pd.DataFrame):
-        temp_selected_id = self.selected_upper_id
-        self.selected_upper_id = None
-
-        next_new_id = self.model_df.iloc[:, 0].max() + 1
-        logger.debug(f"New model_df_row id is {next_new_id}")
-
-        result_s = pd.Series([False] * joined_df.shape[0], index=joined_df.index)
-        for row in joined_df.itertuples():
-            self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
-            self.selected_upper_id = row.treatment_id
-            new_row_df = self.make_a_new_row_df(
-                next_new_id,
-                tr_type="Sell",
-                tr_qty=row.tr_qty,
-                description="***EMR IMPORTED***",
-            )
-
-            if new_row_df is not None:
-                self.model_df = pd.concat([self.model_df, new_row_df], ignore_index=True)
-                next_new_id += 1
-                self.endInsertRows()
-                if not self.validate_new_row(self.index(self.rowCount()-1, 0, QModelIndex())):
-                    self.drop_rows([self.rowCount() - 1])
-                else:   # success
-                    result_s[row.Index] = True
-
-        if temp_selected_id is not None:
-            self.selected_upper_id = temp_selected_id
-
-        # makes a result message
-        joined_df.loc[:, "res"] = result_s
-        msg_df = pd.DataFrame({"res": [True, False], "Result": ["Success", "Failed"]})
-        msg_merged_df = pd.merge(joined_df, msg_df, on="res")
-        msg_merged_df = msg_merged_df[["sku_name", "tr_qty", "Result"]].astype("string")
-        msg_merged_df = msg_merged_df.loc[msg_merged_df.Result == "Failed", :]
-
-        msg_s = msg_merged_df["Result"].str.ljust(15, fillchar='.')
-        msg_s = msg_s + msg_merged_df["sku_name"].str.ljust(25, fillchar='.')
-        msg_s = msg_s + msg_merged_df["tr_qty"].str.rjust(5, fillchar='.')
-
-        return msg_s
-
     def validate_new_row(self, index: QModelIndex) -> bool:
         """
-        This is used to validate a new row generated by SingleTrWindow
-        when the window is done with creating a new row and emits create_tr_signal
+        This is used to validate a new row generated by SingleSessionWindow
+        when a user is done with input for a new row, the window emits
+        create_session_signal which triggers the session_widget to determine
+        whether to drop the new row using this method
+        If it returns True, the new row remains, otherwise drops
         :param index:
         :return:
         """
-        treatment_id = index.siblingAtColumn(self.get_col_number('treatment_id')).data()
-        tr_type = index.siblingAtColumn(self.get_col_number('tr_type')).data()
-        tr_qty = index.siblingAtColumn(self.get_col_number('tr_qty')).data()
-        before_qty = index.siblingAtColumn(self.get_col_number('before_qty')).data()
-
-        if tr_qty <= 0:
-            logger.debug(f"tr_qty is not positive integer {tr_qty}")
-            return False
-
-        result = True
-        if tr_type == "Buy":
-            self.plus_qty_to_models('+', before_qty, tr_qty, index)
-        elif tr_type == "Sell":
-            if tr_qty > before_qty:
-                result = False
-            else:
-                self.plus_qty_to_models('-', before_qty, tr_qty, index)
-        elif tr_type == "AdjustmentPlus":
-            self.plus_qty_to_models('+', before_qty, tr_qty, index)
-        elif tr_type == "AdjustmentMinus":
-            if tr_qty > before_qty:
-                result = False
-            else:
-                self.plus_qty_to_models('-', before_qty, tr_qty, index)
-
-        debug_msg = "valid" if result is True else "not valid"
-        logger.debug(f"before_qty({before_qty}) tr_qty({tr_qty})")
-        logger.debug(f"Sku({treatment_id}) Tr({tr_type}) is {debug_msg}")
-        # not allow a user to change tr_qty after this point
-        self.clear_new_rows()
-
-        return result
-
-    def plus_qty_to_models(self, op, before_qty, tr_qty, index):
-        after_qty = 0
-        if op == '+':
-            after_qty = before_qty + tr_qty
-        elif op == '-':
-            after_qty = before_qty - tr_qty
-
-        after_qty_idx = index.siblingAtColumn(self.get_col_number('after_qty'))
-        self.setData(after_qty_idx, after_qty)
-        logger.debug(f"before_qty({before_qty}){op}tr_qty({tr_qty}) => after_qty({after_qty})")
-
-    def update_sku_qty(self):
-        """
-        When sessions are saved, updating sku qty was carried out immediately
-        :return:
-        """
-        def get_last_row_qty(qty_update_df: pd.DataFrame):
-            qty_update_df.reset_index(inplace=True)
-            idx_s = qty_update_df.groupby('treatment_id')['session_id'].idxmax()
-            qty_df = qty_update_df.loc[idx_s, ["treatment_id", "after_qty"]]
-            logger.debug(f"qty_df to update\n{qty_df}")
-            return qty_df
-
-        new_tr_df = self.get_new_df()
-        if not new_tr_df.empty:
-            qty_df = get_last_row_qty(new_tr_df)
-            for row in qty_df.itertuples():
-                self.sku_model.update_sku_qty_after_transaction(row.treatment_id, row.after_qty)
+        return True

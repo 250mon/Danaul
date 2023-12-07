@@ -104,10 +104,11 @@ class NewUserDialog(QDialog):
         job = self.job_cb.currentText()
 
         input_db_record = {
+            'active': True,
             'user_name': user_name,
             'user_password': hashed_pw_qbyte,
             'user_realname': real_name,
-            'user_job': job
+            'user_job': job,
         }
         # self.insert_user_info(input_db_record)
         self.db_util.insert_into_db('users', input_db_record)

@@ -5,7 +5,7 @@ from common.singleton import Singleton
 
 CONFIG_FILE = 'ds_config'
 ADMIN_GROUP = ['admin', 'jye']
-MAX_TRANSACTION_COUNT = 10
+MAX_SESSION_COUNT = 10
 DEFAULT_MIN_QTY = 1
 
 

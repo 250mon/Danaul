@@ -5,6 +5,7 @@ from model.di_data_model import DataModel
 from common.d_logger import Logs
 from constants import EditLevel
 from constants import RowFlags
+from ds_exceptions import DuplicatePatientEmrId
 
 
 logger = Logs().get_logger("main")
@@ -101,11 +102,15 @@ class PatientModel(DataModel):
     def make_a_new_row_df(self, **kwargs) -> pd.DataFrame:
         """
         Needs to be implemented in subclasses
-        :param next_new_id:
         :return: new dataframe if succeeds, otherwise raise an exception
         """
+        emr_id: int = kwargs.get('patient_emr_id')
+        duplicate_emr_id = self.model_df.query(f"patient_emr_id == {emr_id}")
+        if not duplicate_emr_id.empty():
+            error = f"patient_emr_id({emr_id}) is duplicate"
+            raise DuplicatePatientEmrId(error)
+
         try:
-            emr_id: int = kwargs.get('patient_emr_id')
             name: str = kwargs.get('patient_name')
             gender: str = kwargs.get('patient_gender')
 

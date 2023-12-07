@@ -1,75 +1,69 @@
+from typing import Dict
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
-    QMessageBox, QDateEdit, QGroupBox
+    QMessageBox, QDateEdit, QWidget, QTableView
 )
-from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
-from common.d_logger import Logs, logging
 from db.ds_lab import Lab
 from model.session_model import SessionModel
-from ui.di_table_widget import ItemViewMethods
-from ui.single_tr_window import SingleTrWindow
+from ui.item_view_helpers import ItemViewHelpers
+from ui.single_session_window import SingleSessionWindow
+from ui.register_new_session_dialog import NewSessionDialog
 from constants import UserPrivilege
+from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")
 
 
-class SessionWidget(ItemViewMethods):
-    def __init__(self, parent: QMainWindow = None):
+class SessionWidget(QWidget):
+    def __init__(self, model: SessionModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-
-    def set_source_model(self, model: SessionModel):
         self.source_model = model
-        self._apply_model()
+        # initialize
+        self.set_model()
+        self.init_ui()
 
-    def set_source_model(self, model: SessionModel):
-        """
-        Override method for using tr_model's methods (validate_new_row)
-        :param model:
-        :return:
-        """
-        super().set_source_model(model)
-
-    def _setup_proxy_model(self):
-        """
-        Needs to be implemented
-        :return:
-        """
-        # Filtering is performed on treatment_name column
-        search_col_num = self.source_model.get_col_number('treatment_id')
-        self.prx_model.setFilterKeyColumn(search_col_num)
+    def set_model(self):
+        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(self.source_model)
+        # -1 means searching every column
+        self.proxy_model.setFilterKeyColumn(-1)
 
         # Sorting
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
-        self.prx_model.setSortRole(self.source_model.SortRole)
+        self.proxy_model.setSortRole(self.source_model.SortRole)
         initial_sort_col_num = self.source_model.get_col_number('session_id')
+        self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
-        # descending order makes problem with mapToSource index
-        # self.proxy_model.sort(initial_sort_col_num, Qt.DescendingOrder)
-        self.prx_model.sort(initial_sort_col_num, Qt.AscendingOrder)
+    def init_ui(self):
+        self.session_view = QTableView()
+        self.item_view_helpers = ItemViewHelpers(
+            self.source_model,
+            self.proxy_model,
+            self.session_view)
+        self.session_view.setModel(self.proxy_model)
+        # self.single_session_window = SingleSessionWindow(self.proxy_model, self)
+        self.new_session_dlg = NewSessionDialog(self)
 
-    def _setup_initial_table_view(self):
-        super()._setup_initial_table_view()
-        self.item_view.activated.connect(self.row_activated)
+        self.session_view.setAlternatingRowColors(True)
+        self.session_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.session_view.resizeColumnsToContents()
+        self.session_view.setSortingEnabled(True)
 
-    def _setup_ui(self):
-        """
-        Needs to be implemented
-        :return:
-        """
-        self.set_col_hidden('provider_id')
-        self.set_col_width("session_id", 50)
-        self.set_col_width("treatment_id", 50)
-        self.set_col_width("timestamp", 200)
-        self.set_col_width("description", 600)
+        self.item_view_helpers.set_col_hidden('provider_id')
+        self.item_view_helpers.set_col_width("session_id", 50)
+        self.item_view_helpers.set_col_width("treatment_id", 50)
+        self.item_view_helpers.set_col_width("timestamp", 200)
+        self.item_view_helpers.set_col_width("description", 600)
         # Unlike treatment_widget and sku_widget, tr_widget always allows editing
         # because there is no select mode
         self.source_model.set_editable(True)
 
-        title_label = QLabel('거래내역   ')
+        title_label = QLabel('치료 세션')
         font = QFont("Arial", 12, QFont.Bold)
         title_label.setFont(font)
 
@@ -84,7 +78,7 @@ class SessionWidget(ItemViewMethods):
         date_search_btn = QPushButton('조회')
         # date_search_btn.setMaximumWidth(100)
         date_search_btn.clicked.connect(lambda: self.filter_selection(
-            self.source_model.selected_upper_id))
+            self.source_model.selected_patient_id))
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(title_label)
@@ -112,49 +106,29 @@ class SessionWidget(ItemViewMethods):
         hbox2.addWidget(twenty_search_btn)
         hbox2.addStretch(1)
 
-        self.sku_name_label = QLabel()
+        self.patient_name_label = QLabel()
         font = QFont("Arial", 14, QFont.Bold)
-        self.sku_name_label.setFont(font)
-        hbox2.addWidget(self.sku_name_label)
+        self.patient_name_label.setFont(font)
+        hbox2.addWidget(self.patient_name_label)
 
-        buy_btn = QPushButton('매입')
-        buy_btn.clicked.connect(lambda: self.do_actions("buy"))
-        sell_btn = QPushButton('매출')
-        sell_btn.clicked.connect(lambda: self.do_actions("sell"))
-        adj_plus_btn = QPushButton('조정+')
-        adj_plus_btn.clicked.connect(lambda: self.do_actions("adj+"))
-        adj_minus_btn = QPushButton('조정-')
-        adj_minus_btn.clicked.connect(lambda: self.do_actions("adj-"))
-        save_btn = QPushButton('저장')
-        save_btn.clicked.connect(self.save_model_to_db)
+        new_btn = QPushButton('추가')
+        new_btn.clicked.connect(self.add_session)
+        chg_btn = QPushButton('변경')
+        chg_btn.clicked.connect(self.chg_session)
 
-        self.edit_mode = QGroupBox("편집 모드")
-        self.edit_mode.setCheckable(False)
         edit_hbox = QHBoxLayout()
-        edit_hbox.addWidget(buy_btn)
-        edit_hbox.addWidget(sell_btn)
-        edit_hbox.addWidget(adj_plus_btn)
-        edit_hbox.addWidget(adj_minus_btn)
-        edit_hbox.addWidget(save_btn)
-        self.edit_mode.setLayout(edit_hbox)
-        self.edit_mode.setEnabled(True)
-
-        hbox2.addStretch(1)
-        # hbox2.addWidget(buy_btn)
-        # hbox2.addWidget(sell_btn)
-        # hbox2.addWidget(adj_plus_btn)
-        # hbox2.addWidget(adj_minus_btn)
-        # hbox2.addWidget(save_btn)
-        hbox2.addWidget(self.edit_mode)
+        edit_hbox.addWidget(new_btn)
+        edit_hbox.addWidget(chg_btn)
+        hbox2.addLayout(edit_hbox)
 
         vbox = QVBoxLayout()
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
-        vbox.addWidget(self.item_view)
+        vbox.addWidget(self.session_view)
 
         if self.source_model.get_user_privilege() == UserPrivilege.Admin:
             del_tr_btn = QPushButton('관리자 삭제/해제')
-            del_tr_btn.clicked.connect(lambda: self.do_actions("del_tr"))
+            del_tr_btn.clicked.connect(self.del_session)
             del_hbox = QHBoxLayout()
             del_hbox.addStretch(1)
             del_hbox.addWidget(del_tr_btn)
@@ -163,94 +137,44 @@ class SessionWidget(ItemViewMethods):
         self.setLayout(vbox)
 
     @Slot(str)
-    def enable_edit_mode(self, sender: str):
-        if sender != "tr_widget":
-            self.edit_mode.setEnabled(True)
+    def add_session(self):
+        logger.debug("Adding a new session ...")
+        self.new_session_dlg.show()
 
     @Slot(str)
-    def disable_edit_mode(self, sender: str):
-        if sender != "tr_widget":
-            self.edit_mode.setEnabled(False)
+    def chg_session(self):
+        logger.debug("Changing a session...")
+        if selected_indexes := self.item_view_helpers.get_selected_indexes():
+            self.item_view_helpers.change_rows(selected_indexes)
 
     @Slot(str)
-    def do_actions(self, action: str):
-        """
-        Needs to be implemented
-        :param action:
-        :return:
-        """
-        logger.debug(f"{action}")
+    def del_session(self):
+        logger.debug("Admin deleting a session ...")
+        if selected_indexes := self.item_view_helpers.get_selected_indexes():
+            self.item_view_helpers.delete_rows(selected_indexes)
 
-        if action == "buy":
-            logger.debug("buying ...")
-            self.add_new_row(tr_type='Buy')
-        elif action == "sell":
-            logger.debug("selling ...")
-            self.add_new_row(tr_type='Sell')
-        elif action == "adj+":
-            logger.debug("adjusting plus ...")
-            self.add_new_row(tr_type='AdjustmentPlus')
-        elif action == "adj-":
-            logger.debug("adjusting minus ...")
-            self.add_new_row(tr_type='AdjustmentMinus')
-        elif action == "del_tr":
-            logger.debug("Deleting tr ...")
-            if selected_indexes := self.get_selected_indexes():
-                self.delete_rows(selected_indexes)
-
-    def save_model_to_db(self):
+    @Slot(object)
+    def save_model_to_db(self, input_db_record: Dict):
         """
         Save the model to DB
         It calls the inventory view's async_start() which calls back the model's
         save_to_db()
         :return:
         """
-        self.source_model.update_sku_qty()
-
-        if hasattr(self.parent, "async_start"):
-            self.parent.async_start("tr_save")
-
-        self.parent.edit_unlock_signal.emit("tr_widget")
-
-    def add_new_row(self, **kwargs):
-        """
-        Override superclass method
-        :param tr_type:
-        :return:
-        """
         try:
-            self.source_model.append_new_row(**kwargs)
+            self.source_model.append_new_row(**input_db_record)
+            if hasattr(self.parent, "async_start"):
+                self.parent.async_start("session_save")
         except Exception as e:
             QMessageBox.information(self,
-                                    "Failed New Transaction",
-                                    # "세부품목을 먼저 선택하세요.",
+                                    "Failed New Session",
                                     str(e),
                                     QMessageBox.Close)
-
-        else:
-            self.tr_window = SingleTrWindow(self.prx_model, self)
-
-    @Slot(object)
-    def added_new_tr_by_single_tr_window(self, index: QModelIndex):
-        """
-        This is called when SingleTrWindow emits a signal
-        It validates the newly added treatments.the last index)
-        If it fails to pass the validation, remove it.
-        :return:
-        """
-        logger.debug(f"tr {index.row()} added")
-
-        src_idx = self.prx_model.mapToSource(index)
-        if not self.source_model.validate_new_row(src_idx):
-            self.source_model.drop_rows([src_idx])
-        elif self.source_model.is_model_editing():
-            self.parent.edit_lock_signal.emit("tr_widget")
-
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
         """
-        While changing treatments, activating other treatments would make changing
+        While changing sessions, selecting other sessions would make changing
         to stop.
         :param index:
         :return:
@@ -259,25 +183,25 @@ class SessionWidget(ItemViewMethods):
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
 
-    def update_tr_view(self):
+    def update_session_view(self):
         # retrieve the data about the selected treatment_id from DB
-        self.parent.async_start('tr_update')
+        self.parent.async_start('session_update')
         # displaying the sku name in the tr view
-        self.sku_name_label.setText(self.source_model.selected_upper_name)
+        self.patient_name_label.setText(self.source_model.selected_patient_name)
 
-    def filter_selection(self, treatment_id: int):
+    def filter_selection(self, patient_id: int):
         """
-        A double-click event in the sku view triggers the parent's
-        sku_selected method which in turn calls this method
-        :param treatment_id:
+        A double-click event in the patient view triggers the parent's
+        patient_selected method which in turn calls this method
+        :param patient_id:
         :return:
         """
-        logger.debug(f"treatment_id({treatment_id})")
+        logger.debug(f"patient_id({patient_id})")
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
         # set selected_treatment_id
-        self.source_model.set_upper_model_id(treatment_id)
-        self.update_tr_view()
+        self.source_model.set_upper_model_id(patient_id)
+        self.update_session_view()
 
     def filter_no_selection(self):
         """
@@ -286,10 +210,10 @@ class SessionWidget(ItemViewMethods):
         """
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
-        # set selected_treatment_id to None
+        # set selected_patient_id to None
         self.source_model.set_upper_model_id(None)
-        self.update_tr_view()
+        self.update_session_view()
 
     def set_max_search_count(self, max_count: int):
-        Lab()._set_max_transaction_count(max_count)
-        self.filter_selection(self.source_model.selected_upper_id)
+        Lab()._set_max_session_count(max_count)
+        self.filter_selection(self.source_model.selected_patient_id)

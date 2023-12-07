@@ -1,13 +1,13 @@
-from typing import List, Dict
+from typing import Dict
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
-    QLabel, QGroupBox, QMessageBox, QWidget, QTreeView
+    QLabel, QMessageBox, QWidget, QTreeView
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
 from common.d_logger import Logs
 from model.patient_model import PatientModel
-from ui.di_table_widget import ItemViewMethods
+from ui.item_view_helpers import ItemViewHelpers
 from ui.register_new_patient_dialog import NewPatientDialog
 
 
@@ -21,8 +21,7 @@ class PatientWidget(QWidget):
         self.source_model = model
         # initialize
         self.set_model()
-        self.initUi()
-        self.setup_helpers()
+        self.init_ui()
 
     def set_model(self):
         self.proxy_model = QSortFilterProxyModel()
@@ -37,11 +36,17 @@ class PatientWidget(QWidget):
         initial_sort_col_num = self.source_model.get_col_number('patient_emr_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
-    def initUi(self):
+    def init_ui(self):
         self.patient_view = QTreeView()
+        self.item_view_helpers = ItemViewHelpers(
+            self.source_model,
+            self.proxy_model,
+            self.patient_view)
+        self.patient_view.setModel(self.proxy_model)
+        self.new_patient_dlg = NewPatientDialog(self)
+
         self.patient_view.setRootIsDecorated(False)
         self.patient_view.setAlternatingRowColors(True)
-        self.patient_view.setModel(self.proxy_model)
         self.patient_view.setSortingEnabled(True)
 
         title_label = QLabel('환  자')
@@ -77,13 +82,6 @@ class PatientWidget(QWidget):
         vbox.addWidget(self.patient_view)
         self.setLayout(vbox)
 
-    def setup_helpers(self):
-        self.item_view_methods = ItemViewMethods(
-            self.source_model,
-            self.proxy_model,
-            self.patient_view)
-        self.new_patient_dlg = NewPatientDialog(self)
-
     @Slot()
     def add_patient(self):
         logger.debug("Adding a patient ...")
@@ -92,9 +90,9 @@ class PatientWidget(QWidget):
     @Slot()
     def del_patient(self):
         logger.debug("Deleting patient ...")
-        if selected_indexes := self.item_view_methods.get_selected_indexes():
+        if selected_indexes := self.item_view_helpers.get_selected_indexes():
             logger.debug(f"del_patient {selected_indexes}")
-            self.item_view_methods.delete_rows(selected_indexes)
+            self.item_view_helpers.delete_rows(selected_indexes)
 
     @Slot(object)
     def save_model_to_db(self, input_db_record: Dict):
@@ -110,7 +108,7 @@ class PatientWidget(QWidget):
                 self.parent.async_start("patient_save")
         except Exception as e:
             QMessageBox.information(self,
-                                    "Failed New Sku",
+                                    "Failed New Patient",
                                     str(e),
                                     QMessageBox.Close)
 

@@ -33,6 +33,7 @@ CREATE_USER_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS users(
         user_id SERIAL PRIMARY KEY,
+        active BOOL NOT NULL DEFAULT TRUE,
         user_name TEXT NOT NULL,
         user_password BYTEA NOT NULL,
         user_realname TEXT NOT NULL,
@@ -53,14 +54,14 @@ CREATE_SESSION_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS sessions(
         session_id SERIAL PRIMARY KEY,
-        user_id INT NOT NULL,
-        modality_id INT NOT NULL,
         patient_id INT NOT NULL,
         provider_id INT NOT NULL,
+        modality_id INT NOT NULL,
         part_id INT NOT NULL,
         description TEXT,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         session_price INT NOT NULL,
+        user_id INT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(user_id),
         FOREIGN KEY (modality_id) REFERENCES modalities(modality_id),
         FOREIGN KEY (patient_id) REFERENCES patients(patient_id),

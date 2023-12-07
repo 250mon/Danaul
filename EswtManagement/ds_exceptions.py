@@ -8,7 +8,7 @@ class NonExistentItemIdError(BaseInvalidIdError):
     pass
 
 
-class NonExistentSkuIdError(BaseInvalidIdError):
+class NonExistentPatientIdError(BaseInvalidIdError):
     pass
 
 
@@ -16,17 +16,13 @@ class InactiveItemIdError(BaseInvalidIdError):
     pass
 
 
-class InactiveSkuIdError(BaseInvalidIdError):
-    pass
-
-
 class BaseValueError(ValueError):
     pass
 
 
-class InvalidTrTypeError(BaseValueError):
+class InvalidPasswordError(BaseValueError):
     pass
 
 
-class InvalidPasswordError(BaseValueError):
+class DuplicatePatientEmrId(BaseValueError):
     pass

@@ -11,10 +11,9 @@ class NewPatientDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.new_patient_signal.connect(parent.save_model_to_db)
-        self.initUi()
+        self.init_ui()
 
-
-    def initUi(self):
+    def init_ui(self):
         """ Set up the dialog box for the patient to create a new patient. """
         self.setWindowTitle("Create New Patient")
 

@@ -1,4 +1,4 @@
-import sys, os
+import sys
 from PySide6.QtWidgets import (
     QApplication, QWidget, QSpinBox,
     QVBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel
 from model.tr_model import TrModel
-from common.d_logger import Logs, logging
+from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")
@@ -20,7 +20,9 @@ class SingleTrWindow(QWidget):
         self.parent = parent
         self.proxy_model = proxy_model
         self.source_model: TrModel = self.proxy_model.sourceModel()
+        self.init_ui()
 
+    def init_ui(self):
         self.nameLabel = QLabel("제품명:")
         self.nameBox = QLabel(self.source_model.selected_upper_name)
         self.trTypeLabel = QLabel("거래구분:")
@@ -32,24 +34,38 @@ class SingleTrWindow(QWidget):
         self.qtySpinBox.setSizePolicy(policy)
         self.qtySpinBox.setMaximum(1000)
         self.qtySpinBox.setMinimum(0)
-
         self.descriptionLabel = QLabel("비고:")
         self.descriptionTextEdit = QPlainTextEdit()
-
         self.okButton = QPushButton("&Ok")
         self.exitButton = QPushButton("&Exit")
-
         self.nameLabel.setBuddy(self.nameBox)
         self.trTypeLabel.setBuddy(self.trTypeLE)
         self.qtyLabel.setBuddy(self.qtySpinBox)
         self.descriptionLabel.setBuddy(self.descriptionTextEdit)
         self.addMapper()
-
         # wire the signals into the parent widget
         if hasattr(self.parent, "added_new_tr_by_single_tr_window"):
             self.create_tr_signal.connect(self.parent.added_new_tr_by_single_tr_window)
 
-        self.initializeUI()
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.okButton)
+        vbox.addWidget(self.exitButton)
+
+        gridbox = QGridLayout()
+        gridbox.addWidget(self.nameLabel, 0, 0, 1, 1)
+        gridbox.addWidget(self.nameBox, 0, 1, 1, 1)
+        gridbox.addWidget(self.trTypeLabel, 1, 0, 1, 1)
+        gridbox.addWidget(self.trTypeLE, 1, 1, 1, 1)
+        gridbox.addWidget(self.qtyLabel, 2, 0, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.qtySpinBox, 2, 1, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.descriptionLabel, 4, 0, 1, 1, Qt.AlignTop)
+        gridbox.addWidget(self.descriptionTextEdit, 4, 1, 1, 1)
+
+        gridbox.addLayout(vbox, 2, 2, 1, 1)
+
+        self.setLayout(gridbox)
+        self.setWindowTitle("거래 입력")
+        self.show()
 
     def addMapper(self):
         self.mapper = QDataWidgetMapper(self)
@@ -76,26 +92,6 @@ class SingleTrWindow(QWidget):
         # self.create_tr_signal.emit()
         self.close()
 
-    def initializeUI(self):
-        vbox = QVBoxLayout()
-        vbox.addWidget(self.okButton)
-        vbox.addWidget(self.exitButton)
-
-        gridbox = QGridLayout()
-        gridbox.addWidget(self.nameLabel, 0, 0, 1, 1)
-        gridbox.addWidget(self.nameBox, 0, 1, 1, 1)
-        gridbox.addWidget(self.trTypeLabel, 1, 0, 1, 1)
-        gridbox.addWidget(self.trTypeLE, 1, 1, 1, 1)
-        gridbox.addWidget(self.qtyLabel, 2, 0, 1, 1, Qt.AlignTop)
-        gridbox.addWidget(self.qtySpinBox, 2, 1, 1, 1, Qt.AlignTop)
-        gridbox.addWidget(self.descriptionLabel, 4, 0, 1, 1, Qt.AlignTop)
-        gridbox.addWidget(self.descriptionTextEdit, 4, 1, 1, 1)
-
-        gridbox.addLayout(vbox, 2, 2, 1, 1)
-
-        self.setLayout(gridbox)
-        self.setWindowTitle("거래 입력")
-        self.show()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
