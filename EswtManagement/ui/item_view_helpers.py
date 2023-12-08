@@ -20,6 +20,7 @@ class ItemViewHelpers:
         self.src_model = src_model
         self.prx_model = proxy_model
         self.item_view = view
+        self.setup_delegate_for_columns()
 
     def setup_delegate_for_columns(self):
         """
@@ -27,17 +28,17 @@ class ItemViewHelpers:
         :return:
         """
         for col_idx in self.src_model.get_default_delegate_info():
-            default_delegate = DefaultDelegate(self)
+            default_delegate = DefaultDelegate(self.item_view)
             default_delegate.set_model(self.src_model)
             self.item_view.setItemDelegateForColumn(col_idx, default_delegate)
 
         for col_idx, val_list in self.src_model.get_combobox_delegate_info().items():
-            combo_delegate = ComboBoxDelegate(val_list, self)
+            combo_delegate = ComboBoxDelegate(val_list, self.item_view)
             combo_delegate.set_model(self.src_model)
             self.item_view.setItemDelegateForColumn(col_idx, combo_delegate)
 
         for col_idx, val_list in self.src_model.get_spinbox_delegate_info().items():
-            spin_delegate = SpinBoxDelegate(*val_list, self)
+            spin_delegate = SpinBoxDelegate(*val_list, self.item_view)
             spin_delegate.set_model(self.src_model)
             self.item_view.setItemDelegateForColumn(col_idx, spin_delegate)
 
@@ -60,20 +61,6 @@ class ItemViewHelpers:
         else:
             logger.debug(f"Indexes not selected or invalid: {selected_indexes}")
             return None
-
-    def add_new_row(self, **kwargs):
-        """
-        Common
-        This is called from a Button
-        :return:
-        """
-        try:
-            self.src_model.append_new_row(**kwargs)
-        except Exception as e:
-            QMessageBox.information(self,
-                                    "Failed New Sku",
-                                    str(e),
-                                    QMessageBox.Close)
 
     def change_rows(self, indexes: List[QModelIndex]):
         """
@@ -111,7 +98,7 @@ class ItemViewHelpers:
             rows = [idx.row() for idx in del_indexes]
             logger.debug(f"rows {rows} deleted")
 
-    def filter_selection(self, id: int):
+    def filter_for_selected_id(self, id: int):
         """
         A double click event that triggers the upper level widget's
         row_selected method eventually calls this method
@@ -127,7 +114,8 @@ class ItemViewHelpers:
         self.prx_model.setFilterRegularExpression(
             f"^{self.src_model.selected_patient_id}$")
 
-    def filter_no_selection(self):
+    def filter_for_search_all(self):
+
         """
         Connected to search all button
         :return:

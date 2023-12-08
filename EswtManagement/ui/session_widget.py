@@ -1,7 +1,7 @@
 from typing import Dict
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
-    QMessageBox, QDateEdit, QWidget, QTableView
+    QMessageBox, QDateEdit, QWidget, QTableView, QGroupBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
@@ -10,8 +10,8 @@ from model.session_model import SessionModel
 from ui.item_view_helpers import ItemViewHelpers
 from ui.single_session_window import SingleSessionWindow
 from ui.register_new_session_dialog import NewSessionDialog
-from constants import UserPrivilege
 from common.d_logger import Logs
+
 
 
 logger = Logs().get_logger("main")
@@ -60,11 +60,12 @@ class SessionWidget(QWidget):
         self.item_view_helpers.set_col_hidden("modality_id")
         self.item_view_helpers.set_col_hidden("part_id")
         self.item_view_helpers.set_col_hidden("user_id")
+        self.item_view_helpers.set_col_width("patient_emr_id", 50)
         self.item_view_helpers.set_col_width("patient_name", 50)
         self.item_view_helpers.set_col_width("provider_name", 50)
-        self.item_view_helpers.set_col_width("modality_name", 50)
-        self.item_view_helpers.set_col_width("part_name", 50)
-        self.item_view_helpers.set_col_width("timestamp", 200)
+        self.item_view_helpers.set_col_width("modality_name", 100)
+        self.item_view_helpers.set_col_width("part_name", 100)
+        self.item_view_helpers.set_col_width("timestamp", 100)
         self.item_view_helpers.set_col_width("description", 600)
         # Unlike treatment_widget and sku_widget, tr_widget always allows editing
         # because there is no select mode
@@ -87,13 +88,6 @@ class SessionWidget(QWidget):
         date_search_btn.clicked.connect(lambda: self.filter_for_selected_id(
             self.source_model.selected_patient_id))
 
-        hbox1 = QHBoxLayout()
-        hbox1.addWidget(title_label)
-        hbox1.addWidget(beg_dateedit)
-        hbox1.addWidget(end_dateedit)
-        hbox1.addWidget(date_search_btn)
-        hbox1.addStretch(1)
-
         search_all_btn = QPushButton('전체조회')
         search_all_btn.clicked.connect(self.filter_for_search_all)
         two_search_btn = QPushButton('2')
@@ -105,27 +99,34 @@ class SessionWidget(QWidget):
         twenty_search_btn = QPushButton('20')
         twenty_search_btn.clicked.connect(lambda: self.set_max_search_count(20))
 
+        self.patient_name_label = QLabel()
+        font = QFont("Arial", 14, QFont.Bold)
+        self.patient_name_label.setFont(font)
+
+        new_btn = QPushButton('추가')
+        new_btn.clicked.connect(self.add_session)
+        chg_btn = QPushButton('수정 저장')
+        chg_btn.clicked.connect(self.chg_session)
+
+        edit_hbox = QHBoxLayout()
+        edit_hbox.addWidget(new_btn)
+        edit_hbox.addWidget(chg_btn)
+
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(title_label)
+        hbox1.addWidget(beg_dateedit)
+        hbox1.addWidget(end_dateedit)
+        hbox1.addWidget(date_search_btn)
+        hbox1.addStretch(1)
+
         hbox2 = QHBoxLayout()
         hbox2.addWidget(search_all_btn)
         hbox2.addWidget(two_search_btn)
         hbox2.addWidget(five_search_btn)
         hbox2.addWidget(ten_search_btn)
         hbox2.addWidget(twenty_search_btn)
-        hbox2.addStretch(1)
-
-        self.patient_name_label = QLabel()
-        font = QFont("Arial", 14, QFont.Bold)
-        self.patient_name_label.setFont(font)
         hbox2.addWidget(self.patient_name_label)
-
-        new_btn = QPushButton('추가')
-        new_btn.clicked.connect(self.add_session)
-        chg_btn = QPushButton('변경')
-        chg_btn.clicked.connect(self.chg_session)
-
-        edit_hbox = QHBoxLayout()
-        edit_hbox.addWidget(new_btn)
-        edit_hbox.addWidget(chg_btn)
+        hbox2.addStretch(1)
         hbox2.addLayout(edit_hbox)
 
         vbox = QVBoxLayout()
@@ -133,15 +134,19 @@ class SessionWidget(QWidget):
         vbox.addLayout(hbox2)
         vbox.addWidget(self.session_view)
 
-        if self.source_model.get_user_privilege() == UserPrivilege.Admin:
-            del_tr_btn = QPushButton('관리자 삭제/해제')
-            del_tr_btn.clicked.connect(self.del_session)
-            del_hbox = QHBoxLayout()
-            del_hbox.addStretch(1)
-            del_hbox.addWidget(del_tr_btn)
-            vbox.addLayout(del_hbox)
+        del_tr_btn = QPushButton('관리자 삭제/해제')
+        del_tr_btn.clicked.connect(self.del_session)
+        del_hbox = QHBoxLayout()
+        del_hbox.addStretch(1)
+        del_hbox.addWidget(del_tr_btn)
+        self.admin_menu_grp = QGroupBox(self)
+        self.admin_menu_grp.setLayout(del_hbox)
+        vbox.addWidget(self.admin_menu_grp)
 
         self.setLayout(vbox)
+
+    def set_admin_menu_enabled(self, val: bool):
+        self.admin_menu_grp.setEnabled(val)
 
     @Slot(str)
     def add_session(self):
@@ -151,9 +156,8 @@ class SessionWidget(QWidget):
 
     @Slot(str)
     def chg_session(self):
-        logger.debug("Changing a session...")
-        if selected_indexes := self.item_view_helpers.get_selected_indexes():
-            self.item_view_helpers.change_rows(selected_indexes)
+        logger.debug("Saving changed sessions...")
+        self.save_model_to_db()
 
     @Slot(str)
     def del_session(self):
@@ -162,7 +166,7 @@ class SessionWidget(QWidget):
             self.item_view_helpers.delete_rows(selected_indexes)
 
     @Slot(object)
-    def save_model_to_db(self, input_db_record: Dict):
+    def save_model_to_db(self, input_db_record: Dict = None):
         """
         Save the model to DB
         It calls the inventory view's async_start() which calls back the model's
@@ -170,12 +174,15 @@ class SessionWidget(QWidget):
         :return:
         """
         try:
-            self.source_model.append_new_row(**input_db_record)
+            if input_db_record is not None:
+                self.source_model.append_new_row(**input_db_record)
             if hasattr(self.parent, "async_start"):
                 self.parent.async_start("session_save")
         except Exception as e:
+            logger.debug('Failed saving sessions')
+            logger.debug(e)
             QMessageBox.information(self,
-                                    "Failed New Session",
+                                    "Failed saving sessions",
                                     str(e),
                                     QMessageBox.Close)
 

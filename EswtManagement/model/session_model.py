@@ -30,23 +30,22 @@ class SessionModel(DataModel):
         self.set_table_name('sessions')
 
         self.col_edit_lvl = {
-            'session_id': EditLevel.NotEditable,
-            'patient_id': EditLevel.NotEditable,
+            'timestamp': EditLevel.NotEditable,
             'patient_emr_id': EditLevel.NotEditable,
             'patient_name': EditLevel.NotEditable,
-            'provider_id': EditLevel.NotEditable,
             'provider_name': EditLevel.UserModifiable,
-            'modality_id': EditLevel.NotEditable,
             'modality_name': EditLevel.UserModifiable,
-            'part_id': EditLevel.NotEditable,
             'part_name': EditLevel.UserModifiable,
             'description': EditLevel.UserModifiable,
-            'timestamp': EditLevel.NotEditable,
             'session_price': EditLevel.UserModifiable,
+            'session_id': EditLevel.NotEditable,
+            'patient_id': EditLevel.NotEditable,
+            'provider_id': EditLevel.NotEditable,
+            'modality_id': EditLevel.NotEditable,
+            'part_id': EditLevel.NotEditable,
             'user_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
-
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
 
@@ -160,7 +159,6 @@ class SessionModel(DataModel):
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """
-        Override method from QAbstractTableModel
         QTableView accepts only QString as input for display
         Returns data cell from the pandas DataFrame
         """
@@ -204,13 +202,6 @@ class SessionModel(DataModel):
                 index: QModelIndex,
                 value: object,
                 role=Qt.EditRole):
-        """
-        Override method from QAbstractTableModel
-        :param index:
-        :param value:
-        :param role:
-        :return:
-        """
         if not index.isValid() or role != Qt.EditRole:
             return False
 
@@ -225,18 +216,27 @@ class SessionModel(DataModel):
                 value = False
 
         elif col_name == 'provider_name':
-            id_col = self.get_col_number('provider_id')
-            provider_id = Lab().get_id_from_data('active_provider', value, col_name)
+            id_col_name = 'provider_id'
+            id_col = self.get_col_number(id_col_name)
+            provider_id = Lab().get_id_from_data('active_providers',
+                                                 {col_name: value},
+                                                 id_col_name)
             self.model_df.iloc[index.row(), id_col] = provider_id
 
         elif col_name == 'modality_name':
-            id_col = self.get_col_number('modality_id')
-            modality_id = Lab().get_id_from_data('modalities', value, col_name)
+            id_col_name = 'modality_id'
+            id_col = self.get_col_number(id_col_name)
+            modality_id = Lab().get_id_from_data('modalities',
+                                                 {col_name: value},
+                                                 id_col_name)
             self.model_df.iloc[index.row(), id_col] = modality_id
 
         elif col_name == 'part_name':
-            id_col = self.get_col_number('part_id')
-            part_id = Lab().get_id_from_data('body_parts', value, col_name)
+            id_col_name = 'part_id'
+            id_col = self.get_col_number(id_col_name)
+            part_id = Lab().get_id_from_data('body_parts',
+                                             {col_name: value},
+                                             id_col_name)
             self.model_df.iloc[index.row(), id_col] = part_id
 
         elif col_name == 'timestamp':
@@ -250,6 +250,9 @@ class SessionModel(DataModel):
         """
         :return: new dataframe if succeeds, otherwise raise an exception
         """
+        logger.debug(f"Making a new row for a patient({self.selected_patient_id})...")
+        logger.debug(kwargs)
+
         if self.selected_patient_id is None:
             error = "patient_id is empty"
             raise NonExistentPatientIdError(error)
@@ -264,23 +267,25 @@ class SessionModel(DataModel):
         # provider part
         provider_name = kwargs.get('provider_name')
         provider_id = Lab().get_id_from_data('active_providers',
-                                             provider_name,
-                                             'provider_name')
+                                             {'provider_name': provider_name},
+                                             'provider_id')
         # modality part
         modality_name = kwargs.get('modality_name')
         modality_id = Lab().get_id_from_data('modalities',
-                                             modality_name,
-                                             'modality_name')
+                                             {'modality_name': modality_name},
+                                             'modality_id')
 
         # body part
         part_name = kwargs.get('part_name')
         part_id = Lab().get_id_from_data('body_parts',
-                                         part_name,
-                                         'part_name')
+                                         {'part_name': part_name},
+                                         'part_id')
 
         description = kwargs.get('description', "")
         session_price = kwargs.get('session_price', 0)
-        user_id = Lab().user_id_s.loc[self.user_name]
+        user_id = Lab().get_id_from_data('users',
+                                         {'user_name': self.user_name},
+                                         'user_id')
 
         new_model_df = pd.DataFrame([{
             'patient_id': self.selected_patient_id,
@@ -298,6 +303,10 @@ class SessionModel(DataModel):
             'user_id': user_id,
             'flag': RowFlags.NewRow
         }])
+
+        logger.debug("New session row")
+        logger.debug(new_model_df)
+
         return new_model_df
 
     def validate_new_row(self, index: QModelIndex) -> bool:

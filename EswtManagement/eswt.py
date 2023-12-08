@@ -50,21 +50,26 @@ class TreatmentWindow(QMainWindow):
     def start_app(self, user_name: str):
         self.setup_models(user_name)
         self.async_helper = AsyncHelper(self, self.do_db_work)
-        self.initUi(user_name)
+        self.init_ui(user_name)
 
     def setup_models(self, user_name):
         self.patient_model = PatientModel(user_name)
         self.session_model = SessionModel(user_name)
 
-    def initUi(self, user_name):
+    def init_ui(self, user_name):
         self.setWindowTitle("다나을 물리치료")
         self.setup_menu()
-        if user_name in ADMIN_GROUP:
-            self.admin_menu.menuAction().setVisible(True)
-        else:
-            self.admin_menu.menuAction().setVisible(False)
         self.setup_child_widgets()
         self.setup_central_widget()
+        self.show_ui(user_name)
+
+    def show_ui(self, user_name: str):
+        if user_name in ADMIN_GROUP:
+            self.admin_menu.menuAction().setVisible(True)
+            self.session_widget.set_admin_menu_enabled(True)
+        else:
+            self.admin_menu.menuAction().setVisible(False)
+            self.session_widget.set_admin_menu_enabled(False)
         self.show()
 
     def setup_menu(self):
@@ -107,10 +112,10 @@ class TreatmentWindow(QMainWindow):
 
         self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
-        self.patient_widget.setMinimumWidth(400)
-        self.patient_widget.setMaximumWidth(500)
-        self.session_widget.setMinimumWidth(400)
-        self.session_widget.setMaximumWidth(500)
+        self.patient_widget.setMinimumWidth(200)
+        self.patient_widget.setMaximumWidth(300)
+        self.session_widget.setMinimumWidth(1000)
+        self.session_widget.setMaximumWidth(900)
 
     def setup_central_widget(self):
         central_widget = QWidget(self)
@@ -131,18 +136,6 @@ class TreatmentWindow(QMainWindow):
                                          Qt.LeftDockWidgetArea)
         patient_dock_widget.setWidget(self.patient_widget)
         self.addDockWidget(Qt.TopDockWidgetArea, patient_dock_widget)
-
-        # sku_dock_widget = QDockWidget('세부품목', self)
-        # sku_dock_widget.setAllowedAreas(Qt.TopDockWidgetArea |
-        #                                 Qt.RightDockWidgetArea)
-        # sku_dock_widget.setWidget(self.sku_widget)
-        # self.addDockWidget(Qt.TopDockWidgetArea, sku_dock_widget)
-
-        # tr_dock_widget = QDockWidget('거래내역', self)
-        # tr_dock_widget.setAllowedAreas(Qt.BottomDockWidgetArea |
-        #                                Qt.LeftDockWidgetArea)
-        # tr_dock_widget.setWidget(self.tr_widget)
-        # self.addDockWidget(Qt.BottomDockWidgetArea, tr_dock_widget)
 
     @Slot(str)
     def async_start(self, action: str):
@@ -197,15 +190,6 @@ class TreatmentWindow(QMainWindow):
         """
         self.session_widget.filter_for_selected_id(patient_id)
 
-    def sku_selected(self, treatment_id: int):
-        """
-        A double-click event in the sku view triggers this method,
-        and this method consequently calls transaction view to display
-        the sku selected
-        """
-        pass
-        # self.tr_widget.filter_selection(treatment_id)
-
     def view_inactive_items(self):
         if Lab().show_inactive_items:
             Lab().show_inactive_items = False
@@ -229,7 +213,7 @@ class TreatmentWindow(QMainWindow):
     def change_user(self):
         self.close()
         self.login_widget.start_main.disconnect()
-        self.login_widget.start_main.connect(self.initUi)
+        self.login_widget.start_main.connect(self.show_ui)
         self.login_widget.show()
 
 
@@ -246,8 +230,5 @@ def main():
     TreatmentWindow()
     app.exec()
 
+
 main()
-# try:
-#     main()
-# except Exception as e:
-#     logger.error("Unexpected exception! %s", e)

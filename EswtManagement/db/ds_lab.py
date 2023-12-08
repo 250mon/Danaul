@@ -1,12 +1,13 @@
 import re
 import asyncio
-from typing import List
+from typing import List, Dict
 from db.db_apis import DbApi
 import pandas as pd
 from common.d_logger import Logs
 from constants import MAX_SESSION_COUNT
 from common.singleton import Singleton
 from db.db_schema import *
+
 
 
 logger = Logs().get_logger("db")
@@ -48,9 +49,6 @@ class Lab(metaclass=Singleton):
             for table in reversed(self.table_df.keys()):
                 self.table_df[table] = data_dfs.pop()
 
-            # make reference series
-            self._make_ref_series()
-
         self.bool_initialized = True
         return self
 
@@ -73,18 +71,12 @@ class Lab(metaclass=Singleton):
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
         where_clause = ""
-        # if not self.show_inactive_items:
-        #     if table == "treatments":
-        #         where_clause = " WHERE active = True"
-        #     elif table == "skus":
-        #         where_clause = " WHERE (treatment_id IN (SELECT treatment_id FROM treatments WHERE active = True)) AND " \
-        #                        "(active = True)"
-        #     elif table == "sessions":
-        #         where_clause = " WHERE treatment_id IN (SELECT treatment_id FROM skus AS s WHERE " \
-        #                        "(s.treatment_id IN (SELECT treatment_id FROM treatments AS i WHERE i.active = True)) AND " \
-        #                        "(s.active = True))"
 
-        if table == "sessions":
+        if not self.show_inactive_items:
+            if table == "users":
+                where_clause = "WHERE active = True"
+
+        elif table == "sessions":
             patient_id = kwargs.get('patient_id', None)
             beg_ts = kwargs.get('beg_timestamp', '')
             end_ts = kwargs.get('end_timestamp', '')
@@ -104,7 +96,7 @@ class Lab(metaclass=Singleton):
             where_clause = ""
 
         elif table == "active_providers":
-            query = "SELECT user_id as provider_id, user_name as provider_name FROM users"
+            query = "SELECT user_id as provider_id, user_realname as provider_name FROM users"
             where_clause = "WHERE active = 'True' and user_job = '물리치료'"
 
         else:
@@ -127,35 +119,17 @@ class Lab(metaclass=Singleton):
         df.fillna("", inplace=True)
         return df
 
-    def _make_ref_series(self):
-        def make_series(table, is_name=True):
-            ref_df = self.table_df[table]
-            if is_name:
-                # id becomes index
-                index_col = 0
-            else:
-                # name becomes index
-                index_col = 1
-            ref_df = ref_df.set_index(ref_df.columns[index_col])
-            ref_s: pd.Series = ref_df.iloc[:, 0]
-            return ref_s
-
-        self.category_id_s = make_series('category', False)
-        self.category_name_s = make_series('category', True)
-        self.modality_id_s = make_series('modalities', False)
-        self.modality_name_s = make_series('modalities', True)
-        self.patient_id_s = make_series('patients', False)
-        self.patient_name_s = make_series('patients', True)
-        self.user_id_s = make_series('users', False)
-        self.user_name_s = make_series('users', True)
-
     def get_data_from_id(self, table: str, id: int, col: str) -> object:
         tdf = self.table_df[table]
         return tdf.loc[tdf.iloc[:, 0] == id, col].item()
 
-    def get_id_from_data(self, table: str, data: object, col: str) -> int:
+    def get_id_from_data(self,
+                         table: str,
+                         data: Dict[str, object],
+                         id_col_name: str) -> int:
         tdf = self.table_df[table]
-        return tdf.iloc[tdf.loc[:, col] == data, 1].item()
+        col, data = data.popitem()
+        return tdf.loc[tdf.loc[:, col] == data, id_col_name].item()
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
         logger.debug(f"table {table}")

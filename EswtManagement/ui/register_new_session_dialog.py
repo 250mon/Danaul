@@ -31,6 +31,9 @@ class NewSessionDialog(QDialog):
         self.provider_list = combo_info_dict.get(self.source_model.get_col_number('provider_name'))
         self.modality_list = combo_info_dict.get(self.source_model.get_col_number('modality_name'))
         self.part_list = combo_info_dict.get(self.source_model.get_col_number('part_name'))
+        self.providerCb.addItems(self.provider_list)
+        self.modalityCb.addItems(self.modality_list)
+        self.partCb.addItems(self.part_list)
 
     def init_ui(self):
         if self.source_model is None or self.patient_emr_id is None:
@@ -41,11 +44,8 @@ class NewSessionDialog(QDialog):
 
         emrIdLabel = QLabel(self.patient_emr_id)
         self.providerCb = QComboBox()
-        self.providerCb.addItems(self.provider_list)
         self.modalityCb = QComboBox()
-        self.modalityCb.addItems(self.modality_list)
         self.partCb = QComboBox()
-        self.partCb.addItems(self.part_list)
         self.descriptionTextEdit = QPlainTextEdit()
 
         # Arrange QLineEdit widgets in a QFormLayout
@@ -71,8 +71,8 @@ class NewSessionDialog(QDialog):
     def accept_session_info(self):
         """Verify that the session's passwords match. If so, save the session's
         info to DB and display the login window."""
-        provider_name = self.providerCb.text()
-        modality_name = self.modalityCb.text()
+        provider_name = self.providerCb.currentText()
+        modality_name = self.modalityCb.currentText()
         part_name = self.partCb.currentText()
 
         input_db_record = {
