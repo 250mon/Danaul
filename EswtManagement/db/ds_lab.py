@@ -72,9 +72,9 @@ class Lab(metaclass=Singleton):
         logger.debug(f"{table}")
         where_clause = ""
 
-        if not self.show_inactive_items:
-            if table == "users":
-                where_clause = "WHERE active = True"
+        if not self.show_inactive_items and table == "users":
+            query = f"SELECT * FROM {table}"
+            where_clause = "WHERE active = True"
 
         elif table == "sessions":
             patient_id = kwargs.get('patient_id', None)

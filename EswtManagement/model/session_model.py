@@ -60,7 +60,9 @@ class SessionModel(DataModel):
         # set more columns for the view
         patient_df = Lab().table_df['patients']
         pt_info = patient_df.loc[:, ['patient_id', 'patient_emr_id', 'patient_name']]
-        self.model_df = self.model_df.merge(pt_info, how='left', on='patient_id')
+        self.model_df = self.model_df.merge(pt_info,
+                                            how='left',
+                                            on='patient_id')
 
         user_df = Lab().table_df['users']
         provider_df = user_df.query("user_job == '물리치료'")
@@ -68,18 +70,26 @@ class SessionModel(DataModel):
         self.provider_info.rename(columns={'user_id': 'provider_id',
                                            'user_realname': 'provider_name'},
                                   inplace=True)
-        self.model_df = self.model_df.merge(self.provider_info, how='left', on='provider_id')
+        self.model_df = self.model_df.merge(self.provider_info,
+                                            how='left',
+                                            on='provider_id')
 
         modality_df = Lab().table_df['modalities']
         self.modality_info = modality_df.loc[:, ['modality_id', 'modality_name']]
-        self.model_df = self.model_df.merge(self.modality_info, how='left', on='modality_id')
+        self.model_df = self.model_df.merge(self.modality_info,
+                                            how='left',
+                                            on='modality_id')
 
         part_df = Lab().table_df['body_parts']
         self.part_info = part_df.loc[:, ['part_id', 'part_name']]
-        self.model_df = self.model_df.merge(self.part_info, how='left', on='part_id')
+        self.model_df = self.model_df.merge(self.part_info,
+                                            how='left',
+                                            on='part_id')
 
         user_info = user_df.loc[:, ['user_id', 'user_name']]
-        self.model_df = self.model_df.merge(user_info, how='left', on='user_id')
+        self.model_df = self.model_df.merge(user_info,
+                                            how='left',
+                                            on='user_id')
 
         self.model_df['flag'] = RowFlags.OriginalRow
 
@@ -250,62 +260,68 @@ class SessionModel(DataModel):
         """
         :return: new dataframe if succeeds, otherwise raise an exception
         """
-        logger.debug(f"Making a new row for a patient({self.selected_patient_id})...")
+        logger.debug(f"Making a new session row for"
+                     f" a patient({self.selected_patient_id})...")
         logger.debug(kwargs)
 
         if self.selected_patient_id is None:
             error = "patient_id is empty"
             raise NonExistentPatientIdError(error)
 
-        # patients part
-        patient_emr_id = Lab().get_data_from_id('patients',
-                                                self.selected_patient_id,
-                                                'patient_emr_id')
-        patient_name = Lab().get_data_from_id('patients',
-                                              self.selected_patient_id,
-                                              'patient_name')
-        # provider part
-        provider_name = kwargs.get('provider_name')
-        provider_id = Lab().get_id_from_data('active_providers',
-                                             {'provider_name': provider_name},
-                                             'provider_id')
-        # modality part
-        modality_name = kwargs.get('modality_name')
-        modality_id = Lab().get_id_from_data('modalities',
-                                             {'modality_name': modality_name},
-                                             'modality_id')
+        try:
+            # patients part
+            patient_emr_id = Lab().get_data_from_id('patients',
+                                                    self.selected_patient_id,
+                                                    'patient_emr_id')
+            patient_name = Lab().get_data_from_id('patients',
+                                                  self.selected_patient_id,
+                                                  'patient_name')
+            # provider part
+            provider_name = kwargs.get('provider_name')
+            provider_id = Lab().get_id_from_data('active_providers',
+                                                 {'provider_name': provider_name},
+                                                 'provider_id')
+            # modality part
+            modality_name = kwargs.get('modality_name')
+            modality_id = Lab().get_id_from_data('modalities',
+                                                 {'modality_name': modality_name},
+                                                 'modality_id')
 
-        # body part
-        part_name = kwargs.get('part_name')
-        part_id = Lab().get_id_from_data('body_parts',
-                                         {'part_name': part_name},
-                                         'part_id')
+            # body part
+            part_name = kwargs.get('part_name')
+            part_id = Lab().get_id_from_data('body_parts',
+                                             {'part_name': part_name},
+                                             'part_id')
 
-        description = kwargs.get('description', "")
-        session_price = kwargs.get('session_price', 0)
-        user_id = Lab().get_id_from_data('users',
-                                         {'user_name': self.user_name},
-                                         'user_id')
+            description = kwargs.get('description', "")
+            session_price = kwargs.get('session_price', 0)
+            user_id = Lab().get_id_from_data('users',
+                                             {'user_name': self.user_name},
+                                             'user_id')
 
-        new_model_df = pd.DataFrame([{
-            'patient_id': self.selected_patient_id,
-            'patient_emr_id': patient_emr_id,
-            'patient_name': patient_name,
-            'provider_id': provider_id,
-            'provider_name': provider_name,
-            'modality_id': modality_id,
-            'modality_name': modality_name,
-            'part_id': part_id,
-            'part_name': part_name,
-            'description': description,
-            'timestamp': datetime.now(),
-            'session_price': session_price,
-            'user_id': user_id,
-            'flag': RowFlags.NewRow
-        }])
+            new_model_df = pd.DataFrame([{
+                'patient_id': self.selected_patient_id,
+                'patient_emr_id': patient_emr_id,
+                'patient_name': patient_name,
+                'provider_id': provider_id,
+                'provider_name': provider_name,
+                'modality_id': modality_id,
+                'modality_name': modality_name,
+                'part_id': part_id,
+                'part_name': part_name,
+                'description': description,
+                'timestamp': datetime.now(),
+                'session_price': session_price,
+                'user_id': user_id,
+                'flag': RowFlags.NewRow
+            }])
 
-        logger.debug("New session row")
-        logger.debug(new_model_df)
+            logger.debug("New session row")
+            logger.debug(new_model_df)
+
+        except Exception as e:
+            logger.debug("New session info is improper!")
+            logger.debug(e)
 
         return new_model_df
 

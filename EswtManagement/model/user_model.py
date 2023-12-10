@@ -21,7 +21,6 @@ class UserModel(DataModel):
         self.col_edit_lvl = {
             'user_id': EditLevel.NotEditable,
             'active': EditLevel.AdminModifiable,
-            # 'user_password': EditLevel.NotEditable,
             'user_realname': EditLevel.NotEditable,
             'user_job': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
@@ -104,23 +103,8 @@ class UserModel(DataModel):
         return super().setData(index, value, role)
 
     def make_a_new_row_df(self, **kwargs) -> pd.DataFrame:
-        emr_id: int = kwargs.get('user_emr_id')
-        duplicate_emr_id = self.model_df.query(f"user_emr_id == {emr_id}")
-        if not duplicate_emr_id.empty():
-            error = f"user_emr_id({emr_id}) is duplicate"
-            raise DuplicateUserEmrId(error)
-
-        try:
-            name: str = kwargs.get('user_name')
-            gender: str = kwargs.get('user_gender')
-
-            new_model_df = pd.DataFrame([{
-                'user_emr_id': emr_id,
-                'user_name': name,
-                'user_gender': gender,
-                'flag': RowFlags.NewRow
-            }])
-            return new_model_df
-        except Exception as e:
-            logger.debug("New user info is improper!")
-            logger.debug(e)
+        """
+        To make a new user, sign-up in the login window should
+        be used
+        """
+        pass

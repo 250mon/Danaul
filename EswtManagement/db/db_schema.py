@@ -10,8 +10,8 @@ CREATE_MODALITY_TABLE = \
     """
     CREATE TABLE IF NOT EXISTS modalities(
         modality_id SERIAL PRIMARY KEY,
-        modality_name TEXT NOT NULL,
         active BOOL NOT NULL DEFAULT TRUE,
+        modality_name TEXT NOT NULL,
         modality_price INT NOT NULL,
         category_id INT NOT NULL,
         description TEXT,

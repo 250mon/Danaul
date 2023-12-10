@@ -5,25 +5,24 @@ from model.di_data_model import DataModel
 from common.d_logger import Logs
 from constants import EditLevel
 from constants import RowFlags
-from ds_exceptions import DuplicatePatientEmrId
+from db.ds_lab import Lab
 
 
 logger = Logs().get_logger("main")
 
 
-class PatientModel(DataModel):
-    def __init__(self, user_name: str):
+class ModalityModel(DataModel):
+    def __init__(self, part_name: str):
         self.init_params()
-        super().__init__(user_name)
+        super().__init__(part_name)
 
     def init_params(self):
-        self.set_table_name('patients')
+        self.set_table_name('body_parts')
 
         self.col_edit_lvl = {
-            'patient_id': EditLevel.NotEditable,
-            'patient_emr_id': EditLevel.AdminModifiable,
-            'patient_name': EditLevel.AdminModifiable,
-            'patient_gender': EditLevel.AdminModifiable,
+            'part_name': EditLevel.AdminModifiable,
+            'sub_parts': EditLevel.UserModifiable,
+            'part_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
 
@@ -44,19 +43,8 @@ class PatientModel(DataModel):
         Returns a list of column indexes for default delegate
         :return:
         """
-        columns_for_delegate = ['patient_name', 'patient_gender']
+        columns_for_delegate = ['part_name', 'sub_parts']
         delegate_info = [self.get_col_number(c) for c in columns_for_delegate]
-        return delegate_info
-
-    def get_combobox_delegate_info(self) -> Dict[int, List]:
-        """
-        Returns a dictionary of column indexes and val lists of the combobox
-        for combobox delegate
-        :return:
-        """
-        delegate_info = {
-            self.get_col_number('patient_gender'): ["M", "F"]
-        }
         return delegate_info
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
@@ -71,7 +59,7 @@ class PatientModel(DataModel):
         data_to_display = self.model_df.iloc[index.row(), index.column()]
 
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = ['patient_id', 'patient_emr_id']
+            int_type_columns = ['part_id']
             if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
@@ -79,7 +67,7 @@ class PatientModel(DataModel):
                 return str(data_to_display)
 
         elif role == Qt.TextAlignmentRole:
-            left_aligned = ['description']
+            left_aligned = ['sub_parts']
             if col_name in left_aligned:
                 return Qt.AlignLeft
             else:
@@ -100,29 +88,20 @@ class PatientModel(DataModel):
         return super().setData(index, value, role)
 
     def make_a_new_row_df(self, **kwargs) -> pd.DataFrame:
-        """
-        :return: new dataframe if succeeds, otherwise raise an exception
-        """
-        logger.debug("Making a new patient row ... ")
+        logger.debug("Making a new body part row ... ")
         logger.debug(kwargs)
 
-        emr_id: int = kwargs.get('patient_emr_id')
-        duplicate_emr_id = self.model_df.query(f"patient_emr_id == {emr_id}")
-        if not duplicate_emr_id.empty():
-            error = f"patient_emr_id({emr_id}) is duplicate"
-            raise DuplicatePatientEmrId(error)
-
         try:
-            name: str = kwargs.get('patient_name')
-            gender: str = kwargs.get('patient_gender')
+            name: str = kwargs.get('part_name')
+            sub_parts = kwargs.get('sub_parts', "")
 
             new_model_df = pd.DataFrame([{
-                'patient_emr_id': emr_id,
-                'patient_name': name,
-                'patient_gender': gender,
+                'part_name': name,
+                'sub_parts': sub_parts,
                 'flag': RowFlags.NewRow
             }])
             return new_model_df
+
         except Exception as e:
-            logger.debug("New patient info is improper!")
+            logger.debug("New part info is improper!")
             logger.debug(e)
