@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
 from db.ds_lab import Lab
+from model.di_data_model import DataModel
 from model.session_model import SessionModel
 from ui.item_view_helpers import ItemViewHelpers
 from ui.single_session_window import SingleSessionWindow
@@ -86,7 +87,7 @@ class SessionWidget(QWidget):
         date_search_btn = QPushButton('조회')
         # date_search_btn.setMaximumWidth(100)
         date_search_btn.clicked.connect(lambda: self.filter_for_selected_id(
-            self.source_model.selected_patient_id))
+            self.source_model.selected_id))
 
         search_all_btn = QPushButton('전체조회')
         search_all_btn.clicked.connect(self.filter_for_search_all)
@@ -99,9 +100,9 @@ class SessionWidget(QWidget):
         twenty_search_btn = QPushButton('20')
         twenty_search_btn.clicked.connect(lambda: self.set_max_search_count(20))
 
-        self.patient_name_label = QLabel()
+        self.filter_item_label = QLabel()
         font = QFont("Arial", 14, QFont.Bold)
-        self.patient_name_label.setFont(font)
+        self.filter_item_label.setFont(font)
 
         new_btn = QPushButton('추가')
         new_btn.clicked.connect(self.add_session)
@@ -125,7 +126,7 @@ class SessionWidget(QWidget):
         hbox2.addWidget(five_search_btn)
         hbox2.addWidget(ten_search_btn)
         hbox2.addWidget(twenty_search_btn)
-        hbox2.addWidget(self.patient_name_label)
+        hbox2.addWidget(self.filter_item_label)
         hbox2.addStretch(1)
         hbox2.addLayout(edit_hbox)
 
@@ -202,7 +203,8 @@ class SessionWidget(QWidget):
         # retrieve the data about the selected treatment_id from DB
         self.parent.async_start('session_update')
         # displaying the sku name in the tr view
-        self.patient_name_label.setText(self.source_model.selected_patient_name)
+        self.filter_item_label.setText(self.source_model.selected_name)
+
 
     def filter_for_selected_id(self, patient_id: int):
         """
@@ -218,6 +220,20 @@ class SessionWidget(QWidget):
         self.source_model.set_upper_model_id(patient_id)
         self.update_session_view()
 
+    def filter_for_selected_model(self, upper_model: DataModel):
+        """
+        A double-click event in the patient view triggers the parent's
+        patient_selected method which in turn calls this method
+        :param patient_id:
+        :return:
+        """
+        logger.debug(f"Selected model: {upper_model.table_name}")
+        # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
+        # set selected_treatment_id
+        self.source_model.set_upper_model(upper_model)
+        self.update_session_view()
+
     def filter_for_search_all(self):
         """
         Connected to search all button
@@ -226,9 +242,10 @@ class SessionWidget(QWidget):
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
         # set selected_patient_id to None
-        self.source_model.set_upper_model_id(None)
+        # self.source_model.set_upper_model_id(None)
+        self.source_model.set_upper_model(None)
         self.update_session_view()
 
     def set_max_search_count(self, max_count: int):
         Lab()._set_max_session_count(max_count)
-        self.filter_for_selected_id(self.source_model.selected_patient_id)
+        self.filter_for_selected_id(self.source_model.selected_id)

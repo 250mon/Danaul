@@ -72,37 +72,35 @@ class Lab(metaclass=Singleton):
         logger.debug(f"{table}")
         where_clause = ""
 
-        if not self.show_inactive_items and table == "users":
-            query = f"SELECT * FROM {table}"
-            where_clause = "WHERE active = True"
+        if table == "users" and not self.show_inactive_items:
+            query = f"SELECT * FROM {table} WHERE active = True"
 
         elif table == "sessions":
-            patient_id = kwargs.get('patient_id', None)
-            beg_ts = kwargs.get('beg_timestamp', '')
-            end_ts = kwargs.get('end_timestamp', '')
-            if patient_id is None:
+            if len(kwargs) > 0:
                 query = f"SELECT * FROM sessions {where_clause} ORDER BY session_id DESC LIMIT " \
                         f"{self.max_session_count}"
             else:
+                # patient_id = kwargs.get('patient_id', None)
+                col_name = list(kwargs.keys())[0]
+                val = list(kwargs.values())[0]
+                beg_ts = kwargs.get('beg_timestamp', '')
+                end_ts = kwargs.get('end_timestamp', '')
                 if beg_ts != '' and end_ts != '':
-                    query = f"SELECT * FROM sessions WHERE patient_id = {patient_id} " \
+                    query = f"SELECT * FROM sessions WHERE {col_name} = {val} " \
                             f"AND timestamp >= '{beg_ts}' AND timestamp <= '{end_ts}' " \
                             f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
                 else:
                     # beg_ts == '' or end_ts == '':
-                    query = f"SELECT * FROM sessions WHERE patient_id = {patient_id} " \
+                    query = f"SELECT * FROM sessions WHERE {col_name} = {val} " \
                             f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
 
-            where_clause = ""
-
         elif table == "active_providers":
-            query = "SELECT user_id as provider_id, user_realname as provider_name FROM users"
-            where_clause = "WHERE active = 'True' and user_job = '물리치료'"
+            query = ("SELECT user_id as provider_id, user_realname as provider_name "
+                     "FROM users WHERE active = 'True' and user_job = '물리치료'")
 
         else:
             query = f"SELECT * FROM {table}"
 
-        query = query + " " + where_clause
         logger.debug(f"{query}")
 
         db_results = await self.di_db_util.select_query(query)

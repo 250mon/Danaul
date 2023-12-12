@@ -158,7 +158,8 @@ class TreatmentWindow(QMainWindow):
             result_str = await self.patient_model.save_to_db()
             logger.debug("Updating patients ...")
             await self.patient_model.update()
-            self.session_model.set_upper_model_id(None)
+            # self.session_model.set_upper_model_id(None)
+            self.session_model.set_upper_model(None)
             await self.session_model.update()
         elif action == "session_save":
             logger.debug("Saving sessions ...")

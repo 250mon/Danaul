@@ -38,7 +38,8 @@ class DataModel(PandasModel):
 
         # by selecting an id of the upper layer,
         # the lower layer view is updated
-        self.selected_patient_id = None
+        self.upper_model = None
+        self.selected_id = None
 
     def get_user_privilege(self):
         if self.user_name in ADMIN_GROUP:
@@ -89,6 +90,21 @@ class DataModel(PandasModel):
         :return:
         """
         self.model_df.iloc[index.row(), self.get_col_number('flag')] = flag
+
+    def set_selected_id(self, id: int):
+        self.selected_id = id
+
+    def get_selected_id(self) -> int or None:
+        return self.selected_id
+
+    def set_upper_model(self, index: QModelIndex or None):
+        """
+        Needs to be implemented if necessary
+        upper model is used for filtering
+        :param index:
+        :return:
+        """
+        pass
 
     def set_upper_model_id(self, index: QModelIndex or None):
         """

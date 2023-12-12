@@ -19,8 +19,7 @@ logger = Logs().get_logger("main")
 class SessionModel(DataModel):
     def __init__(self, user_name: str):
         self.init_params()
-        self.selected_patient_id = None
-        self.selected_patient_name = ""
+        self.selected_name = ""
         self.beg_timestamp = QDate.currentDate().addMonths(-6)
         self.end_timestamp = QDate.currentDate()
         # setting a model is carried out in the DataModel
@@ -60,9 +59,7 @@ class SessionModel(DataModel):
         # set more columns for the view
         patient_df = Lab().table_df['patients']
         pt_info = patient_df.loc[:, ['patient_id', 'patient_emr_id', 'patient_name']]
-        self.model_df = self.model_df.merge(pt_info,
-                                            how='left',
-                                            on='patient_id')
+        self.model_df = self.model_df.merge(pt_info, how='left', on='patient_id')
 
         user_df = Lab().table_df['users']
         provider_df = user_df.query("user_job == '물리치료'")
@@ -70,41 +67,57 @@ class SessionModel(DataModel):
         self.provider_info.rename(columns={'user_id': 'provider_id',
                                            'user_realname': 'provider_name'},
                                   inplace=True)
-        self.model_df = self.model_df.merge(self.provider_info,
-                                            how='left',
-                                            on='provider_id')
+        self.model_df = self.model_df.merge(self.provider_info, how='left', on='provider_id')
 
         modality_df = Lab().table_df['modalities']
         self.modality_info = modality_df.loc[:, ['modality_id', 'modality_name']]
-        self.model_df = self.model_df.merge(self.modality_info,
-                                            how='left',
-                                            on='modality_id')
+        self.model_df = self.model_df.merge(self.modality_info, how='left', on='modality_id')
 
         part_df = Lab().table_df['body_parts']
         self.part_info = part_df.loc[:, ['part_id', 'part_name']]
-        self.model_df = self.model_df.merge(self.part_info,
-                                            how='left',
-                                            on='part_id')
+        self.model_df = self.model_df.merge(self.part_info, how='left', on='part_id')
 
         user_info = user_df.loc[:, ['user_id', 'user_name']]
-        self.model_df = self.model_df.merge(user_info,
-                                            how='left',
-                                            on='user_id')
+        self.model_df = self.model_df.merge(user_info, how='left', on='user_id')
 
         self.model_df['flag'] = RowFlags.OriginalRow
 
-    def set_upper_model_id(self, patient_id: int or None):
-        self.selected_patient_id = patient_id
-        logger.debug(f"patient_id({self.selected_patient_id}) is set")
+    def set_upper_model(self, upper_model: DataModel or None):
+        self.upper_model = upper_model
 
-        if patient_id is not None:
-            pt_df = Lab().table_df['patients']
-            self.selected_patient_name = Lab().get_data_from_id('patients',
-                                                                patient_id,
-                                                                'patient_name')
-            logger.debug(f"patient({self.selected_patient_name}) is set")
+        selected_table = self.upper_model.table_name
+        selected_id = self.upper_model.get_selected_id()
+        logger.debug(f"upper_model({selected_table}) is set")
+        logger.debug(f"selected_id({selected_id}) is set")
+
+        name_col = {
+            'patients': 'patient_name',
+            'active_providers': 'provider_name',
+        }
+        name_deco = {
+            'patients': '환자 ',
+            'active_providers': '치료사',
+        }
+        if selected_id is not None:
+            self.selected_name = Lab().get_data_from_id(selected_table,
+                                                        selected_id,
+                                                        name_col[selected_table])
+            self.selected_name = name_deco[selected_table] + " " + self.selected_name
+            logger.debug(f"selected_name({self.selected_name}) is set")
         else:
-            self.selected_patient_name = ""
+            self.selected_name = ""
+
+    def set_upper_model_id(self, upper_model_id: int or None):
+        self.selected_id = upper_model_id
+        logger.debug(f"upper_model_id({self.selected_id}) is set")
+
+        if upper_model_id is not None:
+            self.selected_name = Lab().get_data_from_id('patients',
+                                                        upper_model_id,
+                                                        'patient_name')
+            logger.debug(f"patient({self.selected_name}) is set")
+        else:
+            self.selected_name = ""
 
     def set_beg_timestamp(self, beg: QDate):
         self.beg_timestamp = beg
@@ -122,10 +135,22 @@ class SessionModel(DataModel):
         # end day needs to be added 1 day otherwise query results only includes those thata
         # were created until the day 00h 00mm 00sec
         logger.debug(f"downloading data from DB")
-        kwargs = {'patient_id': self.selected_patient_id,
-                  'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
-                  'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")}
-        logger.debug(f"\n{kwargs}")
+        kwargs = {}
+        col_name = None
+
+        if self.upper_model.table_name == 'patients':
+            col_name = 'patient_id'
+        elif self.upper_model.table_name == 'active_providers':
+            col_name = 'provider_id'
+
+        if col_name is not None:
+            kwargs = {
+                col_name: self.selected_id,
+                'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
+                'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")
+            }
+            logger.debug(f"\n{kwargs}")
+
         await super().update(**kwargs)
 
     def get_default_delegate_info(self) -> List[int]:
@@ -260,68 +285,68 @@ class SessionModel(DataModel):
         """
         :return: new dataframe if succeeds, otherwise raise an exception
         """
-        logger.debug(f"Making a new session row for"
-                     f" a patient({self.selected_patient_id})...")
+        if self.upper_model.table_name != 'patients':
+            logger.debug("Select a patient first to make a new session")
+            logger.debug(f"Currently selected table is {self.upper_model.table_name}")
+            error = "Invalid upper model selected"
+            raise InvalidUpperModelSelected(error)
+
+        logger.debug(f"Making a new row for a patient({self.selected_id})...")
         logger.debug(kwargs)
 
-        if self.selected_patient_id is None:
-            error = "patient_id is empty"
+        if self.selected_id is None:
+            error = "Patient id is empty"
             raise NonExistentPatientIdError(error)
 
-        try:
-            # patients part
-            patient_emr_id = Lab().get_data_from_id('patients',
-                                                    self.selected_patient_id,
-                                                    'patient_emr_id')
-            patient_name = Lab().get_data_from_id('patients',
-                                                  self.selected_patient_id,
-                                                  'patient_name')
-            # provider part
-            provider_name = kwargs.get('provider_name')
-            provider_id = Lab().get_id_from_data('active_providers',
-                                                 {'provider_name': provider_name},
-                                                 'provider_id')
-            # modality part
-            modality_name = kwargs.get('modality_name')
-            modality_id = Lab().get_id_from_data('modalities',
-                                                 {'modality_name': modality_name},
-                                                 'modality_id')
+        # patients part
+        patient_emr_id = Lab().get_data_from_id('patients',
+                                                self.selected_id,
+                                                'patient_emr_id')
+        patient_name = Lab().get_data_from_id('patients',
+                                              self.selected_id,
+                                              'patient_name')
+        # provider part
+        provider_name = kwargs.get('provider_name')
+        provider_id = Lab().get_id_from_data('active_providers',
+                                             {'provider_name': provider_name},
+                                             'provider_id')
+        # modality part
+        modality_name = kwargs.get('modality_name')
+        modality_id = Lab().get_id_from_data('modalities',
+                                             {'modality_name': modality_name},
+                                             'modality_id')
 
-            # body part
-            part_name = kwargs.get('part_name')
-            part_id = Lab().get_id_from_data('body_parts',
-                                             {'part_name': part_name},
-                                             'part_id')
+        # body part
+        part_name = kwargs.get('part_name')
+        part_id = Lab().get_id_from_data('body_parts',
+                                         {'part_name': part_name},
+                                         'part_id')
 
-            description = kwargs.get('description', "")
-            session_price = kwargs.get('session_price', 0)
-            user_id = Lab().get_id_from_data('users',
-                                             {'user_name': self.user_name},
-                                             'user_id')
+        description = kwargs.get('description', "")
+        session_price = kwargs.get('session_price', 0)
+        user_id = Lab().get_id_from_data('users',
+                                         {'user_name': self.user_name},
+                                         'user_id')
 
-            new_model_df = pd.DataFrame([{
-                'patient_id': self.selected_patient_id,
-                'patient_emr_id': patient_emr_id,
-                'patient_name': patient_name,
-                'provider_id': provider_id,
-                'provider_name': provider_name,
-                'modality_id': modality_id,
-                'modality_name': modality_name,
-                'part_id': part_id,
-                'part_name': part_name,
-                'description': description,
-                'timestamp': datetime.now(),
-                'session_price': session_price,
-                'user_id': user_id,
-                'flag': RowFlags.NewRow
-            }])
+        new_model_df = pd.DataFrame([{
+            'patient_id': self.selected_id,
+            'patient_emr_id': patient_emr_id,
+            'patient_name': patient_name,
+            'provider_id': provider_id,
+            'provider_name': provider_name,
+            'modality_id': modality_id,
+            'modality_name': modality_name,
+            'part_id': part_id,
+            'part_name': part_name,
+            'description': description,
+            'timestamp': datetime.now(),
+            'session_price': session_price,
+            'user_id': user_id,
+            'flag': RowFlags.NewRow
+        }])
 
-            logger.debug("New session row")
-            logger.debug(new_model_df)
-
-        except Exception as e:
-            logger.debug("New session info is improper!")
-            logger.debug(e)
+        logger.debug("New session row")
+        logger.debug(new_model_df)
 
         return new_model_df
 

@@ -112,7 +112,23 @@ class ItemViewHelpers:
 
         # filtering in the sku view
         self.prx_model.setFilterRegularExpression(
-            f"^{self.src_model.selected_patient_id}$")
+            f"^{self.src_model.selected_id}$")
+
+    def filter_for_selected_model(self, upper_model: DataModel):
+        """
+        A double click event that triggers the upper level widget's
+        row_selected method eventually calls this method
+        :param treatment_id:
+        :return:
+        """
+        # if there is remaining unsaved new rows, drop them
+        self.src_model.del_new_rows()
+        # let the model learn the upper model index for a new row creation
+        self.src_model.set_upper_model(upper_model)
+
+        # filtering in the sku view
+        self.prx_model.setFilterRegularExpression(
+            f"^{upper_model.get_selected_id()}$")
 
     def filter_for_search_all(self):
 
@@ -122,7 +138,8 @@ class ItemViewHelpers:
         """
         # if there is remaining unsaved new rows, drop them
         self.src_model.del_new_rows()
-        self.src_model.set_upper_model_id(None)
+        # self.src_model.set_upper_model_id(None)
+        self.src_model.set_upper_model(None)
         self.prx_model.setFilterRegularExpression("^\\d*$")
 
     def set_col_width(self, col_name:str, width: int):

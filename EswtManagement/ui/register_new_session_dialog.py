@@ -25,7 +25,7 @@ class NewSessionDialog(QDialog):
 
     def set_source_model(self, src_model: SessionModel):
         self.source_model = src_model
-        self.patient_emr_id = self.source_model.selected_patient_id
+        self.patient_emr_id = self.source_model.selected_id
 
         combo_info_dict = self.source_model.get_combobox_delegate_info()
         self.provider_list = combo_info_dict.get(self.source_model.get_col_number('provider_name'))

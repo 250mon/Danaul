@@ -8,6 +8,10 @@ class NonExistentItemIdError(BaseInvalidIdError):
     pass
 
 
+class InvalidUpperModelSelected(BaseInvalidIdError):
+    pass
+
+
 class NonExistentPatientIdError(BaseInvalidIdError):
     pass
 
