@@ -9,10 +9,13 @@ from PySide6.QtGui import QAction, QIcon
 from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from db.ds_lab import Lab
+from model.di_data_model import DataModel
 from model.patient_model import PatientModel
+from model.provider_model import ProviderModel
 from model.session_model import SessionModel
 from ui.login_widget import LoginWidget
 from ui.patient_widget import PatientWidget
+from ui.provider_widget import ProviderWidget
 from ui.session_widget import SessionWidget
 from constants import ConfigReader, ADMIN_GROUP
 
@@ -54,6 +57,7 @@ class TreatmentWindow(QMainWindow):
 
     def setup_models(self, user_name):
         self.patient_model = PatientModel(user_name)
+        self.provider_model = ProviderModel(user_name)
         self.session_model = SessionModel(user_name)
 
     def init_ui(self, user_name):
@@ -108,12 +112,15 @@ class TreatmentWindow(QMainWindow):
 
     def setup_child_widgets(self):
         self.patient_widget = PatientWidget(self.patient_model, self)
+        self.provider_widget = ProviderWidget(self.provider_model, self)
         self.session_widget = SessionWidget(self.session_model, self)
 
         self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
         self.patient_widget.setMinimumWidth(200)
         self.patient_widget.setMaximumWidth(300)
+        self.provider_widget.setMinimumWidth(200)
+        self.provider_widget.setMaximumWidth(300)
         self.session_widget.setMinimumWidth(1000)
         self.session_widget.setMaximumWidth(900)
 
@@ -121,12 +128,12 @@ class TreatmentWindow(QMainWindow):
         central_widget = QWidget(self)
 
         vbox1 = QVBoxLayout()
+        vbox1.addWidget(self.provider_widget)
         vbox1.addWidget(self.patient_widget)
-        vbox2 = QHBoxLayout()
-        vbox2.addWidget(self.session_widget)
+
         hbox = QHBoxLayout()
         hbox.addLayout(vbox1)
-        hbox.addLayout(vbox2)
+        hbox.addWidget(self.session_widget)
         central_widget.setLayout(hbox)
         self.setCentralWidget(central_widget)
 
@@ -171,9 +178,6 @@ class TreatmentWindow(QMainWindow):
             await self.session_model.update()
         elif action == "all_update":
             await self.patient_model.update()
-            # await self.sku_model.update()
-            # self.tr_model.selected_upper_id = None
-            # await self.tr_model.update()
 
         self.done_signal.emit(action)
 
@@ -183,13 +187,13 @@ class TreatmentWindow(QMainWindow):
                                     result_str,
                                     QMessageBox.Close)
 
-    def patient_selected(self, patient_id: int):
+    def upper_layer_model_selected(self, upper_model: DataModel):
         """
-        A double-click event in the patient view triggers this method,
-        and this method consequently calls the sku view to display
-        the treatments.selected
+        A double-click event in the left pane view triggers this method,
+        and this method consequently calls the session view to display
+        the items for id selected
         """
-        self.session_widget.filter_for_selected_id(patient_id)
+        self.session_widget.update_with_selected_upper_layer(upper_model)
 
     def view_inactive_items(self):
         if Lab().show_inactive_items:

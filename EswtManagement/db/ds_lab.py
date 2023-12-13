@@ -26,7 +26,7 @@ class Lab(metaclass=Singleton):
             'users': None,
             'body_parts': None,
             'sessions': None,
-            'active_providers': None,
+            'providers': None,
         }
         self._set_db_column_names()
 
@@ -67,19 +67,16 @@ class Lab(metaclass=Singleton):
         self.table_column_names = {}
         self.table_column_names['patients'] = col_name.findall(CREATE_PATIENT_TABLE)
         self.table_column_names['sessions'] = col_name.findall(CREATE_SESSION_TABLE)
+        self.table_column_names['providers'] = ['provider_id', 'provider_name']
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
-        where_clause = ""
 
         if table == "users" and not self.show_inactive_items:
             query = f"SELECT * FROM {table} WHERE active = True"
 
         elif table == "sessions":
             if len(kwargs) > 0:
-                query = f"SELECT * FROM sessions {where_clause} ORDER BY session_id DESC LIMIT " \
-                        f"{self.max_session_count}"
-            else:
                 # patient_id = kwargs.get('patient_id', None)
                 col_name = list(kwargs.keys())[0]
                 val = list(kwargs.values())[0]
@@ -93,15 +90,18 @@ class Lab(metaclass=Singleton):
                     # beg_ts == '' or end_ts == '':
                     query = f"SELECT * FROM sessions WHERE {col_name} = {val} " \
                             f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
+            else:
+                query = f"SELECT * FROM sessions ORDER BY session_id DESC LIMIT " \
+                        f"{self.max_session_count}"
 
-        elif table == "active_providers":
+        elif table == "providers":
             query = ("SELECT user_id as provider_id, user_realname as provider_name "
-                     "FROM users WHERE active = 'True' and user_job = '물리치료'")
+                     "FROM users WHERE active = True and user_job = '물리치료'")
 
         else:
             query = f"SELECT * FROM {table}"
 
-        logger.debug(f"{query}")
+        logger.debug(query)
 
         db_results = await self.di_db_util.select_query(query)
         # logger.debug(f"{db_results[:2]}")

@@ -288,7 +288,7 @@ class QtDbUtil:
 
         field_names = list(record.keys())
         args = list(record.values())
-        stmt = make_stmt(field_names, args)
+        stmt = make_insert_query(table_name, record)
         logger.debug(f"{stmt} :: {args}")
 
         query = QSqlQuery()

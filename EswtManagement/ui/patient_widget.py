@@ -121,13 +121,17 @@ class PatientWidget(QWidget):
         :param index:
         :return:
         """
-        if index.isValid() and hasattr(self.parent, 'patient_selected'):
+        if index.isValid() and hasattr(self.parent, 'upper_layer_model_selected'):
             patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
-            self.parent.patient_selected(patient_id)
+            self.source_model.set_selected_id(patient_id)
+            self.parent.upper_layer_model_selected(self.source_model)
 
     def update_all_views(self):
         """
         Update the views with the latest data from db
         :return:
         """
+        # if there is remaining unsaved new rows, drop them
+        self.source_model.del_new_rows()
+        self.source_model.set_selected_id(None)
         self.parent.update_all_signal.emit()

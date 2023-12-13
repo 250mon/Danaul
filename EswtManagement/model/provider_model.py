@@ -11,9 +11,9 @@ logger = Logs().get_logger("main")
 
 
 class ProviderModel(DataModel):
-    def __init__(self, provider_name: str):
+    def __init__(self, user_name: str):
         self.init_params()
-        super().__init__(provider_name)
+        super().__init__(user_name)
 
     def init_params(self):
         self.set_table_name('providers')

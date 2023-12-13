@@ -79,13 +79,15 @@ class ProviderWidget(QWidget):
         :param index:
         :return:
         """
-        if index.isValid() and hasattr(self.parent, 'provider_selected'):
+        if index.isValid() and hasattr(self.parent, 'upper_layer_model_selected'):
             provider_id = index.siblingAtColumn(self.source_model.get_col_number('provider_id')).data()
-            self.parent.provider_selected(provider_id)
+            self.source_model.set_selected_id(provider_id)
+            self.parent.upper_layer_model_selected(self.source_model)
 
     def update_all_views(self):
         """
         Update the views with the latest data from db
         :return:
         """
+        self.source_model.set_selected_id(None)
         self.parent.update_all_signal.emit()

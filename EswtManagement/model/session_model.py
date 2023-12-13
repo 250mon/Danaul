@@ -92,11 +92,11 @@ class SessionModel(DataModel):
 
         name_col = {
             'patients': 'patient_name',
-            'active_providers': 'provider_name',
+            'providers': 'provider_name',
         }
         name_deco = {
             'patients': '환자 ',
-            'active_providers': '치료사',
+            'providers': '치료사',
         }
         if selected_id is not None:
             self.selected_name = Lab().get_data_from_id(selected_table,
@@ -104,18 +104,6 @@ class SessionModel(DataModel):
                                                         name_col[selected_table])
             self.selected_name = name_deco[selected_table] + " " + self.selected_name
             logger.debug(f"selected_name({self.selected_name}) is set")
-        else:
-            self.selected_name = ""
-
-    def set_upper_model_id(self, upper_model_id: int or None):
-        self.selected_id = upper_model_id
-        logger.debug(f"upper_model_id({self.selected_id}) is set")
-
-        if upper_model_id is not None:
-            self.selected_name = Lab().get_data_from_id('patients',
-                                                        upper_model_id,
-                                                        'patient_name')
-            logger.debug(f"patient({self.selected_name}) is set")
         else:
             self.selected_name = ""
 
@@ -140,12 +128,12 @@ class SessionModel(DataModel):
 
         if self.upper_model.table_name == 'patients':
             col_name = 'patient_id'
-        elif self.upper_model.table_name == 'active_providers':
+        elif self.upper_model.table_name == 'providers':
             col_name = 'provider_id'
 
         if col_name is not None:
             kwargs = {
-                col_name: self.selected_id,
+                col_name: self.upper_model.get_selected_id(),
                 'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
                 'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")
             }
@@ -167,7 +155,7 @@ class SessionModel(DataModel):
         for combobox delegate
         :return:
         """
-        provider_list = Lab().table_df['active_providers']['provider_name'].to_list()
+        provider_list = Lab().table_df['providers']['provider_name'].to_list()
         modality_list = self.modality_info['modality_name'].to_list()
         part_list = self.part_info['part_name'].to_list()
 
@@ -253,7 +241,7 @@ class SessionModel(DataModel):
         elif col_name == 'provider_name':
             id_col_name = 'provider_id'
             id_col = self.get_col_number(id_col_name)
-            provider_id = Lab().get_id_from_data('active_providers',
+            provider_id = Lab().get_id_from_data('providers',
                                                  {col_name: value},
                                                  id_col_name)
             self.model_df.iloc[index.row(), id_col] = provider_id
@@ -291,23 +279,24 @@ class SessionModel(DataModel):
             error = "Invalid upper model selected"
             raise InvalidUpperModelSelected(error)
 
-        logger.debug(f"Making a new row for a patient({self.selected_id})...")
+        patient_id = self.upper_model.get_selected_id()
+        logger.debug(f"Making a new row for a patient({patient_id})...")
         logger.debug(kwargs)
 
-        if self.selected_id is None:
+        if patient_id is None:
             error = "Patient id is empty"
             raise NonExistentPatientIdError(error)
 
         # patients part
         patient_emr_id = Lab().get_data_from_id('patients',
-                                                self.selected_id,
+                                                patient_id,
                                                 'patient_emr_id')
         patient_name = Lab().get_data_from_id('patients',
-                                              self.selected_id,
+                                              patient_id,
                                               'patient_name')
         # provider part
         provider_name = kwargs.get('provider_name')
-        provider_id = Lab().get_id_from_data('active_providers',
+        provider_id = Lab().get_id_from_data('providers',
                                              {'provider_name': provider_name},
                                              'provider_id')
         # modality part
@@ -329,7 +318,7 @@ class SessionModel(DataModel):
                                          'user_id')
 
         new_model_df = pd.DataFrame([{
-            'patient_id': self.selected_id,
+            'patient_id': patient_id,
             'patient_emr_id': patient_emr_id,
             'patient_name': patient_name,
             'provider_id': provider_id,

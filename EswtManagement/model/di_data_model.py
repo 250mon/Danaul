@@ -36,9 +36,10 @@ class DataModel(PandasModel):
         # set model_df
         self._set_model_df()
 
-        # by selecting an id of the upper layer,
-        # the lower layer view is updated
+        # the lower layer view is updated by selecting an id of
+        # the upper layer model,
         self.upper_model = None
+        # the selected id is used for lower layer
         self.selected_id = None
 
     def get_user_privilege(self):
@@ -91,7 +92,7 @@ class DataModel(PandasModel):
         """
         self.model_df.iloc[index.row(), self.get_col_number('flag')] = flag
 
-    def set_selected_id(self, id: int):
+    def set_selected_id(self, id: int or None):
         self.selected_id = id
 
     def get_selected_id(self) -> int or None:

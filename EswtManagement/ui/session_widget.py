@@ -86,11 +86,11 @@ class SessionWidget(QWidget):
         end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
         date_search_btn = QPushButton('조회')
         # date_search_btn.setMaximumWidth(100)
-        date_search_btn.clicked.connect(lambda: self.filter_for_selected_id(
+        date_search_btn.clicked.connect(lambda: self.update_with_selected_id(
             self.source_model.selected_id))
 
         search_all_btn = QPushButton('전체조회')
-        search_all_btn.clicked.connect(self.filter_for_search_all)
+        search_all_btn.clicked.connect(self.update_with_no_selection)
         two_search_btn = QPushButton('2')
         two_search_btn.clicked.connect(lambda: self.set_max_search_count(2))
         five_search_btn = QPushButton('5')
@@ -205,22 +205,7 @@ class SessionWidget(QWidget):
         # displaying the sku name in the tr view
         self.filter_item_label.setText(self.source_model.selected_name)
 
-
-    def filter_for_selected_id(self, patient_id: int):
-        """
-        A double-click event in the patient view triggers the parent's
-        patient_selected method which in turn calls this method
-        :param patient_id:
-        :return:
-        """
-        logger.debug(f"patient_id({patient_id})")
-        # if there is remaining unsaved new rows, drop them
-        self.source_model.del_new_rows()
-        # set selected_treatment_id
-        self.source_model.set_upper_model_id(patient_id)
-        self.update_session_view()
-
-    def filter_for_selected_model(self, upper_model: DataModel):
+    def update_with_selected_upper_layer(self, upper_model: DataModel):
         """
         A double-click event in the patient view triggers the parent's
         patient_selected method which in turn calls this method
@@ -230,22 +215,19 @@ class SessionWidget(QWidget):
         logger.debug(f"Selected model: {upper_model.table_name}")
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
-        # set selected_treatment_id
         self.source_model.set_upper_model(upper_model)
         self.update_session_view()
 
-    def filter_for_search_all(self):
+    def update_with_no_selection(self):
         """
         Connected to search all button
         :return:
         """
         # if there is remaining unsaved new rows, drop them
         self.source_model.del_new_rows()
-        # set selected_patient_id to None
-        # self.source_model.set_upper_model_id(None)
         self.source_model.set_upper_model(None)
         self.update_session_view()
 
     def set_max_search_count(self, max_count: int):
         Lab()._set_max_session_count(max_count)
-        self.filter_for_selected_id(self.source_model.selected_id)
+        self.update_with_selected_id(self.source_model.selected_id)

@@ -98,23 +98,7 @@ class ItemViewHelpers:
             rows = [idx.row() for idx in del_indexes]
             logger.debug(f"rows {rows} deleted")
 
-    def filter_for_selected_id(self, id: int):
-        """
-        A double click event that triggers the upper level widget's
-        row_selected method eventually calls this method
-        :param treatment_id:
-        :return:
-        """
-        # if there is remaining unsaved new rows, drop them
-        self.src_model.del_new_rows()
-        # let the model learn the upper model index for a new row creation
-        self.src_model.set_upper_model_id(id)
-
-        # filtering in the sku view
-        self.prx_model.setFilterRegularExpression(
-            f"^{self.src_model.selected_id}$")
-
-    def filter_for_selected_model(self, upper_model: DataModel):
+    def update_with_selected_upper_layer(self, upper_model: DataModel):
         """
         A double click event that triggers the upper level widget's
         row_selected method eventually calls this method
@@ -130,7 +114,7 @@ class ItemViewHelpers:
         self.prx_model.setFilterRegularExpression(
             f"^{upper_model.get_selected_id()}$")
 
-    def filter_for_search_all(self):
+    def update_with_no_selection(self):
 
         """
         Connected to search all button
