@@ -36,12 +36,6 @@ class DataModel(PandasModel):
         # set model_df
         self._set_model_df()
 
-        # the lower layer view is updated by selecting an id of
-        # the upper layer model,
-        self.upper_model = None
-        # the selected id is used for lower layer
-        self.selected_id = None
-
     def get_user_privilege(self):
         if self.user_name in ADMIN_GROUP:
             return UserPrivilege.Admin
@@ -97,24 +91,6 @@ class DataModel(PandasModel):
 
     def get_selected_id(self) -> int or None:
         return self.selected_id
-
-    def set_upper_model(self, index: QModelIndex or None):
-        """
-        Needs to be implemented if necessary
-        upper model is used for filtering
-        :param index:
-        :return:
-        """
-        pass
-
-    def set_upper_model_id(self, index: QModelIndex or None):
-        """
-        Needs to be implemented if necessary
-        upper model index is used for filtering
-        :param index:
-        :return:
-        """
-        pass
 
     @abstractmethod
     def set_add_on_cols(self) -> None:
@@ -385,17 +361,21 @@ class DataModel(PandasModel):
             else:
                 self.unset_uneditable_row(index.row())
 
-    def del_new_rows(self) -> int:
+    def del_new_rows(self):
         """
         Remove new rows (unsaved) by means of set_del_flag
         :return: the number of deleted new rows
         """
-        row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
+        try:
+            row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
+        except Exception as e:
+            logger.debug(e)
+            raise e
+
         if len(row_list) > 0:
             logger.debug(f"rows to delete: {row_list}")
             indexes = [self.index(row, 0) for row in row_list]
             self.set_del_flag(indexes)
-        return len(row_list)
 
     def get_new_df(self) -> pd.DataFrame:
         return self.model_df.loc[self.model_df['flag'] & RowFlags.NewRow > 0, :]
@@ -449,9 +429,9 @@ class DataModel(PandasModel):
 
         new_df = self.get_new_df()
         if not new_df.empty:
-            new_df.loc[:, [self.get_col_name(0)]] = 'DEFAULT'
             logger.debug(f"\n{new_df}")
             df_to_upload = new_df.loc[:, self.db_column_names]
+            df_to_upload.iloc[:, 0] = 'DEFAULT'
             # set id default to let DB assign an id without collision
             # df_to_upload.loc[:, self.get_col_name(0)] = 'DEFAULT'
             logger.debug(f"\n{df_to_upload}")

@@ -2,7 +2,7 @@ import sys
 import pandas as pd
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
-    QVBoxLayout, QInputDialog, QMessageBox
+    QVBoxLayout, QInputDialog, QMessageBox, QTabWidget
 )
 from PySide6.QtCore import Qt, Signal, Slot, QFile
 from PySide6.QtGui import QAction, QIcon
@@ -115,24 +115,31 @@ class TreatmentWindow(QMainWindow):
         self.provider_widget = ProviderWidget(self.provider_model, self)
         self.session_widget = SessionWidget(self.session_model, self)
 
+        self.left_pane = QTabWidget(self)
+        self.left_pane.addTab(self.patient_widget, '환자')
+        self.left_pane.addTab(self.provider_widget, '치료사')
+
         self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
-        self.patient_widget.setMinimumWidth(200)
-        self.patient_widget.setMaximumWidth(300)
-        self.provider_widget.setMinimumWidth(200)
-        self.provider_widget.setMaximumWidth(300)
-        self.session_widget.setMinimumWidth(1000)
+        # self.patient_widget.setMinimumWidth(200)
+        # self.patient_widget.setMaximumWidth(300)
+        # self.provider_widget.setMinimumWidth(200)
+        # self.provider_widget.setMaximumWidth(300)
+        self.left_pane.setMinimumWidth(300)
+        self.left_pane.setMaximumWidth(500)
+        self.session_widget.setMinimumWidth(900)
         self.session_widget.setMaximumWidth(900)
 
     def setup_central_widget(self):
         central_widget = QWidget(self)
 
-        vbox1 = QVBoxLayout()
-        vbox1.addWidget(self.provider_widget)
-        vbox1.addWidget(self.patient_widget)
+        # vbox1 = QVBoxLayout()
+        # vbox1.addWidget(self.provider_widget)
+        # vbox1.addWidget(self.patient_widget)
 
         hbox = QHBoxLayout()
-        hbox.addLayout(vbox1)
+        # hbox.addLayout(vbox1)
+        hbox.addWidget(self.left_pane)
         hbox.addWidget(self.session_widget)
         central_widget.setLayout(hbox)
         self.setCentralWidget(central_widget)
@@ -165,19 +172,22 @@ class TreatmentWindow(QMainWindow):
             result_str = await self.patient_model.save_to_db()
             logger.debug("Updating patients ...")
             await self.patient_model.update()
-            # self.session_model.set_upper_model_id(None)
             self.session_model.set_upper_model(None)
             await self.session_model.update()
         elif action == "session_save":
             logger.debug("Saving sessions ...")
-            result_ssession = await self.session_model.save_to_db()
+            await self.session_model.save_to_db()
             await self.session_model.update()
         elif action == "patient_update":
             await self.patient_model.update()
+        elif action == "provider_update":
+            await self.provider_model.update()
         elif action == "session_update":
             await self.session_model.update()
         elif action == "all_update":
             await self.patient_model.update()
+            await self.provider_model.update()
+            await self.session_model.update()
 
         self.done_signal.emit(action)
 

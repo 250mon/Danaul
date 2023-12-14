@@ -103,8 +103,8 @@ class PatientWidget(QWidget):
         save_to_db()
         :return:
         """
+        self.source_model.append_new_row(**input_db_record)
         try:
-            self.source_model.append_new_row(**input_db_record)
             if hasattr(self.parent, "async_start"):
                 self.parent.async_start("patient_save")
         except Exception as e:

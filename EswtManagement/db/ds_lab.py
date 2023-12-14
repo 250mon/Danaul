@@ -66,8 +66,8 @@ class Lab(metaclass=Singleton):
         col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
         self.table_column_names = {}
         self.table_column_names['patients'] = col_name.findall(CREATE_PATIENT_TABLE)
-        self.table_column_names['sessions'] = col_name.findall(CREATE_SESSION_TABLE)
         self.table_column_names['providers'] = ['provider_id', 'provider_name']
+        self.table_column_names['sessions'] = col_name.findall(CREATE_SESSION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
@@ -76,23 +76,21 @@ class Lab(metaclass=Singleton):
             query = f"SELECT * FROM {table} WHERE active = True"
 
         elif table == "sessions":
+            main_part = f"SELECT * FROM sessions "
+            where_part = ''
+            time_part = ''
+            limit_part = f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
             if len(kwargs) > 0:
-                # patient_id = kwargs.get('patient_id', None)
-                col_name = list(kwargs.keys())[0]
-                val = list(kwargs.values())[0]
                 beg_ts = kwargs.get('beg_timestamp', '')
                 end_ts = kwargs.get('end_timestamp', '')
                 if beg_ts != '' and end_ts != '':
-                    query = f"SELECT * FROM sessions WHERE {col_name} = {val} " \
-                            f"AND timestamp >= '{beg_ts}' AND timestamp <= '{end_ts}' " \
-                            f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
-                else:
-                    # beg_ts == '' or end_ts == '':
-                    query = f"SELECT * FROM sessions WHERE {col_name} = {val} " \
-                            f"ORDER BY session_id DESC LIMIT {self.max_session_count}"
-            else:
-                query = f"SELECT * FROM sessions ORDER BY session_id DESC LIMIT " \
-                        f"{self.max_session_count}"
+                    time_part = f"WHERE timestamp >= '{beg_ts}' AND timestamp <= '{end_ts}' "
+
+                if len(kwargs) == 3:
+                    col_name = list(kwargs.keys())[2]
+                    val = list(kwargs.values())[2]
+                    where_part = f"AND {col_name} = {val} "
+            query = main_part + time_part + where_part + limit_part
 
         elif table == "providers":
             query = ("SELECT user_id as provider_id, user_realname as provider_name "

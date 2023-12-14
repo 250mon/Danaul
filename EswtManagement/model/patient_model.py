@@ -108,7 +108,7 @@ class PatientModel(DataModel):
 
         emr_id: int = kwargs.get('patient_emr_id')
         duplicate_emr_id = self.model_df.query(f"patient_emr_id == {emr_id}")
-        if not duplicate_emr_id.empty():
+        if not duplicate_emr_id.empty:
             error = f"patient_emr_id({emr_id}) is duplicate"
             raise DuplicatePatientEmrId(error)
 

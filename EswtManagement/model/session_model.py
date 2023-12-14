@@ -19,6 +19,12 @@ logger = Logs().get_logger("main")
 class SessionModel(DataModel):
     def __init__(self, user_name: str):
         self.init_params()
+        # the lower layer view is updated by selecting an id of
+        # the upper layer model,
+        self.upper_model = None
+        # the selected id is used for lower layer
+        self.selected_id = None
+        self.selected_model_name = ""
         self.selected_name = ""
         self.beg_timestamp = QDate.currentDate().addMonths(-6)
         self.end_timestamp = QDate.currentDate()
@@ -55,6 +61,8 @@ class SessionModel(DataModel):
         :return:
         """
         self.model_df = Lab().table_df['sessions']
+        if self.model_df.empty:
+            return
 
         # set more columns for the view
         patient_df = Lab().table_df['patients']
@@ -82,7 +90,16 @@ class SessionModel(DataModel):
 
         self.model_df['flag'] = RowFlags.OriginalRow
 
+    def initialize_upper_model(self):
+        self.upper_model = None
+        self.selected_model_name = ""
+        self.selected_name = ""
+
     def set_upper_model(self, upper_model: DataModel or None):
+        if upper_model is None or upper_model.get_selected_id() is None:
+            self.initialize_upper_model()
+            return
+
         self.upper_model = upper_model
 
         selected_table = self.upper_model.table_name
@@ -94,17 +111,19 @@ class SessionModel(DataModel):
             'patients': 'patient_name',
             'providers': 'provider_name',
         }
-        name_deco = {
+        model_name = {
             'patients': '환자 ',
             'providers': '치료사',
         }
         if selected_id is not None:
+            self.selected_model_name = model_name[selected_table]
+            logger.debug(f"selected_model_name({self.selected_model_name}) is set")
             self.selected_name = Lab().get_data_from_id(selected_table,
                                                         selected_id,
                                                         name_col[selected_table])
-            self.selected_name = name_deco[selected_table] + " " + self.selected_name
             logger.debug(f"selected_name({self.selected_name}) is set")
         else:
+            self.selected_model_name = ""
             self.selected_name = ""
 
     def set_beg_timestamp(self, beg: QDate):
@@ -123,22 +142,31 @@ class SessionModel(DataModel):
         # end day needs to be added 1 day otherwise query results only includes those thata
         # were created until the day 00h 00mm 00sec
         logger.debug(f"downloading data from DB")
-        kwargs = {}
+
+        kwargs = {
+            'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
+            'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")
+        }
+
         col_name = None
+        if self.upper_model is None:
+            logger.debug('upper_model is None')
+            pass
 
-        if self.upper_model.table_name == 'patients':
-            col_name = 'patient_id'
-        elif self.upper_model.table_name == 'providers':
-            col_name = 'provider_id'
+        elif self.upper_model.get_selected_id() is not None:
+            if self.upper_model.table_name == 'patients':
+                logger.debug('upper_model is patients')
+                col_name = 'patient_id'
+            elif self.upper_model.table_name == 'providers':
+                logger.debug('upper_model is providers')
+                col_name = 'provider_id'
+            kwargs[col_name] = self.upper_model.get_selected_id()
 
-        if col_name is not None:
-            kwargs = {
-                col_name: self.upper_model.get_selected_id(),
-                'beg_timestamp': self.beg_timestamp.toString("yyyy-MM-dd"),
-                'end_timestamp': self.end_timestamp.addDays(1).toString("yyyy-MM-dd")
-            }
-            logger.debug(f"\n{kwargs}")
+        # self.upper_model is not None, but no selected_id
+        else:
+            self.initialize_upper_model()
 
+        logger.debug(f"\n{kwargs}")
         await super().update(**kwargs)
 
     def get_default_delegate_info(self) -> List[int]:

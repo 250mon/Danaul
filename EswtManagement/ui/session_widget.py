@@ -199,24 +199,22 @@ class SessionWidget(QWidget):
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
 
-    def update_session_view(self):
-        # retrieve the data about the selected treatment_id from DB
-        self.parent.async_start('session_update')
-        # displaying the sku name in the tr view
-        self.filter_item_label.setText(self.source_model.selected_name)
-
     def update_with_selected_upper_layer(self, upper_model: DataModel):
         """
-        A double-click event in the patient view triggers the parent's
-        patient_selected method which in turn calls this method
-        :param patient_id:
+        A double click event on a row of the upper level widget eventually
+         calls this method
+        :param upper_model
         :return:
         """
-        logger.debug(f"Selected model: {upper_model.table_name}")
         # if there is remaining unsaved new rows, drop them
-        self.source_model.del_new_rows()
+        try:
+            self.source_model.del_new_rows()
+        except Exception as e:
+            logger.debug(e)
+
+        # let the model learn the upper model index for a new row creation
         self.source_model.set_upper_model(upper_model)
-        self.update_session_view()
+        self.update_view()
 
     def update_with_no_selection(self):
         """
@@ -224,10 +222,22 @@ class SessionWidget(QWidget):
         :return:
         """
         # if there is remaining unsaved new rows, drop them
-        self.source_model.del_new_rows()
+        try:
+            self.source_model.del_new_rows()
+        except Exception as e:
+            logger.debug(e)
+
         self.source_model.set_upper_model(None)
-        self.update_session_view()
+        self.update_view()
+
+    def update_view(self):
+        # retrieve the data about the selected treatment_id from DB
+        self.parent.async_start('session_update')
+
+        # displaying the selected item name in the session view
+        self.filter_item_label.setText(self.source_model.selected_model_name + " " +
+                                       self.source_model.selected_name)
 
     def set_max_search_count(self, max_count: int):
         Lab()._set_max_session_count(max_count)
-        self.update_with_selected_id(self.source_model.selected_id)
+        self.update_view()

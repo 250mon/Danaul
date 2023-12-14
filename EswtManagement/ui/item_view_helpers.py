@@ -1,5 +1,5 @@
 from typing import List
-from PySide6.QtWidgets import QMainWindow, QWidget, QMessageBox, QAbstractItemView
+from PySide6.QtWidgets import QMainWindow, QWidget, QAbstractItemView, QTableView
 from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
 from model.di_data_model import DataModel
 from ui.default_delegate import DefaultDelegate
@@ -19,7 +19,7 @@ class ItemViewHelpers:
         self.parent: QMainWindow = parent
         self.src_model = src_model
         self.prx_model = proxy_model
-        self.item_view = view
+        self.item_view: QAbstractItemView = view
         self.setup_delegate_for_columns()
 
     def setup_delegate_for_columns(self):
@@ -98,42 +98,18 @@ class ItemViewHelpers:
             rows = [idx.row() for idx in del_indexes]
             logger.debug(f"rows {rows} deleted")
 
-    def update_with_selected_upper_layer(self, upper_model: DataModel):
-        """
-        A double click event that triggers the upper level widget's
-        row_selected method eventually calls this method
-        :param treatment_id:
-        :return:
-        """
-        # if there is remaining unsaved new rows, drop them
-        self.src_model.del_new_rows()
-        # let the model learn the upper model index for a new row creation
-        self.src_model.set_upper_model(upper_model)
-
-        # filtering in the sku view
-        self.prx_model.setFilterRegularExpression(
-            f"^{upper_model.get_selected_id()}$")
-
-    def update_with_no_selection(self):
-
-        """
-        Connected to search all button
-        :return:
-        """
-        # if there is remaining unsaved new rows, drop them
-        self.src_model.del_new_rows()
-        # self.src_model.set_upper_model_id(None)
-        self.src_model.set_upper_model(None)
-        self.prx_model.setFilterRegularExpression("^\\d*$")
 
     def set_col_width(self, col_name:str, width: int):
-        self.item_view.setColumnWidth(self.src_model.get_col_number(col_name), width)
+        if isinstance(self.item_view, QTableView):
+            self.item_view.setColumnWidth(self.src_model.get_col_number(col_name), width)
 
     def set_col_hidden(self, left_most_hidden: str):
-        left_most_col_num = self.src_model.get_col_number(left_most_hidden)
-        last_col_num = len(self.src_model.column_names)
-        for c in range(left_most_col_num, last_col_num):
-            self.item_view.setColumnWidth(c, 1)
+        if isinstance(self.item_view, QTableView):
+            left_most_col_num = self.src_model.get_col_number(left_most_hidden)
+            last_col_num = len(self.src_model.column_names)
+            for c in range(left_most_col_num, last_col_num):
+                self.item_view.setColumnWidth(c, 1)
+
             # The following methods don't allow the hidden col
             # to be accessible
             # self.table_view.horizontalHeader().hideSection(c)
