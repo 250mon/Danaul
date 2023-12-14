@@ -20,10 +20,10 @@ class PatientModel(DataModel):
         self.set_table_name('patients')
 
         self.col_edit_lvl = {
-            'patient_id': EditLevel.NotEditable,
             'patient_emr_id': EditLevel.AdminModifiable,
             'patient_name': EditLevel.AdminModifiable,
             'patient_gender': EditLevel.AdminModifiable,
+            'patient_id': EditLevel.NotEditable,
             'flag': EditLevel.NotEditable
         }
 
@@ -107,8 +107,7 @@ class PatientModel(DataModel):
         logger.debug(kwargs)
 
         emr_id: int = kwargs.get('patient_emr_id')
-        duplicate_emr_id = self.model_df.query(f"patient_emr_id == {emr_id}")
-        if not duplicate_emr_id.empty:
+        if self.is_emr_id_duplicate(emr_id):
             error = f"patient_emr_id({emr_id}) is duplicate"
             raise DuplicatePatientEmrId(error)
 
@@ -126,3 +125,10 @@ class PatientModel(DataModel):
         except Exception as e:
             logger.debug("New patient info is improper!")
             logger.debug(e)
+
+    def is_emr_id_duplicate(self, emr_id: int) -> bool:
+        if (self.model_df.empty or
+                self.model_df.query(f"patient_emr_id == {emr_id}").empty):
+            return False
+        else:
+            return True

@@ -7,9 +7,9 @@ from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
 from db.ds_lab import Lab
 from model.di_data_model import DataModel
+from model.patient_model import PatientModel
 from model.session_model import SessionModel
 from ui.item_view_helpers import ItemViewHelpers
-from ui.single_session_window import SingleSessionWindow
 from ui.register_new_session_dialog import NewSessionDialog
 from common.d_logger import Logs
 
@@ -23,6 +23,7 @@ class SessionWidget(QWidget):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.source_model = model
+        self.proxy_model = None
         # initialize
         self.set_model()
         self.init_ui()
@@ -49,6 +50,7 @@ class SessionWidget(QWidget):
         self.session_view.setModel(self.proxy_model)
         # self.single_session_window = SingleSessionWindow(self.proxy_model, self)
         self.new_session_dlg = NewSessionDialog(self)
+        self.new_session_dlg.set_source_model(self.source_model)
 
         self.session_view.setAlternatingRowColors(True)
         self.session_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
@@ -151,9 +153,11 @@ class SessionWidget(QWidget):
 
     @Slot(str)
     def add_session(self):
-        logger.debug("Adding a new session ...")
-        self.new_session_dlg.set_source_model(self.source_model)
-        self.new_session_dlg.show()
+        if not isinstance(self.source_model.upper_model, PatientModel):
+            logger.debug("Cannot add a new session: choose a patient first")
+        else:
+            logger.debug("Adding a new session ...")
+            self.new_session_dlg.show()
 
     @Slot(str)
     def chg_session(self):
@@ -239,5 +243,5 @@ class SessionWidget(QWidget):
                                        self.source_model.selected_name)
 
     def set_max_search_count(self, max_count: int):
-        Lab()._set_max_session_count(max_count)
+        Lab().set_max_session_count(max_count)
         self.update_view()

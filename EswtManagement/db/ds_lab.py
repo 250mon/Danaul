@@ -55,7 +55,7 @@ class Lab(metaclass=Singleton):
     def __await__(self):
         return self.async_init().__await__()
 
-    def _set_max_session_count(self, count: int):
+    def set_max_session_count(self, count: int):
         if count > 0:
             self.max_session_count = count
         else:

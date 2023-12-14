@@ -1,10 +1,13 @@
+import pandas as pd
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QPushButton, QLineEdit, QSplitter,
     QVBoxLayout, QHBoxLayout, QMessageBox, QComboBox
 )
 from PySide6.QtCore import Qt, QByteArray
 from db.db_utils import QtDbUtil
+from db.ds_lab import Lab
 from common.auth_util import *
+
 
 
 class NewUserDialog(QDialog):
@@ -115,7 +118,22 @@ class NewUserDialog(QDialog):
         self.user_input_dialog.close()
 
     def check_duplicate_user_name(self):
-        self.user_name_le.setEnabled(False)
-        self.new_password_le.setEnabled(True)
-        self.confirm_password_le.setEnabled(True)
-        self.password_check_btn.setEnabled(True)
+        user_name = self.user_name_le.text()
+        if not self.is_user_name_duplicate(user_name):
+            self.user_name_le.setEnabled(False)
+            self.new_password_le.setEnabled(True)
+            self.confirm_password_le.setEnabled(True)
+            self.password_check_btn.setEnabled(True)
+        else:
+            QMessageBox.information(self,
+                                    'Duplicated User Name',
+                                    'The same User Name exists',
+                                    QMessageBox.Close)
+
+    def is_user_name_duplicate(self, user_name: str):
+        users_df: pd.DataFrame = Lab().table_df['users']
+        if (users_df.empty or
+                users_df.query(f"user_name == '{user_name}'").empty):
+            return False
+        else:
+            return True

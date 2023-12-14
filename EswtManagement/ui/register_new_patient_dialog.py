@@ -1,8 +1,9 @@
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QPushButton, QLineEdit,
-    QVBoxLayout, QHBoxLayout, QComboBox
+    QVBoxLayout, QHBoxLayout, QComboBox, QMessageBox
 )
 from PySide6.QtCore import Qt, Signal
+from model.patient_model import PatientModel
 
 
 class NewPatientDialog(QDialog):
@@ -10,6 +11,7 @@ class NewPatientDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.source_model: PatientModel or None = None
         self.new_patient_signal.connect(parent.save_model_to_db)
         self.init_ui()
 
@@ -51,11 +53,20 @@ class NewPatientDialog(QDialog):
 
         self.setLayout(dialog_v_box)
 
+    def set_source_model(self, src_model: PatientModel):
+        self.source_model = src_model
+
     def check_duplicate_emr_id(self):
-        # TODO: check if emr_id is already in use
-        self.emr_id_le.setEnabled(False)
-        self.name_le.setEnabled(True)
-        self.gender_cb.setEnabled(True)
+        emr_id = int(self.emr_id_le.text())
+        if not self.source_model.is_emr_id_duplicate(emr_id):
+            self.emr_id_le.setEnabled(False)
+            self.name_le.setEnabled(True)
+            self.gender_cb.setEnabled(True)
+        else:
+            QMessageBox.information(self,
+                                    'Duplicated EMR ID',
+                                    'The same EMR ID exists',
+                                    QMessageBox.Close)
 
     def accept_patient_info(self):
         """Verify that the patient's passwords match. If so, save the patient's
@@ -71,6 +82,3 @@ class NewPatientDialog(QDialog):
         }
         self.new_patient_signal.emit(input_db_record)
         self.close()
-
-
-        # TODO: update the patient list of main widget

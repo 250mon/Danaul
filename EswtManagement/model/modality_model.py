@@ -63,9 +63,9 @@ class ModalityModel(DataModel):
         for combobox delegate
         :return:
         """
-        category_name_list = Lab().table_df['category']['cantegory_name'].to_list()
+        category_name_list = Lab().table_df['category']['category_name'].to_list()
         combo_info_dict = {
-            self.get_col_number('provider_name'): category_name_list,
+            self.get_col_number('category_name'): category_name_list,
         }
         return combo_info_dict
 
@@ -151,7 +151,7 @@ class ModalityModel(DataModel):
             name: str = kwargs.get('modality_name')
             price: str = kwargs.get('modality_price', 0)
             category_name = kwargs.get('category_name')
-            category_id = Lab().get_id_from_data('active_categorys',
+            category_id = Lab().get_id_from_data('category',
                                                  {'category_name': category_name},
                                                  'category_id')
             description = kwargs.get('description', "")
@@ -170,3 +170,10 @@ class ModalityModel(DataModel):
         except Exception as e:
             logger.debug("New modality info is improper!")
             logger.debug(e)
+
+    def is_modality_name_duplicate(self, modality_name: str) -> bool:
+        if (self.model_df.empty or
+                self.model_df.query(f"modality_name == '{modality_name}'").empty):
+            return False
+        else:
+            return True

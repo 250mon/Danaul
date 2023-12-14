@@ -6,16 +6,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
 from common.d_logger import Logs
-from model.patient_model import PatientModel
+from model.modality_model import ModalityModel
 from ui.item_view_helpers import ItemViewHelpers
-from ui.register_new_patient_dialog import NewPatientDialog
+from ui.register_new_modality_dialog import NewModalityDialog
 
 
 logger = Logs().get_logger("main")
 
 
-class PatientWidget(QWidget):
-    def __init__(self, model: PatientModel, parent: QMainWindow = None):
+class ModalityWidget(QWidget):
+    def __init__(self, model: ModalityModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.source_model = model
@@ -34,23 +34,23 @@ class PatientWidget(QWidget):
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
-        initial_sort_col_num = self.source_model.get_col_number('patient_emr_id')
+        initial_sort_col_num = self.source_model.get_col_number('modality_emr_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     def init_ui(self):
-        self.patient_view = QTreeView()
+        self.modality_view = QTreeView()
         self.item_view_helpers = ItemViewHelpers(
             self.source_model,
             self.proxy_model,
-            self.patient_view)
-        self.patient_view.setModel(self.proxy_model)
-        self.new_patient_dlg = NewPatientDialog(self)
-        self.new_patient_dlg.set_source_model(self.source_model)
+            self.modality_view)
+        self.modality_view.setModel(self.proxy_model)
+        self.new_modality_dlg = NewModalityDialog(self)
+        self.new_modality_dlg.set_source_model(self.source_model)
 
-        self.patient_view.setRootIsDecorated(False)
-        self.patient_view.setAlternatingRowColors(True)
-        self.patient_view.setSortingEnabled(True)
-        self.patient_view.doubleClicked.connect(self.row_double_clicked)
+        self.modality_view.setRootIsDecorated(False)
+        self.modality_view.setAlternatingRowColors(True)
+        self.modality_view.setSortingEnabled(True)
+        self.modality_view.doubleClicked.connect(self.row_double_clicked)
 
         title_label = QLabel('환  자')
         font = QFont("Arial", 12, QFont.Bold)
@@ -66,9 +66,9 @@ class PatientWidget(QWidget):
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_btn = QPushButton('추 가')
-        add_btn.clicked.connect(self.add_patient)
+        add_btn.clicked.connect(self.add_modality)
         del_btn = QPushButton('삭 제')
-        del_btn.clicked.connect(self.del_patient)
+        del_btn.clicked.connect(self.del_modality)
 
         edit_hbox = QHBoxLayout()
         edit_hbox.addWidget(add_btn)
@@ -82,28 +82,20 @@ class PatientWidget(QWidget):
         vbox = QVBoxLayout(self)
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
-        vbox.addWidget(self.patient_view)
+        vbox.addWidget(self.modality_view)
         self.setLayout(vbox)
 
     @Slot()
-    def add_patient(self):
-        logger.debug("Adding a patient ...")
-        self.new_patient_dlg.show()
+    def add_modality(self):
+        logger.debug("Adding a modality ...")
+        self.new_modality_dlg.show()
 
     @Slot()
-    def del_patient(self):
-        logger.debug("Deleting patient ...")
+    def del_modality(self):
+        logger.debug("Deleting modality ...")
         if selected_indexes := self.item_view_helpers.get_selected_indexes():
-            logger.debug(f"del_patient {selected_indexes}")
+            logger.debug(f"del_modality {selected_indexes}")
             self.item_view_helpers.delete_rows(selected_indexes)
-            try:
-                if hasattr(self.parent, "async_start"):
-                    self.parent.async_start("patient_save")
-            except Exception as e:
-                QMessageBox.information(self,
-                                        "Failed Delete Patient",
-                                        str(e),
-                                        QMessageBox.Close)
 
     @Slot(object)
     def save_model_to_db(self, input_db_record: Dict):
@@ -116,24 +108,24 @@ class PatientWidget(QWidget):
         self.source_model.append_new_row(**input_db_record)
         try:
             if hasattr(self.parent, "async_start"):
-                self.parent.async_start("patient_save")
+                self.parent.async_start("modality_save")
         except Exception as e:
             QMessageBox.information(self,
-                                    "Failed New Patient",
+                                    "Failed New Modality",
                                     str(e),
                                     QMessageBox.Close)
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        A patient being double clicked in the patient view automatically makes
-        the session view to update with the data of the patient.
+        A modality being double clicked in the modality view automatically makes
+        the session view to update with the data of the modality.
         :param index:
         :return:
         """
         if index.isValid() and hasattr(self.parent, 'upper_layer_model_selected'):
-            patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
-            self.source_model.set_selected_id(patient_id)
+            modality_id = index.siblingAtColumn(self.source_model.get_col_number('modality_id')).data()
+            self.source_model.set_selected_id(modality_id)
             self.parent.upper_layer_model_selected(self.source_model)
 
     def update_all_views(self):
