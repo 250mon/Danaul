@@ -9,9 +9,9 @@ from model.patient_model import PatientModel
 class NewPatientDialog(QDialog):
     new_patient_signal = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, src_model: PatientModel, parent):
         super().__init__(parent)
-        self.source_model: PatientModel or None = None
+        self.source_model = src_model
         self.new_patient_signal.connect(parent.save_model_to_db)
         self.init_ui()
 
@@ -53,8 +53,12 @@ class NewPatientDialog(QDialog):
 
         self.setLayout(dialog_v_box)
 
-    def set_source_model(self, src_model: PatientModel):
-        self.source_model = src_model
+    def update_with_latest_model(self):
+        self.initialize_form()
+
+    def initialize_form(self):
+        self.emr_id_le.clear()
+        self.name_le.clear()
 
     def check_duplicate_emr_id(self):
         emr_id = int(self.emr_id_le.text())
@@ -64,7 +68,7 @@ class NewPatientDialog(QDialog):
             self.gender_cb.setEnabled(True)
         else:
             QMessageBox.information(self,
-                                    'Duplicated EMR ID',
+                                    'Duplicate EMR ID',
                                     'The same EMR ID exists',
                                     QMessageBox.Close)
 

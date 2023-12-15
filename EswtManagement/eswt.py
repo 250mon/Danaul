@@ -10,13 +10,12 @@ from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from db.ds_lab import Lab
 from model.di_data_model import DataModel
-from model.patient_model import PatientModel
-from model.provider_model import ProviderModel
-from model.session_model import SessionModel
 from ui.login_widget import LoginWidget
-from ui.patient_widget import PatientWidget
-from ui.provider_widget import ProviderWidget
-from ui.session_widget import SessionWidget
+from ui.patient_widget import PatientWidget, PatientModel
+from ui.provider_widget import ProviderWidget, ProviderModel
+from ui.modality_widget import ModalityWidget, ModalityModel
+from ui.bodypart_widget import BodyPartWidget, BodyPartModel
+from ui.session_widget import SessionWidget, SessionModel
 from constants import ConfigReader, ADMIN_GROUP
 
 
@@ -58,6 +57,8 @@ class TreatmentWindow(QMainWindow):
     def setup_models(self, user_name):
         self.patient_model = PatientModel(user_name)
         self.provider_model = ProviderModel(user_name)
+        self.modality_model = ModalityModel(user_name)
+        self.part_model = BodyPartModel(user_name)
         self.session_model = SessionModel(user_name)
 
     def init_ui(self, user_name):
@@ -113,18 +114,18 @@ class TreatmentWindow(QMainWindow):
     def setup_child_widgets(self):
         self.patient_widget = PatientWidget(self.patient_model, self)
         self.provider_widget = ProviderWidget(self.provider_model, self)
+        self.modality_widget = ModalityWidget(self.modality_model, self)
+        self.part_widget = BodyPartWidget(self.part_model, self)
         self.session_widget = SessionWidget(self.session_model, self)
 
         self.left_pane = QTabWidget(self)
         self.left_pane.addTab(self.patient_widget, '환자')
         self.left_pane.addTab(self.provider_widget, '치료사')
+        self.left_pane.addTab(self.modality_widget, '치료 형태')
+        self.left_pane.addTab(self.part_widget, '치료 부위')
 
         self.setMinimumSize(1200, 800)
         self.setMaximumSize(1600, 1000)
-        # self.patient_widget.setMinimumWidth(200)
-        # self.patient_widget.setMaximumWidth(300)
-        # self.provider_widget.setMinimumWidth(200)
-        # self.provider_widget.setMaximumWidth(300)
         self.left_pane.setMinimumWidth(300)
         self.left_pane.setMaximumWidth(500)
         self.session_widget.setMinimumWidth(900)
@@ -174,6 +175,14 @@ class TreatmentWindow(QMainWindow):
             await self.patient_model.update()
             self.session_model.set_upper_model(None)
             await self.session_model.update()
+        elif action == "modality_save":
+            logger.debug("Saving modality ...")
+            await self.modality_model.save_to_db()
+            await self.modality_model.update()
+        elif action == "part_save":
+            logger.debug("Saving body part ...")
+            await self.part_model.save_to_db()
+            await self.part_model.update()
         elif action == "session_save":
             logger.debug("Saving sessions ...")
             await self.session_model.save_to_db()
@@ -182,11 +191,14 @@ class TreatmentWindow(QMainWindow):
             await self.patient_model.update()
         elif action == "provider_update":
             await self.provider_model.update()
+        elif action == "modality_update":
+            await self.provider_model.update()
         elif action == "session_update":
             await self.session_model.update()
         elif action == "all_update":
             await self.patient_model.update()
             await self.provider_model.update()
+            await self.modality_model.update()
             await self.session_model.update()
 
         self.done_signal.emit(action)

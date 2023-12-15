@@ -6,16 +6,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
 from common.d_logger import Logs
-from model.modality_model import ModalityModel
+from model.bodypart_model import BodyPartModel
 from ui.item_view_helpers import ItemViewHelpers
-from ui.register_new_modality_dialog import NewModalityDialog
+from ui.register_new_bodypart_dialog import NewBodyPartDialog
 
 
 logger = Logs().get_logger("main")
 
 
-class ModalityWidget(QWidget):
-    def __init__(self, model: ModalityModel, parent: QMainWindow = None):
+class BodyPartWidget(QWidget):
+    def __init__(self, model: BodyPartModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
         self.source_model = model
@@ -34,24 +34,24 @@ class ModalityWidget(QWidget):
         # For sorting, model data needs to be read in certain deterministic order
         # we use SortRole to read in model.data() for sorting purpose
         self.proxy_model.setSortRole(self.source_model.SortRole)
-        initial_sort_col_num = self.source_model.get_col_number('modality_id')
+        initial_sort_col_num = self.source_model.get_col_number('part_id')
         self.proxy_model.sort(initial_sort_col_num, Qt.AscendingOrder)
 
     def init_ui(self):
-        self.modality_view = QTreeView()
+        self.part_view = QTreeView()
         self.item_view_helpers = ItemViewHelpers(self.source_model,
                                                  self.proxy_model,
-                                                 self.modality_view)
-        self.modality_view.setModel(self.proxy_model)
+                                                 self.part_view)
+        self.part_view.setModel(self.proxy_model)
 
-        self.modality_view.setRootIsDecorated(False)
-        self.modality_view.setAlternatingRowColors(True)
-        self.modality_view.setSortingEnabled(True)
-        self.modality_view.doubleClicked.connect(self.row_double_clicked)
+        self.part_view.setRootIsDecorated(False)
+        self.part_view.setAlternatingRowColors(True)
+        self.part_view.setSortingEnabled(True)
+        self.part_view.doubleClicked.connect(self.row_double_clicked)
 
-        self.new_modality_dlg = NewModalityDialog(self.source_model, self)
+        self.new_part_dlg = NewBodyPartDialog(self.source_model, self)
 
-        title_label = QLabel('치료 형태')
+        title_label = QLabel('치료 부위')
         font = QFont("Arial", 12, QFont.Bold)
         title_label.setFont(font)
         refresh_btn = QPushButton('전체새로고침')
@@ -65,9 +65,9 @@ class ModalityWidget(QWidget):
         search_bar.setPlaceholderText('검색어')
         search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
         add_btn = QPushButton('추 가')
-        add_btn.clicked.connect(self.add_modality)
+        add_btn.clicked.connect(self.add_part)
         del_btn = QPushButton('삭 제')
-        del_btn.clicked.connect(self.del_modality)
+        del_btn.clicked.connect(self.del_part)
 
         edit_hbox = QHBoxLayout()
         edit_hbox.addWidget(add_btn)
@@ -81,20 +81,20 @@ class ModalityWidget(QWidget):
         vbox = QVBoxLayout(self)
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
-        vbox.addWidget(self.modality_view)
+        vbox.addWidget(self.part_view)
         self.setLayout(vbox)
 
     @Slot()
-    def add_modality(self):
-        logger.debug("Adding a modality ...")
-        self.new_modality_dlg.update_with_latest_model()
-        self.new_modality_dlg.show()
+    def add_part(self):
+        logger.debug("Adding a part ...")
+        self.new_part_dlg.update_with_latest_model()
+        self.new_part_dlg.show()
 
     @Slot()
-    def del_modality(self):
-        logger.debug("Deleting modality ...")
+    def del_part(self):
+        logger.debug("Deleting part ...")
         if selected_indexes := self.item_view_helpers.get_selected_indexes():
-            logger.debug(f"del_modality {selected_indexes}")
+            logger.debug(f"del_part {selected_indexes}")
             self.item_view_helpers.delete_rows(selected_indexes)
 
     @Slot(object)
@@ -108,24 +108,24 @@ class ModalityWidget(QWidget):
         self.source_model.append_new_row(**input_db_record)
         try:
             if hasattr(self.parent, "async_start"):
-                self.parent.async_start("modality_save")
+                self.parent.async_start("part_save")
         except Exception as e:
             QMessageBox.information(self,
-                                    "Failed New Modality",
+                                    "Failed New BodyPart",
                                     str(e),
                                     QMessageBox.Close)
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        A modality being double clicked in the modality view automatically makes
-        the session view to update with the data of the modality.
+        A part being double clicked in the part view automatically makes
+        the session view to update with the data of the part.
         :param index:
         :return:
         """
         if index.isValid() and hasattr(self.parent, 'upper_layer_model_selected'):
-            modality_id = index.siblingAtColumn(self.source_model.get_col_number('modality_id')).data()
-            self.source_model.set_selected_id(modality_id)
+            part_id = index.siblingAtColumn(self.source_model.get_col_number('part_id')).data()
+            self.source_model.set_selected_id(part_id)
             self.parent.upper_layer_model_selected(self.source_model)
 
     def update_all_views(self):

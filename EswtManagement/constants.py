@@ -7,6 +7,17 @@ CONFIG_FILE = 'ds_config'
 ADMIN_GROUP = ['admin', 'jye']
 MAX_SESSION_COUNT = 10
 DEFAULT_MIN_QTY = 1
+HORIZONTAL_HEADERS = {
+    'patient_emr_id': '환자번호',
+    'patient_name': '환자이름',
+    'patient_gender': '성별',
+    'provider_name': '치료사',
+    'modality_name': '치료형태',
+    'part_name': '치료부위',
+    'description': '비고',
+    'active': '활성',
+    'timestamp': '시간',
+}
 
 
 class UserPrivilege:

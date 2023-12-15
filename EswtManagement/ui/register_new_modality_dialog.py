@@ -10,9 +10,9 @@ from model.modality_model import ModalityModel
 class NewModalityDialog(QDialog):
     new_modality_signal = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, src_model: ModalityModel, parent):
         super().__init__(parent)
-        self.source_model: ModalityModel or None = None
+        self.source_model = src_model
         self.new_modality_signal.connect(parent.save_model_to_db)
         self.init_ui()
 
@@ -56,12 +56,18 @@ class NewModalityDialog(QDialog):
 
         self.setLayout(dialog_v_box)
 
-    def set_source_model(self, src_model: ModalityModel):
-        self.source_model = src_model
+    def update_with_latest_model(self):
+        self.initialize_form()
 
         combo_info_dict = self.source_model.get_combobox_delegate_info()
         category_list = combo_info_dict.get(self.source_model.get_col_number('category_name'))
         self.category_cb.addItems(category_list)
+
+    def initialize_form(self):
+        self.modality_name_le.clear()
+        self.modality_price_le.clear()
+        self.category_cb.clear()
+        self.description_te.clear()
 
     def check_duplicate_modality_name(self):
         modality_name = self.modality_name_le.text()
@@ -69,9 +75,10 @@ class NewModalityDialog(QDialog):
             self.modality_name_le.setEnabled(False)
             self.modality_price_le.setEnabled(True)
             self.category_cb.setEnabled(True)
+            self.description_te.setEnabled(True)
         else:
             QMessageBox.information(self,
-                                    'Duplicated Modality Name',
+                                    'Duplicate Modality Name',
                                     'The same Modality Name exists',
                                     QMessageBox.Close)
 

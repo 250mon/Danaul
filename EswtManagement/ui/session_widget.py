@@ -43,19 +43,17 @@ class SessionWidget(QWidget):
 
     def init_ui(self):
         self.session_view = QTableView()
-        self.item_view_helpers = ItemViewHelpers(
-            self.source_model,
-            self.proxy_model,
-            self.session_view)
+        self.item_view_helpers = ItemViewHelpers(self.source_model,
+                                                 self.proxy_model,
+                                                 self.session_view)
         self.session_view.setModel(self.proxy_model)
-        # self.single_session_window = SingleSessionWindow(self.proxy_model, self)
-        self.new_session_dlg = NewSessionDialog(self)
-        self.new_session_dlg.set_source_model(self.source_model)
 
         self.session_view.setAlternatingRowColors(True)
         self.session_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.session_view.resizeColumnsToContents()
         self.session_view.setSortingEnabled(True)
+
+        self.new_session_dlg = NewSessionDialog(self.source_model, self)
 
         self.item_view_helpers.set_col_hidden("session_id")
         self.item_view_helpers.set_col_hidden('patient_id')
@@ -63,9 +61,9 @@ class SessionWidget(QWidget):
         self.item_view_helpers.set_col_hidden("modality_id")
         self.item_view_helpers.set_col_hidden("part_id")
         self.item_view_helpers.set_col_hidden("user_id")
-        self.item_view_helpers.set_col_width("patient_emr_id", 50)
-        self.item_view_helpers.set_col_width("patient_name", 50)
-        self.item_view_helpers.set_col_width("provider_name", 50)
+        self.item_view_helpers.set_col_width("patient_emr_id", 70)
+        self.item_view_helpers.set_col_width("patient_name", 70)
+        self.item_view_helpers.set_col_width("provider_name", 70)
         self.item_view_helpers.set_col_width("modality_name", 100)
         self.item_view_helpers.set_col_width("part_name", 100)
         self.item_view_helpers.set_col_width("timestamp", 100)
@@ -88,8 +86,7 @@ class SessionWidget(QWidget):
         end_dateedit.dateChanged.connect(self.source_model.set_end_timestamp)
         date_search_btn = QPushButton('조회')
         # date_search_btn.setMaximumWidth(100)
-        date_search_btn.clicked.connect(lambda: self.update_with_selected_id(
-            self.source_model.selected_id))
+        date_search_btn.clicked.connect(lambda: self.set_max_search_count(20))
 
         search_all_btn = QPushButton('전체조회')
         search_all_btn.clicked.connect(self.update_with_no_selection)
@@ -120,7 +117,6 @@ class SessionWidget(QWidget):
         hbox1.addWidget(beg_dateedit)
         hbox1.addWidget(end_dateedit)
         hbox1.addWidget(date_search_btn)
-        hbox1.addStretch(1)
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(search_all_btn)
@@ -128,6 +124,7 @@ class SessionWidget(QWidget):
         hbox2.addWidget(five_search_btn)
         hbox2.addWidget(ten_search_btn)
         hbox2.addWidget(twenty_search_btn)
+        hbox1.addStretch(1)
         hbox2.addWidget(self.filter_item_label)
         hbox2.addStretch(1)
         hbox2.addLayout(edit_hbox)
@@ -157,6 +154,7 @@ class SessionWidget(QWidget):
             logger.debug("Cannot add a new session: choose a patient first")
         else:
             logger.debug("Adding a new session ...")
+            self.new_session_dlg.update_with_latest_model()
             self.new_session_dlg.show()
 
     @Slot(str)
@@ -239,7 +237,7 @@ class SessionWidget(QWidget):
         self.parent.async_start('session_update')
 
         # displaying the selected item name in the session view
-        self.filter_item_label.setText(self.source_model.selected_model_name + " " +
+        self.filter_item_label.setText(self.source_model.selected_model_name + ": " +
                                        self.source_model.selected_name)
 
     def set_max_search_count(self, max_count: int):

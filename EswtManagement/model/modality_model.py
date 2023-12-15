@@ -92,8 +92,7 @@ class ModalityModel(DataModel):
         data_to_display = self.model_df.iloc[index.row(), index.column()]
 
         if role == Qt.DisplayRole or role == Qt.EditRole or role == self.SortRole:
-            int_type_columns = ['modality_id', 'category_id',
-                                'modality_price']
+            int_type_columns = ['modality_id', 'category_id', 'modality_price']
             if col_name in int_type_columns:
                 # if column data is int, return int type
                 return int(data_to_display)
@@ -157,6 +156,7 @@ class ModalityModel(DataModel):
             description = kwargs.get('description', "")
 
             new_model_df = pd.DataFrame([{
+                'modality_id': 0,  # any number is ok, getting replaced by DEFAULT
                 'active': active,
                 'modality_name': name,
                 'modality_price': price,

@@ -110,10 +110,14 @@ class SessionModel(DataModel):
         name_col = {
             'patients': 'patient_name',
             'providers': 'provider_name',
+            'modalities': 'modality_name',
+            'body_parts': 'part_name',
         }
         model_name = {
             'patients': '환자 ',
             'providers': '치료사',
+            'modalities': '치료형태',
+            'body_parts': '치료부위',
         }
         if selected_id is not None:
             self.selected_model_name = model_name[selected_table]
@@ -160,6 +164,13 @@ class SessionModel(DataModel):
             elif self.upper_model.table_name == 'providers':
                 logger.debug('upper_model is providers')
                 col_name = 'provider_id'
+            elif self.upper_model.table_name == 'modalities':
+                logger.debug('upper_model is modalities')
+                col_name = 'modality_id'
+            elif self.upper_model.table_name == 'body_parts':
+                logger.debug('upper_model is body_parts')
+                col_name = 'part_id'
+
             kwargs[col_name] = self.upper_model.get_selected_id()
 
         # self.upper_model is not None, but no selected_id
@@ -332,7 +343,9 @@ class SessionModel(DataModel):
         modality_id = Lab().get_id_from_data('modalities',
                                              {'modality_name': modality_name},
                                              'modality_id')
-
+        modality_price = Lab().get_data_from_id('modalities',
+                                                modality_id,
+                                                'modality_price')
         # body part
         part_name = kwargs.get('part_name')
         part_id = Lab().get_id_from_data('body_parts',
@@ -340,12 +353,13 @@ class SessionModel(DataModel):
                                          'part_id')
 
         description = kwargs.get('description', "")
-        session_price = kwargs.get('session_price', 0)
+        session_price = kwargs.get('session_price', modality_price)
         user_id = Lab().get_id_from_data('users',
                                          {'user_name': self.user_name},
                                          'user_id')
 
         new_model_df = pd.DataFrame([{
+            'session_id': 0, # any number is ok, getting replaced by DEFAULT
             'patient_id': patient_id,
             'patient_emr_id': patient_emr_id,
             'patient_name': patient_name,

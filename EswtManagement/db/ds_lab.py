@@ -67,13 +67,19 @@ class Lab(metaclass=Singleton):
         self.table_column_names = {}
         self.table_column_names['patients'] = col_name.findall(CREATE_PATIENT_TABLE)
         self.table_column_names['providers'] = ['provider_id', 'provider_name']
+        self.table_column_names['modalities'] = col_name.findall(CREATE_MODALITY_TABLE)
+        self.table_column_names['body_parts'] = col_name.findall(CREATE_BODY_PART_TABLE)
         self.table_column_names['sessions'] = col_name.findall(CREATE_SESSION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")
 
-        if table == "users" and not self.show_inactive_items:
+        if (table == "users" or table == "modalities") and not self.show_inactive_items:
             query = f"SELECT * FROM {table} WHERE active = True"
+
+        elif table == "providers":
+            query = ("SELECT user_id as provider_id, user_realname as provider_name "
+                     "FROM users WHERE active = True and user_job = '물리치료'")
 
         elif table == "sessions":
             main_part = f"SELECT * FROM sessions "
@@ -91,10 +97,6 @@ class Lab(metaclass=Singleton):
                     val = list(kwargs.values())[2]
                     where_part = f"AND {col_name} = {val} "
             query = main_part + time_part + where_part + limit_part
-
-        elif table == "providers":
-            query = ("SELECT user_id as provider_id, user_realname as provider_name "
-                     "FROM users WHERE active = True and user_job = '물리치료'")
 
         else:
             query = f"SELECT * FROM {table}"

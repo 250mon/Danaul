@@ -126,7 +126,7 @@ class NewUserDialog(QDialog):
             self.password_check_btn.setEnabled(True)
         else:
             QMessageBox.information(self,
-                                    'Duplicated User Name',
+                                    'Duplicate User Name',
                                     'The same User Name exists',
                                     QMessageBox.Close)
 

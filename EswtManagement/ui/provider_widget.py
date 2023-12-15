@@ -37,10 +37,9 @@ class ProviderWidget(QWidget):
 
     def init_ui(self):
         self.provider_view = QTreeView()
-        self.item_view_helpers = ItemViewHelpers(
-            self.source_model,
-            self.proxy_model,
-            self.provider_view)
+        self.item_view_helpers = ItemViewHelpers(self.source_model,
+                                                 self.proxy_model,
+                                                 self.provider_view)
         self.provider_view.setModel(self.proxy_model)
 
         self.provider_view.setRootIsDecorated(False)

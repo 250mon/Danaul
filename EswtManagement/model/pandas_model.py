@@ -3,8 +3,8 @@ import pandas as pd
 from typing import Dict
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
-from constants import EditLevel
-from common.d_logger import Logs, logging
+from constants import EditLevel, HORIZONTAL_HEADERS
+from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")
@@ -68,7 +68,10 @@ class PandasModel(QAbstractTableModel):
         """
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                return str(self.model_df.columns[section])
+                col_name = self.model_df.columns[section]
+                header = HORIZONTAL_HEADERS.get(col_name, col_name)
+                return header
+                # return str(self.model_df.columns[section])
 
             if orientation == Qt.Vertical:
                 return str(self.model_df.index[section])

@@ -39,18 +39,17 @@ class PatientWidget(QWidget):
 
     def init_ui(self):
         self.patient_view = QTreeView()
-        self.item_view_helpers = ItemViewHelpers(
-            self.source_model,
-            self.proxy_model,
-            self.patient_view)
+        self.item_view_helpers = ItemViewHelpers(self.source_model,
+                                                 self.proxy_model,
+                                                 self.patient_view)
         self.patient_view.setModel(self.proxy_model)
-        self.new_patient_dlg = NewPatientDialog(self)
-        self.new_patient_dlg.set_source_model(self.source_model)
 
         self.patient_view.setRootIsDecorated(False)
         self.patient_view.setAlternatingRowColors(True)
         self.patient_view.setSortingEnabled(True)
         self.patient_view.doubleClicked.connect(self.row_double_clicked)
+
+        self.new_patient_dlg = NewPatientDialog(self.source_model, self)
 
         title_label = QLabel('환  자')
         font = QFont("Arial", 12, QFont.Bold)
@@ -88,6 +87,7 @@ class PatientWidget(QWidget):
     @Slot()
     def add_patient(self):
         logger.debug("Adding a patient ...")
+        self.new_patient_dlg.update_with_latest_model()
         self.new_patient_dlg.show()
 
     @Slot()
