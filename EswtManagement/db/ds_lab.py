@@ -119,15 +119,26 @@ class Lab(metaclass=Singleton):
 
     def get_data_from_id(self, table: str, id: int, col: str) -> object:
         tdf = self.table_df[table]
-        return tdf.loc[tdf.iloc[:, 0] == id, col].item()
+        ret_s = tdf.loc[tdf.iloc[:, 0] == id, col]
+        if ret_s.empty:
+            logger.warning(f'no data at col({col})for id({id})')
+            return None
+        else:
+            return ret_s.item()
 
     def get_id_from_data(self,
                          table: str,
                          data: Dict[str, object],
-                         id_col_name: str) -> int:
+                         id_col_name: str) -> int or None:
         tdf = self.table_df[table]
         col, data = data.popitem()
-        return tdf.loc[tdf.loc[:, col] == data, id_col_name].item()
+
+        ret_s = tdf.loc[tdf.loc[:, col] == data, id_col_name]
+        if ret_s.empty:
+            logger.warning(f'no id for col({col}) data({data})')
+            return None
+        else:
+            return ret_s.item()
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
         logger.debug(f"table {table}")

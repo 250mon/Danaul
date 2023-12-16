@@ -61,9 +61,10 @@ class PatientWidget(QWidget):
         hbox1.stretch(1)
         hbox1.addWidget(refresh_btn)
 
-        search_bar = QLineEdit(self)
-        search_bar.setPlaceholderText('검색어')
-        search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
+        self.search_bar = QLineEdit(self)
+        self.search_bar.setPlaceholderText('검색어')
+        self.search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
+        self.search_bar.returnPressed.connect(self.emr_id_entered)
         add_btn = QPushButton('추 가')
         add_btn.clicked.connect(self.add_patient)
         del_btn = QPushButton('삭 제')
@@ -74,7 +75,7 @@ class PatientWidget(QWidget):
         edit_hbox.addWidget(del_btn)
 
         hbox2 = QHBoxLayout()
-        hbox2.addWidget(search_bar)
+        hbox2.addWidget(self.search_bar)
         hbox2.addStretch(1)
         hbox2.addLayout(edit_hbox)
 
@@ -135,6 +136,15 @@ class PatientWidget(QWidget):
             patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
             self.source_model.set_selected_id(patient_id)
             self.parent.upper_layer_model_selected(self.source_model)
+
+    @Slot()
+    def emr_id_entered(self):
+        emr_id = self.search_bar.text()
+        if emr_id.isdecimal():
+
+
+
+
 
     def update_all_views(self):
         """

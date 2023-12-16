@@ -72,10 +72,18 @@ class DataModel(PandasModel):
         return index.column() == flag_col
 
     def get_data_from_index(self, index: QModelIndex, col: str) -> object:
-        return self.model_df.iloc[index.row(), self.get_col_number(col)]
+        if index.isValid():
+            return self.model_df.iloc[index.row(), self.get_col_number(col)]
+        else:
+            return None
 
     def get_data_from_id(self, id: int, col: str) -> object:
-        return self.model_df.loc[self.model_df.iloc[:, 0] == id, col].item()
+        data_s = self.model_df.loc[self.model_df.iloc[:, 0] == id, col]
+        if data_s.empty:
+            logger.warning(f'no data at col({col})for id({id})')
+            return None
+        else:
+            return data_s.item()
 
     def set_flag(self, index: QModelIndex, flag: int):
         """
