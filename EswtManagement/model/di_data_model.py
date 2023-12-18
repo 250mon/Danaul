@@ -9,6 +9,7 @@ from db.ds_lab import Lab
 from common.d_logger import Logs
 from common.datetime_utils import date
 from constants import EditLevel, RowFlags, UserPrivilege, ADMIN_GROUP
+from model.dataframe_tool import *
 
 """
 Handling a raw dataframe from db to convert into model data(dataframe)
@@ -62,28 +63,28 @@ class DataModel(PandasModel):
         super().set_column_index_edit_level(col_idx_edit_lvl)
 
     def get_col_number(self, col_name: str) -> int:
-        return self.model_df.columns.get_loc(col_name)
+        return get_col_number(self.model_df, col_name)
 
     def get_col_name(self, col_num: int) -> str:
-        return self.model_df.columns[col_num]
+        return get_col_name(self.model_df, col_num)
 
     def is_flag_column(self, index: QModelIndex) -> bool:
         flag_col = self.get_col_number('flag')
         return index.column() == flag_col
 
-    def get_data_from_index(self, index: QModelIndex, col: str) -> object:
+    def get_data_by_index(self, index: QModelIndex, col: str) -> object:
         if index.isValid():
             return self.model_df.iloc[index.row(), self.get_col_number(col)]
         else:
             return None
 
-    def get_data_from_id(self, id: int, col: str) -> object:
-        data_s = self.model_df.loc[self.model_df.iloc[:, 0] == id, col]
-        if data_s.empty:
-            logger.warning(f'no data at col({col})for id({id})')
-            return None
-        else:
-            return data_s.item()
+    def get_data_by_id(self, id: int, col: str) -> object:
+        return get_data_by_id(self.model_df, id, col)
+
+    def get_id_by_data(self,
+                       data: Dict[str, object],
+                       id_col_name: str) -> int or None:
+        return get_id_by_data(self.model_df, data, id_col_name)
 
     def set_flag(self, index: QModelIndex, flag: int):
         """
@@ -191,16 +192,16 @@ class DataModel(PandasModel):
 
         if isinstance(idx, QModelIndex):
             # index is given as an arg
-            active_val = self.get_data_from_index(idx, 'active')
+            active_val = self.get_data_by_index(idx, 'active')
         else:
             # id is given as an arg
-            active_val = self.get_data_from_id(idx, 'active')
+            active_val = self.get_data_by_id(idx, 'active')
 
         return active_val
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         if role == Qt.BackgroundRole:
-            flag = self.get_data_from_index(index, 'flag')
+            flag = self.get_data_by_index(index, 'flag')
             if flag & RowFlags.DeletedRow > 0:
                 return QBrush(Qt.darkGray)
             elif not self.is_active_row(index):
@@ -232,7 +233,7 @@ class DataModel(PandasModel):
                 value: object,
                 role=Qt.EditRole):
 
-        flag = self.get_data_from_index(index, 'flag')
+        flag = self.get_data_by_index(index, 'flag')
         # Unless it is a deleted row, proceed to set the data
         if flag & RowFlags.DeletedRow > 0:
             logger.debug("Cannot change data in the deleted row")
@@ -332,7 +333,7 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        curr_flag = self.get_data_from_index(index, 'flag')
+        curr_flag = self.get_data_by_index(index, 'flag')
         curr_flag |= RowFlags.ChangedRow
         if self.diff_row(index):
             self.set_flag(index, curr_flag)
@@ -345,7 +346,7 @@ class DataModel(PandasModel):
         :param index:
         :return:
         """
-        flags = [self.get_data_from_index(index, 'flag') for index in indexes]
+        flags = [self.get_data_by_index(index, 'flag') for index in indexes]
         is_new = [flag & RowFlags.NewRow for flag in flags]
         new_idxes = [index for index, cond in zip(indexes, is_new)
                        if cond > 0]
@@ -359,7 +360,7 @@ class DataModel(PandasModel):
 
         # exclusive or op with deleted flag
         for index in other_idxes:
-            curr_flag = self.get_data_from_index(index, 'flag')
+            curr_flag = self.get_data_by_index(index, 'flag')
             curr_flag ^= RowFlags.DeletedRow
             self.set_flag(index, curr_flag)
 

@@ -2,7 +2,7 @@ import sys
 import pandas as pd
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QDockWidget, QWidget, QHBoxLayout,
-    QVBoxLayout, QInputDialog, QMessageBox, QTabWidget
+    QInputDialog, QMessageBox, QTabWidget
 )
 from PySide6.QtCore import Qt, Signal, Slot, QFile
 from PySide6.QtGui import QAction, QIcon
@@ -173,8 +173,8 @@ class TreatmentWindow(QMainWindow):
             result_str = await self.patient_model.save_to_db()
             logger.debug("Updating patients ...")
             await self.patient_model.update()
-            self.session_model.set_upper_model(None)
-            await self.session_model.update()
+            # self.session_model.set_upper_model(None)
+            # await self.session_model.update()
         elif action == "modality_save":
             logger.debug("Saving modality ...")
             await self.modality_model.save_to_db()

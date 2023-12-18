@@ -35,15 +35,15 @@ class ConnectPg:
         self._conn = None
 
     async def __aenter__(self):
-        logger.debug("Trying to connect to db ...")
-        logger.debug("Entering context manager, waiting for connection")
+        # logger.debug("Trying to connect to db ...")
+        # logger.debug("Entering context manager, waiting for connection")
         try:
             self._conn = await asyncpg.connect(host=self.config.get_options("Host"),
                                                port=self.config.get_options("Port"),
                                                user=self.config.get_options("User"),
                                                database=self.config.get_options("Database"),
                                                password=self.config.get_options("Password"))
-            logger.debug("Successfully connected!!!")
+            # logger.debug("Successfully connected!!!")
             return self._conn
         except Exception as e:
             logger.debug('Error while connecting to DB')
@@ -54,9 +54,9 @@ class ConnectPg:
                         exc_type: Optional[Type[BaseException]],
                         exc_val: Optional[BaseException],
                         exc_tb: Optional[TracebackType]):
-        logger.debug("Exiting context manager")
+        # logger.debug("Exiting context manager")
         if self._conn:
-            logger.debug("Closed connection")
+            # logger.debug("Closed connection")
             await self._conn.close()
 
 

@@ -60,6 +60,13 @@ class NewPatientDialog(QDialog):
         self.emr_id_le.clear()
         self.name_le.clear()
 
+    def start_with_emr_id(self, emr_id: int):
+        self.emr_id_le.setText(emr_id)
+        self.name_le.clear()
+        self.emr_id_le.setEnabled(False)
+        self.name_le.setEnabled(True)
+        self.gender_cb.setEnabled(True)
+
     def check_duplicate_emr_id(self):
         emr_id = int(self.emr_id_le.text())
         if not self.source_model.is_emr_id_duplicate(emr_id):

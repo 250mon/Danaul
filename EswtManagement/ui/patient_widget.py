@@ -3,7 +3,9 @@ from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
     QLabel, QMessageBox, QWidget, QTreeView
 )
-from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
+from PySide6.QtCore import (
+    Qt, Slot, QModelIndex, QSortFilterProxyModel, Signal
+)
 from PySide6.QtGui import QFont
 from common.d_logger import Logs
 from model.patient_model import PatientModel
@@ -110,10 +112,11 @@ class PatientWidget(QWidget):
     def save_model_to_db(self, input_db_record: Dict):
         """
         Save the model to DB
-        It calls the inventory view's async_start() which calls back the model's
-        save_to_db()
+        It calls the main view's async_start() which calls back
+        the model's save_to_db()
         :return:
         """
+        logger.debug('Save a patient record to DB')
         self.source_model.append_new_row(**input_db_record)
         try:
             if hasattr(self.parent, "async_start"):
@@ -124,6 +127,11 @@ class PatientWidget(QWidget):
                                     str(e),
                                     QMessageBox.Close)
 
+        # auto clicking the newly created patient
+        new_patient_id = self.source_model.model_df['patient_id'].argmax()
+        self.source_model.set_selected_id(new_patient_id)
+        self.parent.upper_layer_model_selected(self.source_model)
+
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
@@ -132,19 +140,28 @@ class PatientWidget(QWidget):
         :param index:
         :return:
         """
-        if index.isValid() and hasattr(self.parent, 'upper_layer_model_selected'):
+        if (index.isValid() and
+                hasattr(self.parent, 'upper_layer_model_selected')):
             patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
+            logger.debug(f'patient_id is double clicked: {patient_id}')
             self.source_model.set_selected_id(patient_id)
             self.parent.upper_layer_model_selected(self.source_model)
 
     @Slot()
     def emr_id_entered(self):
         emr_id = self.search_bar.text()
-        if emr_id.isdecimal():
-
-
-
-
+        logger.debug(f'emr_id is entered: {emr_id}')
+        if (emr_id.isdecimal() and
+                hasattr(self.parent, 'upper_layer_model_selected')):
+            data = {'patient_emr_id': int(emr_id)}
+            patient_id = self.source_model.get_id_by_data(data, 'patient_id')
+            if patient_id is not None:
+                logger.debug(f'patient_id is selected: {patient_id}')
+                self.source_model.set_selected_id(patient_id)
+                self.parent.upper_layer_model_selected(self.source_model)
+            else:
+                self.new_patient_dlg.start_with_emr_id(emr_id)
+                self.new_patient_dlg.show()
 
     def update_all_views(self):
         """

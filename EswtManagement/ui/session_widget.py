@@ -233,7 +233,7 @@ class SessionWidget(QWidget):
         self.update_view()
 
     def update_view(self):
-        # retrieve the data about the selected treatment_id from DB
+        # retrieve the data about the selected patient_id from DB
         self.parent.async_start('session_update')
 
         # displaying the selected item name in the session view
