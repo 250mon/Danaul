@@ -14,7 +14,6 @@ from ui.register_new_session_dialog import NewSessionDialog
 from common.d_logger import Logs
 
 
-
 logger = Logs().get_logger("main")
 
 

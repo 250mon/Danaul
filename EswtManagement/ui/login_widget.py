@@ -78,11 +78,11 @@ class LoginWidget(QWidget):
     def verify_user(self, password, user_name):
         # The following code converts QByteArray to PyBtye(bytes) format
         # stored_pwd: type is QByteArray hex format
-        query_stmt = f"SELECT * FROM users WHERE user_name = '{user_name}'"
-        db_record = self.db_util.query_info(query_stmt)
-        stored_pw: QByteArray = db_record.get('user_password', None)
-        if stored_pw is None:
+        query_stmt = f"SELECT user_password FROM users WHERE user_name = '{user_name}'"
+        records = self.db_util.query(query_stmt)
+        if records['field_names'][0] != 'user_password':
             return False
+        stored_pw: QByteArray = records['values'][0][0]
 
         # convert QByteArray to bytes
         stored_pw_bytes: bytes = stored_pw.data()

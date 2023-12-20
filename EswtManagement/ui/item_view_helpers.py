@@ -98,8 +98,7 @@ class ItemViewHelpers:
             rows = [idx.row() for idx in del_indexes]
             logger.debug(f"rows {rows} deleted")
 
-
-    def set_col_width(self, col_name:str, width: int):
+    def set_col_width(self, col_name: str, width: int):
         if isinstance(self.item_view, QTableView):
             self.item_view.setColumnWidth(self.src_model.get_col_number(col_name), width)
 

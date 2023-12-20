@@ -1,5 +1,4 @@
 import pandas as pd
-from typing import Dict, List
 from PySide6.QtCore import Qt, QModelIndex
 from model.di_data_model import DataModel
 from common.d_logger import Logs

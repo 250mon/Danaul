@@ -1,9 +1,7 @@
-import pandas as pd
-from typing import Dict, List
+from typing import List
 from PySide6.QtCore import Qt, QModelIndex
 from model.di_data_model import DataModel
 from db.ds_lab import Lab
-from common.d_logger import Logs
 from constants import EditLevel
 from common.datetime_utils import *
 from constants import RowFlags
@@ -245,7 +243,7 @@ class SessionModel(DataModel):
 
             elif col_name == 'timestamp':
                 # data type is datetime.date
-                return pydt_to_qdt(data_to_display)
+                return pydt_to_qdt(data_to_display).date()
 
             else:
                 # otherwise, string type
@@ -343,8 +341,7 @@ class SessionModel(DataModel):
         modality_name = kwargs.get('modality_name')
         data = {'modality_name': modality_name}
         modality_id = get_id_by_data(modality_df, data, 'modality_id')
-        modality_price = get_data_by_id(modality_df, modality_id,
-                                          'modality_price')
+        modality_price = get_data_by_id(modality_df, modality_id, 'modality_price')
         # body part
         part_df = Lab().table_df['body_parts']
         part_name = kwargs.get('part_name')
@@ -359,7 +356,7 @@ class SessionModel(DataModel):
         user_id = get_id_by_data(user_df, data, 'user_id')
 
         new_model_df = pd.DataFrame([{
-            'session_id': 0, # any number is ok, getting replaced by DEFAULT
+            'session_id': 0,  # any number is ok, getting replaced by DEFAULT
             'patient_id': patient_id,
             'patient_emr_id': patient_emr_id,
             'patient_name': patient_name,

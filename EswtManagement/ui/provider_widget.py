@@ -1,7 +1,6 @@
-from typing import Dict
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
-    QLabel, QMessageBox, QWidget, QTreeView
+    QLabel, QWidget, QTreeView
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
@@ -73,7 +72,7 @@ class ProviderWidget(QWidget):
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        A provider being double clicked in the provider view automatically makes
+        A provider being double-clicked in the provider view automatically makes
         the session view to update with the data of the provider.
         :param index:
         :return:

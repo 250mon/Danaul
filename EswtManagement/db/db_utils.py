@@ -5,10 +5,10 @@ from asyncpg import UndefinedTableError
 from asyncpg import Record
 from types import TracebackType
 from typing import Optional, Type, List, Tuple, Dict
-from PySide6.QtWidgets import QMessageBox
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
 from common.d_logger import Logs
 from constants import ConfigReader
+
 
 logger = Logs().get_logger("db")
 
@@ -62,7 +62,8 @@ class ConnectPg:
 
 class DbUtil:
 
-    async def create_tables(self, statements: List[str]):
+    @staticmethod
+    async def create_tables(statements: List[str]):
         """
         Create tables
         sync_execute can be used instead.
@@ -88,7 +89,8 @@ class DbUtil:
             logger.info("Finished creating the tables")
         return results
 
-    async def drop_tables(self, table_names: List[str]):
+    @staticmethod
+    async def drop_tables(table_names: List[str]):
         """
         Remove the tables
         :param table_names:
@@ -115,7 +117,8 @@ class DbUtil:
             logger.info("Finished removing the tables")
         return results
 
-    async def select_query(self, query: str, args: List = None):
+    @staticmethod
+    async def select_query(query: str, args: List = None):
         """
         Select query
         :param query
@@ -138,7 +141,8 @@ class DbUtil:
                 logger.debug(e)
                 return None
 
-    async def executemany(self, statement: str, args: List[Tuple]):
+    @staticmethod
+    async def executemany(statement: str, args: List[Tuple]):
         """
         Execute a statement through connection.executemany()
         :param statement: statement to execute
@@ -162,7 +166,8 @@ class DbUtil:
                 logger.debug(e)
                 return e
 
-    async def pool_execute(self, statement: str, args: List[Tuple]):
+    @staticmethod
+    async def pool_execute(statement: str, args: List[Tuple]):
         """
         Execute a statement through ascynpg.pool
         :param statement: statement to execute
@@ -172,8 +177,8 @@ class DbUtil:
             otherwise, exception
         """
 
-        async def execute(stmt, arg, pool):
-            async with pool.acquire() as conn:
+        async def execute(stmt, arg, _pool):
+            async with _pool.acquire() as conn:
                 logger.debug(stmt)
                 logger.debug(arg)
                 return await conn.execute(stmt, *arg)
@@ -190,7 +195,8 @@ class DbUtil:
             logger.debug(f":\n{results}")
             return results
 
-    async def delete(self, table, col_name, args: List[Tuple]):
+    @staticmethod
+    async def delete(table, col_name, args: List[Tuple]):
         """
         Delete rows where col value is in the args list from table
         :param table: table name
@@ -217,7 +223,7 @@ class DbUtil:
         logger.debug(args)
 
         # results = await self.pool_execute(stmt, args)
-        results = await self.executemany(stmt, args)
+        results = await DbUtil.executemany(stmt, args)
         logger.debug(f":\n{results}")
         return results
 
@@ -226,7 +232,8 @@ class QtDbUtil:
     def __init__(self):
         self.createConnection()
 
-    def createConnection(self):
+    @staticmethod
+    def createConnection():
         """Set up the connection to the database.
         Check for the tables needed."""
         config = ConfigReader()
@@ -249,15 +256,14 @@ class QtDbUtil:
         # if tables_not_found:
         tables = database.tables()
         if "users" not in tables:
-            QMessageBox.critical(None,
-                                 "Error",
-                                 f"""<p>The following tables are missing
-                                  from the database: {tables}</p>""")
+            logger.debug(f"The following tables are missing from"
+                         f" the database: {tables}")
             sys.exit(1)  # Error code 1 - signifies error
 
-    def query_info(self, query_stmt: str) -> Dict:
+    @staticmethod
+    def query(query_stmt: str) -> Dict[str, List]:
         """
-        query user info with user_name
+        query
         """
         logger.debug(query_stmt)
 
@@ -265,28 +271,33 @@ class QtDbUtil:
         query.prepare(query_stmt)
         query.exec()
 
-        output_db_record = {}
-        if query.next():
+        field_names = list()
+        values = list()
+        while query.next():
             rec = query.record()
-            rec_col_count = rec.count()
-            for i in range(rec_col_count):
-                output_db_record[rec.fieldName(i)] = rec.value(i)
-            logger.debug("Got a record!")
-            logger.debug(output_db_record)
-        else:
-            logger.debug("No record found")
+            col_count = rec.count()
+            # field_names part
+            if len(field_names) == 0:
+                field_names = [rec.fieldName(i) for i in range(col_count)]
+                logger.debug('<<Field Names>>')
+                logger.debug(field_names)
 
-        return output_db_record
+            # values part
+            rec_values = [rec.value(i) for i in range(col_count)]
+            values.append(rec_values)
 
-    def insert_into_db(self,
-                       table_name: str,
-                       record: Dict):
+        logger.debug('<<Values>>')
+        logger.debug(values)
+
+        return {'field_names': field_names, 'values': values}
+
+    @staticmethod
+    def insert_into_db(table_name: str, record: Dict):
         """
         Insert input_db_record into DB
         """
         logger.debug(f"Inserting data into {table_name}: {record}")
 
-        field_names = list(record.keys())
         args = list(record.values())
         stmt = make_insert_query(table_name, record)
         logger.debug(f"{stmt} :: {args}")
@@ -299,32 +310,26 @@ class QtDbUtil:
         if query.exec():
             logger.debug("Data insertion into DB successful!")
         else:
-            QMessageBox.warning(None,
-                                "Warning",
-                                "Improper data to insert !!",
-                                QMessageBox.Close)
             logger.debug("Data insertion into DB failed!")
             logger.debug(f"{query.lastError()}")
 
-    def update_db(self,
-                  table_name: str,
-                  record: Dict,
-                  where_clause: str):
+    @staticmethod
+    def update_db(table_name: str, record: Dict, where_clause: str):
         """
         Update DB with input_db_record
         """
         logger.debug(f"Updating data in {table_name}: {record}")
 
-        def make_stmt(record: Dict):
+        def make_stmt(_record: Dict):
             # make a statement like "UPDATE tb name1 = $1, name2 = $2 WHERE ..."
             place_holders = []
             i = 1
-            for name, val in record.items():
+            for name, val in _record.items():
                 place_holders.append(f'{name} = ${i}')
                 i += 1
             stmt_value_part = ','.join(place_holders)
-            stmt = f"UPDATE {table_name} SET {stmt_value_part} WHERE {where_clause}"
-            return stmt
+            _stmt = f"UPDATE {table_name} SET {stmt_value_part} WHERE {where_clause}"
+            return _stmt
 
         args = list(record.values())
         stmt = make_stmt(record)
@@ -338,14 +343,11 @@ class QtDbUtil:
         if query.exec():
             logger.debug("Data updating successful!")
         else:
-            QMessageBox.warning(None,
-                                "Warning",
-                                "Improper data to update!!",
-                                QMessageBox.Close)
             logger.debug("Data updating failed!")
             logger.debug(f"{query.lastError()}")
 
-    def delete_db(self, table_name: str, where_clause: str):
+    @staticmethod
+    def delete_db(table_name: str, where_clause: str):
         """
         Delete a record in DB
         """
@@ -357,9 +359,5 @@ class QtDbUtil:
         if query.exec():
             logger.debug("Data deleting successful!")
         else:
-            QMessageBox.warning(None,
-                                "Warning",
-                                "Improper expression to delete!!",
-                                QMessageBox.Close)
             logger.debug("Data deleting failed!")
             logger.debug(f"{query.lastError()}")

@@ -3,22 +3,22 @@ import pandas as pd
 from PySide6.QtWidgets import (
     QWidget, QApplication, QListView, QPushButton, QVBoxLayout, QHBoxLayout
 )
-from PySide6.QtCore import QAbstractListModel
-from PySide6.QtGui import Qt
+from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex
+
 
 class ImportModel(QAbstractListModel):
     def __init__(self, *args, data_df=pd.DataFrame(), **kwargs):
         super(ImportModel, self).__init__(*args, **kwargs)
         self.data_df = data_df
 
-    def data(self, index, role):
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         if role == Qt.DisplayRole:
             data_row = self.data_df.values[index.row()]
             # [sku_id, qty, item_name]
             text = f"{data_row[1]} {data_row[2]}:\t\t{data_row[0]} "
             return text
 
-    def rowCount(self, index):
+    def rowCount(self, parent=QModelIndex()) -> int:
         return self.data_df.shape[0]
 
 

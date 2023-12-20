@@ -118,7 +118,7 @@ class BodyPartWidget(QWidget):
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        A part being double clicked in the part view automatically makes
+        A part being double-clicked in the part view automatically makes
         the session view to update with the data of the part.
         :param index:
         :return:

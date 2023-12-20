@@ -1,16 +1,15 @@
 import re
 import asyncio
-from typing import List, Dict
 from db.db_apis import DbApi
+from db.db_schema import *
 import pandas as pd
 from common.d_logger import Logs
 from constants import MAX_SESSION_COUNT
 from common.singleton import Singleton
-from db.db_schema import *
-
 
 
 logger = Logs().get_logger("db")
+
 
 class Lab(metaclass=Singleton):
     def __init__(self):
@@ -28,6 +27,8 @@ class Lab(metaclass=Singleton):
             'sessions': None,
             'providers': None,
         }
+
+        self.table_column_names = dict()
         self._set_db_column_names()
 
         self.bool_initialized = False
@@ -43,7 +44,7 @@ class Lab(metaclass=Singleton):
             # getting dfs
             get_data = [self._get_df_from_db(table) for table
                         in self.table_df.keys()]
-            data_dfs: List = await asyncio.gather(*get_data)
+            data_dfs = await asyncio.gather(*get_data)
             for df in data_dfs:
                 logger.debug(f"Retrieved DB data \n{df}")
             for table in reversed(self.table_df.keys()):
@@ -59,17 +60,15 @@ class Lab(metaclass=Singleton):
         if count > 0:
             self.max_session_count = count
         else:
-            logger.warn(f""
-                        f"count({count}) is not a positive integer")
+            logger.warning(f"count({count}) is not a positive integer")
 
     def _set_db_column_names(self):
-        col_name = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
-        self.table_column_names = {}
-        self.table_column_names['patients'] = col_name.findall(CREATE_PATIENT_TABLE)
+        col_name_regex = re.compile(r'''^\s*([a-z_]+)\s*''', re.MULTILINE)
+        self.table_column_names['patients'] = col_name_regex.findall(CREATE_PATIENT_TABLE)
         self.table_column_names['providers'] = ['provider_id', 'provider_name']
-        self.table_column_names['modalities'] = col_name.findall(CREATE_MODALITY_TABLE)
-        self.table_column_names['body_parts'] = col_name.findall(CREATE_BODY_PART_TABLE)
-        self.table_column_names['sessions'] = col_name.findall(CREATE_SESSION_TABLE)
+        self.table_column_names['modalities'] = col_name_regex.findall(CREATE_MODALITY_TABLE)
+        self.table_column_names['body_parts'] = col_name_regex.findall(CREATE_BODY_PART_TABLE)
+        self.table_column_names['sessions'] = col_name_regex.findall(CREATE_SESSION_TABLE)
 
     async def _get_df_from_db(self, table: str, **kwargs) -> pd.DataFrame:
         logger.debug(f"{table}")

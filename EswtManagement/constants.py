@@ -6,6 +6,7 @@ from common.singleton import Singleton
 CONFIG_FILE = 'ds_config'
 ADMIN_GROUP = ['admin', 'jye']
 MAX_SESSION_COUNT = 10
+MAX_SESSION_COUNT = 1000
 DEFAULT_MIN_QTY = 1
 HORIZONTAL_HEADERS = {
     'patient_emr_id': '환자번호',

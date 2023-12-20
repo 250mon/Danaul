@@ -19,7 +19,8 @@ class Logs(metaclass=Singleton):
         self.err_logger = logging.getLogger("main")
         sys.excepthook = self.handle_exception
 
-    def get_logger(self, name: str) -> logging.Logger:
+    @staticmethod
+    def get_logger(name: str) -> logging.Logger:
         return logging.getLogger(name)
 
     def handle_exception(self, exc_type, exc_value, exc_traceback):

@@ -118,7 +118,7 @@ class ModalityWidget(QWidget):
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        A modality being double clicked in the modality view automatically makes
+        A modality being double-clicked in the modality view automatically makes
         the session view to update with the data of the modality.
         :param index:
         :return:

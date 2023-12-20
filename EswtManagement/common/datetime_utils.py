@@ -2,7 +2,7 @@ from datetime import datetime, date
 from PySide6.QtCore import QDate, QDateTime
 
 
-def pydate_to_qdate(pydate: date)-> QDate:
+def pydate_to_qdate(pydate: date) -> QDate:
     return QDate.fromString(str(pydate), "yyyy-MM-dd")
 
 
@@ -34,4 +34,3 @@ if __name__ == '__main__':
     q_dt = QDateTime(2023, 1, 3, 12, 30, 50)
     print(qdt_to_pydt(q_dt))
     print(qdt_to_pydt(QDateTime.currentDateTime()))
-

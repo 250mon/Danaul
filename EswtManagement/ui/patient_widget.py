@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QLabel, QMessageBox, QWidget, QTreeView
 )
 from PySide6.QtCore import (
-    Qt, Slot, QModelIndex, QSortFilterProxyModel, Signal
+    Qt, Slot, QModelIndex, QSortFilterProxyModel
 )
 from PySide6.QtGui import QFont
 from common.d_logger import Logs
@@ -14,6 +14,20 @@ from ui.register_new_patient_dialog import NewPatientDialog
 
 
 logger = Logs().get_logger("main")
+
+
+class PatientFilterProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def filterAcceptsRow(self, source_row, source_parent) -> bool:
+        index0 = self.sourceModel().index(source_row, 0, source_parent)
+        index1 = self.sourceModel().index(source_row, 1, source_parent)
+
+        result0 = self.filterRegularExpression().match(str(self.sourceModel().data(index0))).hasMatch()
+        result1 = self.filterRegularExpression().match(self.sourceModel().data(index1)).hasMatch()
+
+        return result0 or result1
 
 
 class PatientWidget(QWidget):
@@ -27,10 +41,10 @@ class PatientWidget(QWidget):
         self.init_ui()
 
     def set_model(self):
-        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model = PatientFilterProxyModel(self)
         self.proxy_model.setSourceModel(self.source_model)
-        # -1 means searching every column
-        self.proxy_model.setFilterKeyColumn(-1)
+        # -1 means searching every column, 0 is the patient_emr_id column number
+        # self.proxy_model.setFilterKeyColumn(0)
 
         # Sorting
         # For sorting, model data needs to be read in certain deterministic order
@@ -48,6 +62,8 @@ class PatientWidget(QWidget):
 
         self.patient_view.setRootIsDecorated(False)
         self.patient_view.setAlternatingRowColors(True)
+        self.patient_view.setSelectionBehavior(QTreeView.SelectionBehavior.SelectRows)
+        self.patient_view.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
         self.patient_view.setSortingEnabled(True)
         self.patient_view.doubleClicked.connect(self.row_double_clicked)
 
@@ -65,7 +81,7 @@ class PatientWidget(QWidget):
 
         self.search_bar = QLineEdit(self)
         self.search_bar.setPlaceholderText('검색어')
-        self.search_bar.textChanged.connect(self.proxy_model.setFilterFixedString)
+        self.search_bar.textChanged.connect(self.proxy_model.setFilterRegularExpression)
         self.search_bar.returnPressed.connect(self.emr_id_entered)
         add_btn = QPushButton('추 가')
         add_btn.clicked.connect(self.add_patient)
@@ -135,7 +151,7 @@ class PatientWidget(QWidget):
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
         """
-        A patient being double clicked in the patient view automatically makes
+        A patient being double-clicked in the patient view automatically makes
         the session view to update with the data of the patient.
         :param index:
         :return:
@@ -143,7 +159,7 @@ class PatientWidget(QWidget):
         if (index.isValid() and
                 hasattr(self.parent, 'upper_layer_model_selected')):
             patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
-            logger.debug(f'patient_id is double clicked: {patient_id}')
+            logger.debug(f'patient_id is double-clicked: {patient_id}')
             self.source_model.set_selected_id(patient_id)
             self.parent.upper_layer_model_selected(self.source_model)
 

@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QStyleOptionViewItem, QDateEdit
 )
-from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel, QDate
+from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
 from common.datetime_utils import qdate_to_pydate, pydate_to_qdate, date
 from ui.default_delegate import DefaultDelegate
 

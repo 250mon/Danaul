@@ -1,6 +1,7 @@
 import bcrypt
 from ds_exceptions import InvalidPasswordError
 
+
 def encrypt_password(password):
     # Generate a salt and hash the password
     salt = bcrypt.gensalt()
