@@ -5,6 +5,7 @@ from PySide6.QtCore import QDate
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
 from db.db_utils import QtDbUtil
 from common.d_logger import Logs
+from db.ds_lab import Lab
 
 
 logger = Logs().get_logger("main")
@@ -32,7 +33,11 @@ class Stats:
         col_names = records['field_names']
         values = records['values']
 
-        self.sessions_df = pd.DataFrame(values, columns=col_names)
+        sess_df = pd.DataFrame(values, columns=col_names)
+        provider_df = Lab().table_df['providers']
+        modality_df = Lab().table_df['modalities']
+        sess_df = pd.merge(sess_df, provider_df, on="provider_id")
+        self.sessions_df = pd.merge(sess_df, modality_df, on="modality_id")
         logger.debug(self.sessions_df)
 
     def by_provider(self):
@@ -42,8 +47,17 @@ class Stats:
         grp_by_provider = provider_df.groupby(['provider_id', 'modality_id'])
         print(grp_by_provider.sum())
 
+    def pivot_table(self):
+        pivot_df = self.sessions_df.pivot_table(index=['provider_name'],
+                                                columns='modality_name',
+                                                values=['session_price'],
+                                                aggfunc=['count', 'sum'])
+        print(pivot_df.xs("session_price", level=1, axis=1))
+
+
 
 if __name__ == '__main__':
     stat = Stats()
     stat.init_df(QDate(2023, 10, 1), QDate(2023, 12, 20))
     stat.by_provider()
+    stat.pivot_table()

@@ -118,10 +118,10 @@ class DbUtil:
         return results
 
     @staticmethod
-    async def select_query(query: str, args: List = None):
+    async def select_query(query_stmt: str, args: List = None):
         """
         Select query
-        :param query
+        :param query_stmt
         :return: all results if successful, otherwise None
         """
         async with ConnectPg() as conn:
@@ -130,23 +130,23 @@ class DbUtil:
                 return None
 
             try:
-                query = await conn.prepare(query)
+                query_stmt = await conn.prepare(query_stmt)
                 if args:
-                    results: List[Record] = await query.fetch(*args)
+                    results: List[Record] = await query_stmt.fetch(*args)
                 else:
-                    results: List[Record] = await query.fetch()
+                    results: List[Record] = await query_stmt.fetch()
                 return results
             except Exception as e:
-                logger.debug(f'select_query: Error while executing {query}')
+                logger.debug(f'select_query: Error while executing {query_stmt}')
                 logger.debug(e)
                 return None
 
     @staticmethod
-    async def executemany(statement: str, args: List[Tuple]):
+    async def executemany(query_stmt: str, args: List[Tuple]):
         """
-        Execute a statement through connection.executemany()
-        :param statement: statement to execute
-        :param args: list of arguments which are supplied to the statement one by one
+        Execute a query through connection.executemany()
+        :param query_stmt: query to execute
+        :param args: list of arguments which are supplied to the query one by one
         :return:
             if successful, None
             otherwise, exception or string
@@ -158,7 +158,7 @@ class DbUtil:
 
             logger.debug("Synchronous executing")
             try:
-                results = await conn.executemany(statement, args)
+                results = await conn.executemany(query_stmt, args)
                 logger.debug(f"results::\n{results}")
                 return results
             except Exception as e:
@@ -167,11 +167,11 @@ class DbUtil:
                 return e
 
     @staticmethod
-    async def pool_execute(statement: str, args: List[Tuple]):
+    async def pool_execute(query_stmt: str, args: List[Tuple]):
         """
-        Execute a statement through ascynpg.pool
-        :param statement: statement to execute
-        :param args: list of argements which are supplied to the statement one by one
+        Execute a query through ascynpg.pool
+        :param query_stmt: query to execute
+        :param args: list of arguments which are supplied to the query one by one
         :return:
             if successful, list of results of queries
             otherwise, exception
@@ -190,7 +190,7 @@ class DbUtil:
                                        user=config.get_options("User"),
                                        database=config.get_options("Database"),
                                        password=config.get_options("Password")) as pool:
-            queries = [execute(statement, arg, pool) for arg in args]
+            queries = [execute(query_stmt, arg, pool) for arg in args]
             results = await asyncio.gather(*queries, return_exceptions=True)
             logger.debug(f":\n{results}")
             return results
