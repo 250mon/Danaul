@@ -18,11 +18,15 @@ class PandasModel(QAbstractTableModel):
     def __init__(self, dataframe: pd.DataFrame = None, parent=None):
         QAbstractTableModel.__init__(self, parent)
         self.model_df = dataframe
+        self.hidden_col = set()
         self.edit_level = EditLevel.UserModifiable
         self.is_editable = False
         self.new_rows_set = set()
         self.editable_rows_set = set()
         self.uneditable_rows_set = set()
+
+    def set_col_hidden(self, col_list: list):
+        self.hidden_col = self.hidden_col.union(set(col_list))
 
     def rowCount(self, parent=QModelIndex()) -> int:
         """ Override method from QAbstractTableModel
@@ -40,7 +44,7 @@ class PandasModel(QAbstractTableModel):
         Return column count of the pandas DataFrame
         """
         if parent == QModelIndex():
-            return len(self.model_df.columns)
+            return len(self.model_df.columns) - len(self.hidden_col)
         return 0
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:

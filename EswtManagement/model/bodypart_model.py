@@ -94,7 +94,7 @@ class BodyPartModel(DataModel):
 
         except Exception as e:
             logger.debug("New body_part info is improper!")
-            logger.debug(e)
+            logger.exception(e)
 
     def is_part_name_duplicate(self, part_name: str) -> bool:
         if (self.model_df.empty or

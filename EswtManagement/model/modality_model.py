@@ -169,7 +169,7 @@ class ModalityModel(DataModel):
 
         except Exception as e:
             logger.debug("New modality info is improper!")
-            logger.debug(e)
+            logger.exception(e)
 
     def is_modality_name_duplicate(self, modality_name: str) -> bool:
         if (self.model_df.empty or

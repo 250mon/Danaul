@@ -12,7 +12,6 @@ class NewBodyPartDialog(QDialog):
     def __init__(self, src_model: BodyPartModel, parent):
         super().__init__(parent)
         self.source_model = src_model
-        self.new_part_signal.connect(parent.save_model_to_db)
         self.init_ui()
 
     def init_ui(self):

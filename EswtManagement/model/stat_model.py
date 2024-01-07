@@ -1,5 +1,4 @@
 import re
-from typing import List
 import pandas as pd
 from PySide6.QtCore import QDate
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
@@ -52,7 +51,8 @@ class Stats:
                                                 columns='modality_name',
                                                 values=['session_price'],
                                                 aggfunc=['count', 'sum'])
-        print(pivot_df.xs("session_price", level=1, axis=1))
+        pivot_df.columns = [a[2]+"_"+a[0] for a in pivot_df.columns.to_flat_index()]
+        print(pivot_df)
 
 
 

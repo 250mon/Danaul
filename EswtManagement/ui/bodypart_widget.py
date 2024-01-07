@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
+from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from model.bodypart_model import BodyPartModel
 from ui.item_view_helpers import ItemViewHelpers
@@ -18,6 +19,7 @@ class BodyPartWidget(QWidget):
     def __init__(self, model: BodyPartModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
+        self.async_helper: AsyncHelper = self.parent.async_helper
         self.source_model = model
         self.proxy_model = None
         # initialize
@@ -41,7 +43,8 @@ class BodyPartWidget(QWidget):
         self.part_view = QTreeView()
         self.item_view_helpers = ItemViewHelpers(self.source_model,
                                                  self.proxy_model,
-                                                 self.part_view)
+                                                 self.part_view,
+                                                 self)
         self.part_view.setModel(self.proxy_model)
 
         self.part_view.setRootIsDecorated(False)
@@ -50,6 +53,7 @@ class BodyPartWidget(QWidget):
         self.part_view.doubleClicked.connect(self.row_double_clicked)
 
         self.new_part_dlg = NewBodyPartDialog(self.source_model, self)
+        self.new_part_dlg.new_part_signal.connect(self.item_view_helpers.save_model_to_db)
 
         title_label = QLabel('치료 부위')
         font = QFont("Arial", 12, QFont.Bold)
@@ -96,24 +100,7 @@ class BodyPartWidget(QWidget):
         if selected_indexes := self.item_view_helpers.get_selected_indexes():
             logger.debug(f"del_part {selected_indexes}")
             self.item_view_helpers.delete_rows(selected_indexes)
-
-    @Slot(object)
-    def save_model_to_db(self, input_db_record: Dict):
-        """
-        Save the model to DB
-        It calls the inventory view's async_start() which calls back the model's
-        save_to_db()
-        :return:
-        """
-        self.source_model.append_new_row(**input_db_record)
-        try:
-            if hasattr(self.parent, "async_start"):
-                self.parent.async_start("part_save")
-        except Exception as e:
-            QMessageBox.information(self,
-                                    "Failed New BodyPart",
-                                    str(e),
-                                    QMessageBox.Close)
+            self.item_view_helpers.save_model_to_db()
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):

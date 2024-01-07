@@ -5,13 +5,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
+from common.async_helper import AsyncHelper
+from common.d_logger import Logs
 from db.ds_lab import Lab
 from model.di_data_model import DataModel
 from model.patient_model import PatientModel
 from model.session_model import SessionModel
 from ui.item_view_helpers import ItemViewHelpers
 from ui.register_new_session_dialog import NewSessionDialog
-from common.d_logger import Logs
 
 
 logger = Logs().get_logger("main")
@@ -21,6 +22,7 @@ class SessionWidget(QWidget):
     def __init__(self, model: SessionModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
+        self.async_helper: AsyncHelper = self.parent.async_helper
         self.source_model = model
         self.proxy_model = None
         # initialize
@@ -44,7 +46,8 @@ class SessionWidget(QWidget):
         self.session_view = QTableView()
         self.item_view_helpers = ItemViewHelpers(self.source_model,
                                                  self.proxy_model,
-                                                 self.session_view)
+                                                 self.session_view,
+                                                 self)
         self.session_view.setModel(self.proxy_model)
 
         self.session_view.setAlternatingRowColors(True)
@@ -53,13 +56,8 @@ class SessionWidget(QWidget):
         self.session_view.setSortingEnabled(True)
 
         self.new_session_dlg = NewSessionDialog(self.source_model, self)
+        self.new_session_dlg.new_session_signal.connect(self.item_view_helpers.save_model_to_db)
 
-        self.item_view_helpers.set_col_hidden("session_id")
-        self.item_view_helpers.set_col_hidden('patient_id')
-        self.item_view_helpers.set_col_hidden("provider_id")
-        self.item_view_helpers.set_col_hidden("modality_id")
-        self.item_view_helpers.set_col_hidden("part_id")
-        self.item_view_helpers.set_col_hidden("user_id")
         self.item_view_helpers.set_col_width("patient_emr_id", 70)
         self.item_view_helpers.set_col_width("patient_name", 70)
         self.item_view_helpers.set_col_width("provider_name", 70)
@@ -88,7 +86,7 @@ class SessionWidget(QWidget):
         date_search_btn.clicked.connect(lambda: self.set_max_search_count(20))
 
         search_all_btn = QPushButton('전체조회')
-        search_all_btn.clicked.connect(self.update_with_no_selection)
+        search_all_btn.clicked.connect(lambda: self.update_with_no_selection(None))
         two_search_btn = QPushButton('2')
         two_search_btn.clicked.connect(lambda: self.set_max_search_count(2))
         five_search_btn = QPushButton('5')
@@ -159,34 +157,14 @@ class SessionWidget(QWidget):
     @Slot(str)
     def chg_session(self):
         logger.debug("Saving changed sessions...")
-        self.save_model_to_db()
+        self.item_view_helpers.save_model_to_db()
 
     @Slot(str)
     def del_session(self):
         logger.debug("Admin deleting a session ...")
         if selected_indexes := self.item_view_helpers.get_selected_indexes():
             self.item_view_helpers.delete_rows(selected_indexes)
-
-    @Slot(object)
-    def save_model_to_db(self, input_db_record: Dict = None):
-        """
-        Save the model to DB
-        It calls the inventory view's async_start() which calls back the model's
-        save_to_db()
-        :return:
-        """
-        try:
-            if input_db_record is not None:
-                self.source_model.append_new_row(**input_db_record)
-            if hasattr(self.parent, "async_start"):
-                self.parent.async_start("session_save")
-        except Exception as e:
-            logger.debug('Failed saving sessions')
-            logger.debug(e)
-            QMessageBox.information(self,
-                                    "Failed saving sessions",
-                                    str(e),
-                                    QMessageBox.Close)
+            self.item_view_helpers.save_model_to_db()
 
     @Slot(QModelIndex)
     def row_activated(self, index: QModelIndex):
@@ -196,7 +174,7 @@ class SessionWidget(QWidget):
         :param index:
         :return:
         """
-        src_idx = self.prx_model.mapToSource(index)
+        src_idx = self.proxy_model.mapToSource(index)
         if src_idx.row() not in self.source_model.editable_rows_set:
             self.source_model.clear_editable_rows()
 
@@ -211,24 +189,14 @@ class SessionWidget(QWidget):
         try:
             self.source_model.del_new_rows()
         except Exception as e:
-            logger.debug(e)
+            logger.exception(e)
 
         # let the model learn the upper model index for a new row creation
         self.source_model.set_upper_model(upper_model)
         self.update_view()
 
-    def update_with_no_selection(self):
-        """
-        Connected to search all button
-        :return:
-        """
-        # if there is remaining unsaved new rows, drop them
-        try:
-            self.source_model.del_new_rows()
-        except Exception as e:
-            logger.debug(e)
-
-        self.source_model.set_upper_model(None)
+    def set_max_search_count(self, max_count: int):
+        Lab().set_max_session_count(max_count)
         self.update_view()
 
     def update_view(self):
@@ -238,7 +206,3 @@ class SessionWidget(QWidget):
         # displaying the selected item name in the session view
         self.filter_item_label.setText(self.source_model.selected_model_name + ": " +
                                        self.source_model.selected_name)
-
-    def set_max_search_count(self, max_count: int):
-        Lab().set_max_session_count(max_count)
-        self.update_view()

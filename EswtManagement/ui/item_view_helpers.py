@@ -1,11 +1,14 @@
 from typing import List
-from PySide6.QtWidgets import QMainWindow, QWidget, QAbstractItemView, QTableView
-from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
+from PySide6.QtWidgets import (
+    QWidget, QAbstractItemView, QTableView, QMessageBox
+)
+from PySide6.QtCore import QSortFilterProxyModel, QModelIndex, Slot
+from common.async_helper import AsyncHelper
+from common.d_logger import Logs
 from model.di_data_model import DataModel
 from ui.default_delegate import DefaultDelegate
 from ui.combobox_delegate import ComboBoxDelegate
 from ui.spinbox_delegate import SpinBoxDelegate
-from common.d_logger import Logs
 
 logger = Logs().get_logger("main")
 
@@ -16,7 +19,8 @@ class ItemViewHelpers:
                  proxy_model: QSortFilterProxyModel,
                  view: QAbstractItemView,
                  parent: QWidget = None):
-        self.parent: QMainWindow = parent
+        self.parent: QWidget = parent
+        self.async_helper: AsyncHelper = self.parent.async_helper
         self.src_model = src_model
         self.prx_model = proxy_model
         self.item_view: QAbstractItemView = view
@@ -67,15 +71,17 @@ class ItemViewHelpers:
         Common
         This is called from a Button
         Just tagging as 'changed' in flag column and allowing the user
-        to modify the treatments
+        to modify the item
         :param indexes:
         :return:
         """
-        for idx in indexes:
-            if self.src_model.is_flag_column(idx):
-                src_idx = self.prx_model.mapToSource(idx)
-                self.src_model.set_chg_flag(src_idx)
-                logger.debug(f"rows {src_idx.row()} being changed")
+        # only the first column indexes in the selected rows are
+        # collected
+        row_indexes = [self.prx_model.mapToSource(idx) for idx in indexes
+                       if idx.column() == 0]
+        logger.debug(f"rows{[idx.row() for idx in row_indexes]} being changed")
+        for idx in row_indexes:
+            self.src_model.set_chg_flag(idx)
 
     def delete_rows(self, indexes: List[QModelIndex]):
         """
@@ -86,31 +92,36 @@ class ItemViewHelpers:
         :param indexes:
         :return:
         """
-        del_indexes = []
-        for idx in indexes:
-            # do it only once for multiple indexes belonging to the same row
-            if self.src_model.is_flag_column(idx):
-                src_idx = self.prx_model.mapToSource(idx)
-                del_indexes.append(src_idx)
+        del_indexes = [self.prx_model.mapToSource(idx) for idx in indexes
+                       if idx.column() == 0]
+        logger.debug(f"rows{[idx.row() for idx in del_indexes]} being deleted")
 
         if len(del_indexes) > 0:
             self.src_model.set_del_flag(del_indexes)
-            rows = [idx.row() for idx in del_indexes]
-            logger.debug(f"rows {rows} deleted")
+
+    @Slot(object)
+    def save_model_to_db(self, input_db_record: dict = None):
+        """
+        Save the model to DB
+        It calls the inventory view's async_start() which calls back the model's
+        save_to_db()
+        :return:
+        """
+        try:
+            if input_db_record is not None:
+                self.src_model.append_new_row(**input_db_record)
+            # if hasattr(self.parent.parent, "async_start"):
+            #     self.parent.async_start(self.src_model.table_name)
+                sig_txt = self.src_model.table_name + "_save"
+                self.async_helper.async_start_signal.emit(sig_txt)
+        except Exception as e:
+            logger.debug('Failed saving sessions')
+            logger.exception(e)
+            QMessageBox.information(self.parent,
+                                    "Failed saving sessions",
+                                    str(e),
+                                    QMessageBox.Close)
 
     def set_col_width(self, col_name: str, width: int):
         if isinstance(self.item_view, QTableView):
             self.item_view.setColumnWidth(self.src_model.get_col_number(col_name), width)
-
-    def set_col_hidden(self, left_most_hidden: str):
-        if isinstance(self.item_view, QTableView):
-            left_most_col_num = self.src_model.get_col_number(left_most_hidden)
-            last_col_num = len(self.src_model.column_names)
-            for c in range(left_most_col_num, last_col_num):
-                self.item_view.setColumnWidth(c, 1)
-
-            # The following methods don't allow the hidden col
-            # to be accessible
-            # self.table_view.horizontalHeader().hideSection(c)
-            # self.table_view.setColumnHidden(c, True)
-            # filterAcceptsColumn..

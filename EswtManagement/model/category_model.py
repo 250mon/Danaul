@@ -107,4 +107,4 @@ class ModalityModel(DataModel):
 
         except Exception as e:
             logger.debug("New modality info is improper!")
-            logger.debug(e)
+            logger.exception(e)

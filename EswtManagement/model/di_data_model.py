@@ -37,6 +37,9 @@ class DataModel(PandasModel):
         # set model_df
         self._set_model_df()
 
+        # selected id is used for lower layer
+        self.selected_id = None
+
     def get_user_privilege(self):
         if self.user_name in ADMIN_GROUP:
             return UserPrivilege.Admin
@@ -350,7 +353,7 @@ class DataModel(PandasModel):
         is_new = [flag & RowFlags.NewRow for flag in flags]
         new_idxes = [index for index, cond in zip(indexes, is_new)
                        if cond > 0]
-        other_idxes = [index for index in indexes
+        old_idxes = [index for index in indexes
                        if index not in new_idxes]
         if len(new_idxes) > 0:
             # if it is a new row, just drop it
@@ -359,7 +362,7 @@ class DataModel(PandasModel):
                 self.unset_new_row(index.row())
 
         # exclusive or op with deleted flag
-        for index in other_idxes:
+        for index in old_idxes:
             curr_flag = self.get_data_by_index(index, 'flag')
             curr_flag ^= RowFlags.DeletedRow
             self.set_flag(index, curr_flag)
@@ -378,7 +381,7 @@ class DataModel(PandasModel):
         try:
             row_list = self.model_df[self.model_df.flag & RowFlags.NewRow > 0].index.to_list()
         except Exception as e:
-            logger.debug(e)
+            logger.exception(e)
             raise e
 
         if len(row_list) > 0:

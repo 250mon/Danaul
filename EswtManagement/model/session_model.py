@@ -18,17 +18,21 @@ logger = Logs().get_logger("main")
 class SessionModel(DataModel):
     def __init__(self, user_name: str):
         self.init_params()
+        # setting a model is carried out in the DataModel
+        # using the table_name set in the init_params
+        super().__init__(user_name)
+        # after setting up the model_df, need to finish
+        # works that are needed
+        self.finish_works()
+
         # the lower layer view is updated by selecting an id of
         # the upper layer model,
         self.upper_model = None
-        # the selected id is used for lower layer
-        self.selected_id = None
+        # selected model and item for display
         self.selected_model_name = ""
         self.selected_name = ""
         self.beg_timestamp = QDate.currentDate().addMonths(-6)
         self.end_timestamp = QDate.currentDate()
-        # setting a model is carried out in the DataModel
-        super().__init__(user_name)
 
     def init_params(self):
         self.set_table_name('sessions')
@@ -52,6 +56,11 @@ class SessionModel(DataModel):
         }
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
+
+    def finish_works(self):
+        # set hidden columns
+        self.set_col_hidden(["session_id", "patient_id", "provider_id",
+                             "modality_id", "part_id", "user_id", "flag"])
 
     def set_add_on_cols(self):
         """
@@ -337,7 +346,7 @@ class SessionModel(DataModel):
         provider_id = get_id_by_data(provider_df, data, 'provider_id')
 
         # modality part
-        modality_df = Lab().table_df['madalities']
+        modality_df = Lab().table_df['modalities']
         modality_name = kwargs.get('modality_name')
         data = {'modality_name': modality_name}
         modality_id = get_id_by_data(modality_df, data, 'modality_id')

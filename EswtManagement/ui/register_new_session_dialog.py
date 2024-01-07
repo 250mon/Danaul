@@ -18,7 +18,6 @@ class NewSessionDialog(QDialog):
         self.source_model = src_model
         self.patient_emr_id: int or None = None
         self.init_ui()
-        self.new_session_signal.connect(parent.save_model_to_db)
 
     def init_ui(self):
         if self.source_model is None or self.patient_emr_id is None:

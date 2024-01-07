@@ -7,6 +7,7 @@ from PySide6.QtCore import (
     Qt, Slot, QModelIndex, QSortFilterProxyModel
 )
 from PySide6.QtGui import QFont
+from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from model.patient_model import PatientModel
 from ui.item_view_helpers import ItemViewHelpers
@@ -34,6 +35,7 @@ class PatientWidget(QWidget):
     def __init__(self, model: PatientModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
+        self.async_helper: AsyncHelper = self.parent.async_helper
         self.source_model = model
         self.proxy_model = None
         # initialize
@@ -57,7 +59,8 @@ class PatientWidget(QWidget):
         self.patient_view = QTreeView()
         self.item_view_helpers = ItemViewHelpers(self.source_model,
                                                  self.proxy_model,
-                                                 self.patient_view)
+                                                 self.patient_view,
+                                                 self)
         self.patient_view.setModel(self.proxy_model)
 
         self.patient_view.setRootIsDecorated(False)
@@ -68,6 +71,7 @@ class PatientWidget(QWidget):
         self.patient_view.doubleClicked.connect(self.row_double_clicked)
 
         self.new_patient_dlg = NewPatientDialog(self.source_model, self)
+        self.new_patient_dlg.new_patient_signal.connect(self.item_view_helpers.save_model_to_db)
 
         title_label = QLabel('환  자')
         font = QFont("Arial", 12, QFont.Bold)
@@ -115,38 +119,7 @@ class PatientWidget(QWidget):
         if selected_indexes := self.item_view_helpers.get_selected_indexes():
             logger.debug(f"del_patient {selected_indexes}")
             self.item_view_helpers.delete_rows(selected_indexes)
-            try:
-                if hasattr(self.parent, "async_start"):
-                    self.parent.async_start("patient_save")
-            except Exception as e:
-                QMessageBox.information(self,
-                                        "Failed Delete Patient",
-                                        str(e),
-                                        QMessageBox.Close)
-
-    @Slot(object)
-    def save_model_to_db(self, input_db_record: Dict):
-        """
-        Save the model to DB
-        It calls the main view's async_start() which calls back
-        the model's save_to_db()
-        :return:
-        """
-        logger.debug('Save a patient record to DB')
-        self.source_model.append_new_row(**input_db_record)
-        try:
-            if hasattr(self.parent, "async_start"):
-                self.parent.async_start("patient_save")
-        except Exception as e:
-            QMessageBox.information(self,
-                                    "Failed New Patient",
-                                    str(e),
-                                    QMessageBox.Close)
-
-        # auto clicking the newly created patient
-        new_patient_id = self.source_model.model_df['patient_id'].argmax()
-        self.source_model.set_selected_id(new_patient_id)
-        self.parent.upper_layer_model_selected(self.source_model)
+            self.item_view_helpers.save_model_to_db()
 
     @Slot(QModelIndex)
     def row_double_clicked(self, index: QModelIndex):
@@ -158,7 +131,8 @@ class PatientWidget(QWidget):
         """
         if (index.isValid() and
                 hasattr(self.parent, 'upper_layer_model_selected')):
-            patient_id = index.siblingAtColumn(self.source_model.get_col_number('patient_id')).data()
+            src_idx = self.proxy_model.mapToSource(index)
+            patient_id = self.source_model.get_data_by_index(src_idx, 'patient_id')
             logger.debug(f'patient_id is double-clicked: {patient_id}')
             self.source_model.set_selected_id(patient_id)
             self.parent.upper_layer_model_selected(self.source_model)

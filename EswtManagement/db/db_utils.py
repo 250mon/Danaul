@@ -1,7 +1,6 @@
 import sys
 import asyncio
 import asyncpg
-from asyncpg import UndefinedTableError
 from asyncpg import Record
 from types import TracebackType
 from typing import Optional, Type, List, Tuple, Dict
@@ -47,7 +46,7 @@ class ConnectPg:
             return self._conn
         except Exception as e:
             logger.debug('Error while connecting to DB')
-            logger.debug(e)
+            logger.exception(e)
             return None
 
     async def __aexit__(self,
@@ -85,7 +84,7 @@ class DbUtil:
                     logger.info(status)
                 except Exception as e:
                     logger.info(f'create_tables: Error while creating table: {statement}')
-                    logger.info(e)
+                    logger.exception(e)
             logger.info("Finished creating the tables")
         return results
 
@@ -109,11 +108,9 @@ class DbUtil:
                     sql_stmt = f'DROP TABLE {table} CASCADE;'
                     result = await conn.execute(sql_stmt)
                     results.append(result)
-                except UndefinedTableError as ute:
-                    logger.info('drop_table: Trying to drop an undefined table', ute)
                 except Exception as e:
                     logger.info('drop_table: Error while dropping tables')
-                    logger.info(e)
+                    logger.exception(e)
             logger.info("Finished removing the tables")
         return results
 
@@ -138,7 +135,7 @@ class DbUtil:
                 return results
             except Exception as e:
                 logger.debug(f'select_query: Error while executing {query_stmt}')
-                logger.debug(e)
+                logger.exception(e)
                 return None
 
     @staticmethod
@@ -163,7 +160,7 @@ class DbUtil:
                 return results
             except Exception as e:
                 logger.debug('executemany: Error during synchronous executing')
-                logger.debug(e)
+                logger.exception(e)
                 return e
 
     @staticmethod

@@ -2,12 +2,16 @@ import asyncio
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QObject, Signal, Slot, QEvent
 from common.d_logger import Logs
+from common.singleton import Singleton
 
 
 logger = Logs().get_logger("main")
 
 
 class AsyncHelper(QObject):
+    async_start_signal = Signal(str)
+    async_done_signal = Signal(str)
+
     class ReenterQtObject(QObject):
         """ This is a QObject to which an event will be posted, allowing
             asyncio to resume when the event is handled. event.fn() is
@@ -28,15 +32,14 @@ class AsyncHelper(QObject):
     def __init__(self, worker, entry):
         super().__init__()
         self.reenter_qt = self.ReenterQtObject()
-        self.entry = entry
         self.loop = asyncio.new_event_loop()
         self.done = {}
 
+        self.entry = entry
         self.worker = worker
-        if hasattr(self.worker, "start_signal") and isinstance(self.worker.start_signal, Signal):
-            self.worker.start_signal.connect(self.on_worker_started)
-        if hasattr(self.worker, "done_signal") and isinstance(self.worker.done_signal, Signal):
-            self.worker.done_signal.connect(self.on_worker_done)
+
+        self.async_start_signal.connect(self.on_worker_started)
+        self.async_done_signal.connect(self.on_worker_done)
 
     @Slot(str)
     def on_worker_started(self, action: str):

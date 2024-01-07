@@ -1,5 +1,6 @@
 import re
 import asyncio
+from typing import Dict
 from db.db_apis import DbApi
 from db.db_schema import *
 import pandas as pd
@@ -115,6 +116,29 @@ class Lab(metaclass=Singleton):
         df = pd.DataFrame(list_of_dict)
         df.fillna("", inplace=True)
         return df
+
+    def get_data_from_id(self, table: str, id: int, col: str) -> object:
+        tdf = self.table_df[table]
+        ret_s = tdf.loc[tdf.iloc[:, 0] == id, col]
+        if ret_s.empty:
+            logger.warning(f'no data at col({col})for id({id})')
+            return None
+        else:
+            return ret_s.item()
+
+    def get_id_from_data(self,
+                         table: str,
+                         data: Dict[str, object],
+                         id_col_name: str) -> int or None:
+        tdf = self.table_df[table]
+        col, data = data.popitem()
+
+        ret_s = tdf.loc[tdf.loc[:, col] == data, id_col_name]
+        if ret_s.empty:
+            logger.warning(f'no id for col({col}) data({data})')
+            return None
+        else:
+            return ret_s.item()
 
     async def update_lab_df_from_db(self, table: str, **kwargs):
         logger.debug(f"table {table}")

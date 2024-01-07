@@ -15,6 +15,7 @@ class PatientModel(DataModel):
     def __init__(self, user_name: str):
         self.init_params()
         super().__init__(user_name)
+        # self.finish_works()
 
     def init_params(self):
         self.set_table_name('patients')
@@ -29,6 +30,10 @@ class PatientModel(DataModel):
 
         self.set_column_names(list(self.col_edit_lvl.keys()))
         self.set_column_index_edit_level(self.col_edit_lvl)
+
+    def finish_works(self):
+        # set hidden columns
+        self.set_col_hidden(["patient_id", "flag"])
 
     def set_add_on_cols(self) -> None:
         """
@@ -125,7 +130,7 @@ class PatientModel(DataModel):
             return new_model_df
         except Exception as e:
             logger.debug("New patient info is improper!")
-            logger.debug(e)
+            logger.exception(e)
 
     def is_emr_id_duplicate(self, emr_id: int) -> bool:
         if (self.model_df.empty or

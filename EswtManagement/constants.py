@@ -2,10 +2,14 @@ from enum import Enum
 from functools import total_ordering
 from operator import methodcaller
 from common.singleton import Singleton
+from common.d_logger import Logs
+
+
+logger = Logs().get_logger("main")
+
 
 CONFIG_FILE = 'ds_config'
 ADMIN_GROUP = ['admin', 'jye']
-MAX_SESSION_COUNT = 10
 MAX_SESSION_COUNT = 1000
 DEFAULT_MIN_QTY = 1
 HORIZONTAL_HEADERS = {
@@ -63,7 +67,7 @@ class ConfigReader(metaclass=Singleton):
                 self.options = {k.strip(): v.strip() for k, v in words_iter}
 
         except Exception as e:
-            print(e)
+            logger.exception(e)
 
     def get_options(self, option_name: str):
         options = self.options.get(option_name, None)

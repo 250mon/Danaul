@@ -23,10 +23,10 @@ logger = Logs().get_logger("main")
 
 
 class TreatmentWindow(QMainWindow):
-    start_signal = Signal(str)
-    done_signal = Signal(str)
     update_all_signal = Signal()
     import_trs_signal = Signal(pd.DataFrame)
+    async_start_signal = Signal(str)
+    async_done_signal = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -34,7 +34,8 @@ class TreatmentWindow(QMainWindow):
 
         self.login_widget = LoginWidget(self)
         self.login_widget.start_main.connect(self.start_app)
-        self.update_all_signal.connect(self.update_all)
+
+        self.async_helper: AsyncHelper = None
 
         if is_test.lower() == "true":
             self.start_app("test")
@@ -43,7 +44,9 @@ class TreatmentWindow(QMainWindow):
         else:
             self.login()
 
-        self.import_widget = None
+        self.async_start_signal.connect(self.async_helper.on_worker_started)
+        self.async_done_signal.connect(self.async_helper.on_worker_done)
+        self.update_all_signal.connect(self.update_all)
 
     def login(self):
         self.login_widget.show()
@@ -157,7 +160,7 @@ class TreatmentWindow(QMainWindow):
         # send signal to AsyncHelper to schedule the guest (asyncio) event loop
         # inside the host(Qt) event loop
         # AsyncHelper will eventually call self.save_to_db(action, action)
-        self.start_signal.emit(action)
+        self.async_start_signal.emit(action)
 
     async def do_db_work(self, action: str):
         """
@@ -168,22 +171,22 @@ class TreatmentWindow(QMainWindow):
         """
         logger.debug(f"{action}")
         result_str = None
-        if action == "patient_save":
+        if action == "patients_save":
             logger.debug("Saving patients...")
             result_str = await self.patient_model.save_to_db()
             logger.debug("Updating patients ...")
             await self.patient_model.update()
             # self.session_model.set_upper_model(None)
             # await self.session_model.update()
-        elif action == "modality_save":
+        elif action == "modalities_save":
             logger.debug("Saving modality ...")
             await self.modality_model.save_to_db()
             await self.modality_model.update()
-        elif action == "part_save":
+        elif action == "body_parts_save":
             logger.debug("Saving body part ...")
             await self.part_model.save_to_db()
             await self.part_model.update()
-        elif action == "session_save":
+        elif action == "sessions_save":
             logger.debug("Saving sessions ...")
             await self.session_model.save_to_db()
             await self.session_model.update()
@@ -201,7 +204,7 @@ class TreatmentWindow(QMainWindow):
             await self.modality_model.update()
             await self.session_model.update()
 
-        self.done_signal.emit(action)
+        self.async_done_signal.emit(action)
 
         if result_str is not None:
             QMessageBox.information(self,
