@@ -116,10 +116,14 @@ class TreatmentWindow(QMainWindow):
 
     def setup_child_widgets(self):
         self.patient_widget = PatientWidget(self.patient_model, self)
+        self.patient_widget.set_async_helper(self.async_helper)
         self.provider_widget = ProviderWidget(self.provider_model, self)
         self.modality_widget = ModalityWidget(self.modality_model, self)
+        self.modality_widget.set_async_helper(self.async_helper)
         self.part_widget = BodyPartWidget(self.part_model, self)
+        self.part_widget.set_async_helper(self.async_helper)
         self.session_widget = SessionWidget(self.session_model, self)
+        self.session_widget.set_async_helper(self.async_helper)
 
         self.left_pane = QTabWidget(self)
         self.left_pane.addTab(self.patient_widget, '환자')
@@ -155,13 +159,6 @@ class TreatmentWindow(QMainWindow):
         patient_dock_widget.setWidget(self.patient_widget)
         self.addDockWidget(Qt.TopDockWidgetArea, patient_dock_widget)
 
-    @Slot(str)
-    def async_start(self, action: str):
-        # send signal to AsyncHelper to schedule the guest (asyncio) event loop
-        # inside the host(Qt) event loop
-        # AsyncHelper will eventually call self.save_to_db(action, action)
-        self.async_start_signal.emit(action)
-
     async def do_db_work(self, action: str):
         """
         This is the function registered to async_helper as a async coroutine
@@ -190,13 +187,13 @@ class TreatmentWindow(QMainWindow):
             logger.debug("Saving sessions ...")
             await self.session_model.save_to_db()
             await self.session_model.update()
-        elif action == "patient_update":
+        elif action == "patients_update":
             await self.patient_model.update()
-        elif action == "provider_update":
+        elif action == "providers_update":
             await self.provider_model.update()
-        elif action == "modality_update":
+        elif action == "modalities_update":
             await self.provider_model.update()
-        elif action == "session_update":
+        elif action == "sessions_update":
             await self.session_model.update()
         elif action == "all_update":
             await self.patient_model.update()

@@ -1,20 +1,19 @@
-import re
 import pandas as pd
-from PySide6.QtCore import QDate
-from PySide6.QtSql import QSqlDatabase, QSqlQuery
-from db.db_utils import QtDbUtil
+from PySide6.QtCore import QAbstractTableModel, Qt, QDate, QModelIndex
 from common.d_logger import Logs
+from db.db_utils import QtDbUtil
 from db.ds_lab import Lab
 
 
 logger = Logs().get_logger("main")
 
 
-class Stats:
+class StatTableModel(QAbstractTableModel):
     def __init__(self):
         self.db_util = QtDbUtil()
         self.max_stats_count = 1000
         self.sessions_df = pd.DataFrame()
+        self.stat_df = None
 
     def init_df(self, beg_date: QDate, end_date: QDate):
         self.beg_date = beg_date
@@ -44,20 +43,45 @@ class Stats:
         provider_df = self.sessions_df.loc[:, columns]
         provider_df.loc[:, 'count'] = 1
         grp_by_provider = provider_df.groupby(['provider_id', 'modality_id'])
-        print(grp_by_provider.sum())
 
     def pivot_table(self):
-        pivot_df = self.sessions_df.pivot_table(index=['provider_name'],
+        self.stat_df = self.sessions_df.pivot_table(index=['provider_name'],
                                                 columns='modality_name',
                                                 values=['session_price'],
                                                 aggfunc=['count', 'sum'])
-        pivot_df.columns = [a[2]+"_"+a[0] for a in pivot_df.columns.to_flat_index()]
-        print(pivot_df)
+        self.stat_df.columns = [a[2]+"_"+a[0] for a in self.stat_df.columns.to_flat_index()]
 
+    def rowCount(self, parent=QModelIndex):
+        return self.stat_df.shape[0]
+
+    def columnCount(self, parent=QModelIndex):
+        return self.stat_df.shape[1]
+
+    def data(self,
+             index: QModelIndex,
+             role=Qt.DisplayRole) -> object:
+        if not index.isValid():
+            return None
+
+        if role == Qt.DisplayRole:
+            return str(self.stat_df.iloc[index.row(), index.column()])
+
+    def headerData(self,
+                   section: int,
+                   orientation: Qt.orientation,
+                   role=Qt.ItemDataRole) -> str or None:
+        if role == Qt.DiaplayRole:
+            if orientation == Qt.Horizontal:
+                return str(self.stat_df.columns[section])
+
+            if orientation == Qt.Vertical:
+                return str(self.stat_df.index[section])
+
+        return None
 
 
 if __name__ == '__main__':
-    stat = Stats()
+    stat = StatTableModel()
     stat.init_df(QDate(2023, 10, 1), QDate(2023, 12, 20))
     stat.by_provider()
     stat.pivot_table()

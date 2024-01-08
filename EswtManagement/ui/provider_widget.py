@@ -4,10 +4,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
-from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from model.provider_model import ProviderModel
 from ui.item_view_helpers import ItemViewHelpers
+
 
 
 logger = Logs().get_logger("main")
@@ -17,7 +17,6 @@ class ProviderWidget(QWidget):
     def __init__(self, model: ProviderModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-        self.async_helper: AsyncHelper = self.parent.async_helper
         self.source_model = model
         # initialize
         self.set_model()

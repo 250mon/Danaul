@@ -20,11 +20,14 @@ class ItemViewHelpers:
                  view: QAbstractItemView,
                  parent: QWidget = None):
         self.parent: QWidget = parent
-        self.async_helper: AsyncHelper = self.parent.async_helper
+        self.async_helper = None
         self.src_model = src_model
         self.prx_model = proxy_model
         self.item_view: QAbstractItemView = view
         self.setup_delegate_for_columns()
+
+    def set_async_helper(self, async_helper: AsyncHelper):
+        self.async_helper = async_helper
 
     def setup_delegate_for_columns(self):
         """
@@ -99,7 +102,6 @@ class ItemViewHelpers:
         if len(del_indexes) > 0:
             self.src_model.set_del_flag(del_indexes)
 
-    @Slot(object)
     def save_model_to_db(self, input_db_record: dict = None):
         """
         Save the model to DB
@@ -108,12 +110,11 @@ class ItemViewHelpers:
         :return:
         """
         try:
-            if input_db_record is not None:
-                self.src_model.append_new_row(**input_db_record)
-            # if hasattr(self.parent.parent, "async_start"):
-            #     self.parent.async_start(self.src_model.table_name)
-                sig_txt = self.src_model.table_name + "_save"
-                self.async_helper.async_start_signal.emit(sig_txt)
+            if self.async_helper is not None:
+                if input_db_record is not None:
+                    self.src_model.append_new_row(**input_db_record)
+                work = self.src_model.table_name + "_save"
+                self.start_async_work(work)
         except Exception as e:
             logger.debug('Failed saving sessions')
             logger.exception(e)
@@ -121,6 +122,9 @@ class ItemViewHelpers:
                                     "Failed saving sessions",
                                     str(e),
                                     QMessageBox.Close)
+
+    def start_async_work(self, work: str):
+        self.async_helper.async_start_signal.emit(work)
 
     def set_col_width(self, col_name: str, width: int):
         if isinstance(self.item_view, QTableView):

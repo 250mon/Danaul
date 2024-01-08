@@ -1,11 +1,9 @@
-from typing import Dict
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLabel, QHBoxLayout, QVBoxLayout,
-    QMessageBox, QDateEdit, QWidget, QTableView, QGroupBox
+    QDateEdit, QWidget, QTableView, QGroupBox
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
-from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from db.ds_lab import Lab
 from model.di_data_model import DataModel
@@ -22,7 +20,6 @@ class SessionWidget(QWidget):
     def __init__(self, model: SessionModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-        self.async_helper: AsyncHelper = self.parent.async_helper
         self.source_model = model
         self.proxy_model = None
         # initialize
@@ -145,6 +142,9 @@ class SessionWidget(QWidget):
     def set_admin_menu_enabled(self, val: bool):
         self.admin_menu_grp.setEnabled(val)
 
+    def set_async_helper(self, async_helper):
+        self.item_view_helpers.set_async_helper(async_helper)
+
     @Slot(str)
     def add_session(self):
         if not isinstance(self.source_model.upper_model, PatientModel):
@@ -201,7 +201,7 @@ class SessionWidget(QWidget):
 
     def update_view(self):
         # retrieve the data about the selected patient_id from DB
-        self.parent.async_start('session_update')
+        self.item_view_helpers.start_async_work('sessions_update')
 
         # displaying the selected item name in the session view
         self.filter_item_label.setText(self.source_model.selected_model_name + ": " +

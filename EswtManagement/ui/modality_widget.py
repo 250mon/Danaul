@@ -1,11 +1,9 @@
-from typing import Dict
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
-    QLabel, QMessageBox, QWidget, QTreeView
+    QLabel, QWidget, QTreeView
 )
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
-from common.async_helper import AsyncHelper
 from common.d_logger import Logs
 from model.modality_model import ModalityModel
 from ui.item_view_helpers import ItemViewHelpers
@@ -19,7 +17,6 @@ class ModalityWidget(QWidget):
     def __init__(self, model: ModalityModel, parent: QMainWindow = None):
         super().__init__(parent)
         self.parent: QMainWindow = parent
-        self.async_helper: AsyncHelper = self.parent.async_helper
         self.source_model = model
         self.proxy_model = None
         # initialize
@@ -87,6 +84,9 @@ class ModalityWidget(QWidget):
         vbox.addLayout(hbox2)
         vbox.addWidget(self.modality_view)
         self.setLayout(vbox)
+
+    def set_async_helper(self, async_helper):
+        self.item_view_helpers.set_async_helper(async_helper)
 
     @Slot()
     def add_modality(self):
