@@ -37,13 +37,19 @@ class EmailSender:
         :return:
         '''
         # extract year and month info for salary slip
-        year_month = self.options['year_month']
-        year = year_month[0:2]
-        month = year_month[2:4].lstrip('0')
-        # make email subject, body, dir_path containing the files to be attached
-        self.subject = year + '년 ' + month + self.options['subject']
-        self.body = self.options['body']
-        self.dir_path = self.options['dir_path']
+        if self.options['other_purpose'] != 'yes':
+            year_month = self.options['year_month']
+            year = year_month[0:2]
+            month = year_month[2:4].lstrip('0')
+            # make email subject, body, dir_path containing the files to be attached
+            self.subject = year + '년 ' + month + self.options['subject']
+            self.body = self.options['body']
+            self.dir_path = self.options['dir_path']
+        else:
+            self.subject = self.options['subject_2']
+            self.body = self.options['body_2']
+            self.dir_path = self.options['dir_path_2']
+
         print(f"Title: {self.subject}")
 
     def read_config(self):
