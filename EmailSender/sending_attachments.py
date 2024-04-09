@@ -1,3 +1,4 @@
+from re import IGNORECASE
 import smtplib, ssl
 import os
 import glob
@@ -113,6 +114,7 @@ class EmailSender:
         context = ssl.create_default_context()
 
         # Try to log in to server and send email
+        server = None
         try:
             server = smtplib.SMTP(self.smtp_server, self.port)
             server.ehlo() # can be omitted
@@ -126,12 +128,23 @@ class EmailSender:
             # Print any error messages to stdout
             print(e)
         finally:
-            server.quit()
+            if server:
+                server.quit()
 
     def find_files_by_name(self, name):
         # searching the directory including subdirectories
-        dir_name = self.dir_path + "\**"
-        files = glob.glob(os.path.join(dir_name, f'*{name}*.pdf'), recursive=True)
+        if self.dir_path is None:
+            self.dir_path = '.'
+        # dir_name = os.path.join(self.dir_path, '**')
+        # files = glob.glob(os.path.join(dir_name, f'*{name}*.pdf'), recursive=True)
+        import re, fnmatch
+        file_path = f'*{name}*.pdf'
+        file_pattern = re.compile(fnmatch.translate(file_path), re.IGNORECASE)
+        all_files = glob.glob('./**', recursive=True)
+        files = [file for file in all_files if file_pattern.search(file)]
+
+        # file_path = os.path.join(self.dir_path, f'*{name}*.[pP][dD][fF]')
+        # files = glob.glob(file_path, recursive=True)
         print(f'\nfiles are {files}')
         files_to_send = []
         for file in files:
