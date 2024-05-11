@@ -99,14 +99,3 @@ if __name__ == '__main__':
     ex = MyApp()
     sys.exit(app.exec())
 
-
-
-
-# # Call draw method to add 2D graphic in an image
-# final_img = ImageDraw.Draw(base_img)
-# # Custom font style and font size
-# my_font = ImageFont.truetype('FreeMono.ttf', 65)
-# # Add text to an image
-# final_img.text((500, 500), "nice care", font=my_font, fill=(255, 0, 0))
-# # Display edited image
-# base_img.show()
