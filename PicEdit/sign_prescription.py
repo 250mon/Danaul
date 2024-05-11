@@ -2,19 +2,21 @@ from io import open_code
 import sys
 from pathlib import Path
 from PIL import Image
-# from PIL import ImageDraw
-# from PIL import ImageFont
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QTextEdit, QFileDialog, QWidget
 from PySide6.QtWidgets import QVBoxLayout, QLabel
-from PySide6.QtGui import QIcon, QAction, QPixmap
+from PySide6.QtGui import QIcon, QAction, QPixmap, QImage
+from danaul_logger import Logs
+
+
+logger = Logs().get_logger("main")
 
 
 class MyApp(QMainWindow):
 
     def __init__(self):
-        self.file_path = Path('원외처방-차트번호5263_1.jpg')
         super().__init__()
         self.initUI()
+        self.dir_path = Path('/Users/danaul/Downloads/')
 
     def initUI(self):
         self.textEdit = QTextEdit()
@@ -47,7 +49,7 @@ class MyApp(QMainWindow):
         self.show()
 
     def sign_pic(self, file_path: Path):
-        out_file_name = Path('OUT_' + file_path.name)
+        out_file_name = 'OUT_' + file_path.stem + '.pdf'
 
         try:
             # Open an Image
@@ -58,40 +60,30 @@ class MyApp(QMainWindow):
                 composite_img.paste(img_sign, (470, 430), img_sign)
 
                 # composite_img.show()
-                composite_img.save(out_file_name.with_suffix('.png'))
+                composite_img.save(file_path.with_name(out_file_name))
                 return composite_img
 
         except Exception as e:
-            print("Error in opening the file")
-            print(e)
+            logger.debug(f"Error in opening file: {e}")
             return None
 
     def showDialog(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open file', './')
+        fname = QFileDialog.getOpenFileName(self, 'Open file', str(self.dir_path))
+        logger.debug(f"Opening {fname[0]}")
 
         if fname[0]:
-            pillow_image = self.sign_pic(Path(fname[0]))
-            if pillow_image is None:
+            pil_img = self.sign_pic(Path(fname[0]))
+            if pil_img is None:
                 return
 
             # Convert Pillow image to QPixmap
-            qt_image = QPixmap(pillow_image.size[0], pillow_image.size[1])
-            qt_image.fill(0)
-            qt_pixmap = QPixmap(qt_image)
-            qt_pixmap.loadFromData(pillow_image.tobytes(), "png")
+            pil_img_rgba = pil_img.convert("RGBA")
+            data = pil_img_rgba.tobytes("raw", "RGBA")
+            qimg = QImage(data, pil_img_rgba.width, pil_img_rgba.height, QImage.Format_RGBA8888)
+            qt_pixmap = QPixmap.fromImage(qimg)
 
-            # Create a QLabel to display the image
             self.display_window.setPixmap(qt_pixmap)
-            widget1 = QWidget()
-            label = QLabel()
-            label.setPixmap(QPixmap(self.file_path))
-            label.show()
 
-            # f = open(fname[0], 'r')
-            #
-            # with f:
-            #     data = f.read()
-            #     self.textEdit.setText(data)
 
 
 if __name__ == '__main__':
