@@ -1,4 +1,3 @@
-from io import open_code
 import sys
 import platform
 from pathlib import Path
@@ -6,7 +5,8 @@ from PIL import Image, ImageDraw, ImageFont
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QTextEdit, QFileDialog, QWidget
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QScrollArea
 from PySide6.QtGui import QIcon, QAction, QPixmap, QImage, Qt
-from danaul_logger import Logs
+from configparser import ConfigParser
+from common.danaul_logger import Logs
 
 
 logger = Logs().get_logger("main")
@@ -17,7 +17,10 @@ class MyApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
-        self.dir_path = Path('.')
+        self.config = ConfigParser()
+        self.config.read('./common/config.ini')
+        self.dir_path = Path(self.config['danaul']['WorkingDirPath'])
+        self.sign_file_path = Path(self.config['danaul']['SignFilePath'])
 
     def initUI(self):
         self.textEdit = QTextEdit()
@@ -82,7 +85,7 @@ class MyApp(QMainWindow):
             with Image.open(file_path) as base_img:
                 # paste a sign image
                 composite_img = base_img.copy()
-                img_sign = Image.open('jye_sign.png')
+                img_sign = Image.open(self.sign_file_path)
                 composite_img.paste(img_sign, (470, 430), img_sign)
 
                 # render the text on the image

@@ -8,7 +8,7 @@ import yaml
 class Logs():
     def __init__(self):
         # make 'log' directory to store log files
-        os.makedirs("log", exist_ok=True)
+        os.makedirs("../log", exist_ok=True)
 
         # read config file
         with open('common/log_config.yaml', 'rt') as f:
