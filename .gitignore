@@ -11,6 +11,7 @@
 !*.qrc
 !*.qss
 !**/assets/*
+!**/PicEdit/config.ini
 
 # even if they are in subdirectoreis
 !*/

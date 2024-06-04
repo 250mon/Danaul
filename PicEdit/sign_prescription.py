@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import platform
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QTextEdit,
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QScrollArea
 from PySide6.QtGui import QIcon, QAction, QPixmap, QImage, Qt
 from configparser import ConfigParser
-from common.danaul_logger import Logs
+from common.danaul_logger import Logs, resource_path
 
 
 logger = Logs().get_logger("main")
@@ -18,7 +18,8 @@ class MyApp(QMainWindow):
         super().__init__()
         self.initUI()
         self.config = ConfigParser()
-        self.config.read('./common/config.ini')
+        config_path = resource_path('./config.ini')
+        self.config.read(config_path)
         self.dir_path = Path(self.config['danaul']['WorkingDirPath'])
         self.sign_file_path = Path(self.config['danaul']['SignFilePath'])
 
