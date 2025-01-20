@@ -8,4 +8,8 @@ class Config:
     SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
     SENDER_EMAIL = os.getenv('SENDER_EMAIL')
     SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads') 
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+    
+    # SQLite configuration
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'addresses.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False 
